@@ -1,0 +1,36 @@
+{
+  "name": "Ludus Studii",
+  "dockerComposeFile": "docker-compose.yml",
+  "service": "app",
+  "workspaceFolder": "/workspace",
+  "customizations": {
+    "vscode": {
+      "extensions": [
+        "golang.go",
+        "Google.google-antigravity"
+      ]
+    }
+  },
+  "forwardPorts": [
+    8080,
+    5432
+  ],
+  "portsAttributes": {
+    "8080": {
+      "label": "API"
+    },
+    "5432": {
+      "label": "PostgreSQL"
+    }
+  },
+  "otherPortsAttributes": {
+    "onAutoForward": "ignore"
+  },
+  "containerEnv": {
+    "DATABASE_URL": "postgres://ludus:ludus@db:5432/ludus_studii_user_db?sslmode=disable",
+    "MACHINE_ID": "1",
+    "PORT": "8080",
+    "SHUTDOWN_TIMEOUT": "0s"
+  },
+  "postCreateCommand": ".devcontainer/post-create.sh"
+}
