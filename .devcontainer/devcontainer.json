@@ -1,5 +1,5 @@
 {
-  "name": "Ludus Studii",
+  "name": "ludustudii",
   "dockerComposeFile": "docker-compose.yml",
   "service": "app",
   "workspaceFolder": "/workspace",
@@ -11,9 +11,15 @@
       ]
     }
   },
+  "features": {
+    "ghcr.io/devcontainers/features/node:2": {
+      "version": "26"
+    }
+  },
   "forwardPorts": [
     8080,
-    5432
+    5432,
+    5173
   ],
   "portsAttributes": {
     "8080": {
@@ -21,16 +27,16 @@
     },
     "5432": {
       "label": "PostgreSQL"
+    },
+    "5173": {
+      "label": "SPA"
     }
   },
   "otherPortsAttributes": {
     "onAutoForward": "ignore"
   },
   "containerEnv": {
-    "DATABASE_URL": "postgres://ludus:ludus@db:5432/ludus_studii_user_db?sslmode=disable",
-    "MACHINE_ID": "1",
-    "PORT": "8080",
-    "SHUTDOWN_TIMEOUT": "0s"
+    "PORT": "8080"
   },
   "postCreateCommand": ".devcontainer/post-create.sh"
 }

@@ -5,9 +5,11 @@ services:
     command: sleep infinity
     volumes:
       - ..:/workspace:cached
+      - spa-node-modules:/workspace/frontend/node_modules
     working_dir: /workspace
     ports:
       - "8080:8080"
+      - "5173:5173"
 
   db:
     container_name: ludustudiidb
@@ -25,3 +27,4 @@ services:
 volumes:
   postgres-data:
   postgres-cfg-data:
+  spa-node-modules:

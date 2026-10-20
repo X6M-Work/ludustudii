@@ -2,10 +2,10 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/main ./cmd/api"
+  cmd = "go build -o ./tmp/main ./cmd/server/api"
   bin = "./tmp/main"
   include_ext = ["go", "html", "tmpl"]
-  exclude_dir = ["tmp", "vendor"]
+  exclude_dir = ["tmp", "vendor", "bin", "internal/spa/dist"]
   delay = 1000
 
 [log]
