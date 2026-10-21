@@ -13,6 +13,11 @@ export default defineConfig({
     react(),
     tailwindcss(),
   ],
+  resolve: {
+    alias: {
+      '@': path.resolve(__dirname, './src'),
+    },
+  },
   server: {
     host: '0.0.0.0', // Listen on all network interfaces inside devcontainer
     port: 5173,
