@@ -1,12 +1,95 @@
 package main
 
 import (
+	"context"
+	"errors"
+	"fmt"
+	"log/slog"
+	"net"
 	"net/http"
+	"os"
+	"os/signal"
+	"syscall"
 
+	"github.com/apotourlyan/ludustudii/internal/database"
+	"github.com/apotourlyan/ludustudii/internal/environment"
+	"github.com/apotourlyan/ludustudii/internal/services/lcards"
 	"github.com/apotourlyan/ludustudii/internal/spa"
 )
 
 func main() {
-	http.Handle("/", spa.Handler())
-	http.ListenAndServe(":8080", nil)
+	if err := run(); err != nil {
+		slog.Error("Application terminated with error", "error", err)
+		os.Exit(1)
+	}
+}
+
+func run() (err error) {
+	vars, err := environment.Load()
+	if err != nil {
+		return fmt.Errorf("load environment: %w", err)
+	}
+
+	clientApp, err := spa.Load()
+	if err != nil {
+		return fmt.Errorf("load client app: %w", err)
+	}
+
+	db, err := database.Connect(database.Options{
+		ConnectionString: vars.DBConnectionString,
+		MaxOpenConns:     vars.DBMaxOpenConns,
+		MaxIdleConns:     vars.DBMaxIdleConns,
+		ConnMaxLifetime:  vars.DBConnMaxLifetime,
+		ConnMaxIdleTime:  vars.DBConnMaxIdleTime,
+	})
+	if err != nil {
+		return fmt.Errorf("connect database: %w", err)
+	}
+	defer func() {
+		if closeErr := db.Close(); closeErr != nil {
+			err = errors.Join(err, fmt.Errorf("close database: %w", closeErr))
+		}
+	}()
+
+	mux := http.NewServeMux()
+	// Register API routes
+	lcards.NewHandler(db).RegisterRoutes(mux)
+	mux.HandleFunc("/api/", http.NotFound)
+	// Register SPA routes
+	spa.NewHandler(clientApp).RegisterRoutes(mux)
+
+	server := &http.Server{
+		Addr:         net.JoinHostPort("", vars.AppPort),
+		Handler:      mux,
+		ReadTimeout:  vars.AppReadTimeout,
+		WriteTimeout: vars.AppWriteTimeout,
+		IdleTimeout:  vars.AppIdleTimeout,
+	}
+
+	errChan := make(chan error, 1)
+	go func() {
+		slog.Info("Starting HTTP server", "port", vars.AppPort)
+		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+			errChan <- fmt.Errorf("http server error: %w", err)
+		}
+	}()
+
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	select {
+	case err := <-errChan:
+		return err
+	case <-ctx.Done():
+		slog.Info("Shutting down server...")
+	}
+
+	shutdownCtx, cancel := context.WithTimeout(context.Background(), vars.AppShutdownTimeout)
+	defer cancel()
+
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("http server shutdown: %w", err)
+	}
+
+	return nil
 }
