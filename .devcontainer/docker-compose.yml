@@ -7,6 +7,9 @@ services:
       - ..:/workspace:cached
       - spa-node-modules:/workspace/frontend/node_modules
     working_dir: /workspace
+    environment:
+      - APP_PORT=8080
+      - DB_CONNECTION=postgres://ludus:ludus@db:5432/ludustudii_db?sslmode=disable
     ports:
       - "8080:8080"
       - "5173:5173"
