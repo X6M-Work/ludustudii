@@ -37,7 +37,8 @@
     "onAutoForward": "ignore"
   },
   "containerEnv": {
-    "PORT": "8080"
+    "PORT": "8080",
+    "LANG": "C.UTF-8"
   },
   "postCreateCommand": ".devcontainer/post-create.sh"
 }

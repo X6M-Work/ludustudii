@@ -62,3 +62,8 @@ migrate-status:
 migrate-create:
 	@if [ -z "$(NAME)" ]; then echo "Error: NAME is required (e.g., make migrate-create NAME=add_users)"; exit 1; fi
 	@goose -dir $(MIGRATIONS_DIR) create $(NAME) sql
+
+## psql: Connects to the PostgreSQL database using DB_CONNECTION environment variable
+psql:
+	@echo "==> Connecting to PostgreSQL..."
+	@psql "$(DB_CONNECTION)"
