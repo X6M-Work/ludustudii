@@ -17,4 +17,5 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("POST /api/lcards", h.create)
 	mux.HandleFunc("GET /api/lcards", h.list)
 	mux.HandleFunc("GET /api/lcards/{id}", h.get)
+	mux.HandleFunc("PUT /api/lcards/{id}", h.update)
 }
