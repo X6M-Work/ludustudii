@@ -11,6 +11,7 @@
 import { Route as rootRouteImport } from './routes/__root'
 import { Route as IndexRouteImport } from './routes/index'
 import { Route as LearningCardRouteImport } from './routes/learning-card'
+import { Route as LearningCardCardIdRouteImport } from './routes/learning-card_.$cardId'
 
 const IndexRoute = IndexRouteImport.update({
   id: '/',
@@ -22,31 +23,40 @@ const LearningCardRoute = LearningCardRouteImport.update({
   path: '/learning-card',
   getParentRoute: () => rootRouteImport,
 } as any)
+const LearningCardCardIdRoute = LearningCardCardIdRouteImport.update({
+  id: '/learning-card_/$cardId',
+  path: '/learning-card/$cardId',
+  getParentRoute: () => rootRouteImport,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
   '/learning-card': typeof LearningCardRoute
+  '/learning-card/$cardId': typeof LearningCardCardIdRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
   '/learning-card': typeof LearningCardRoute
+  '/learning-card/$cardId': typeof LearningCardCardIdRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
   '/learning-card': typeof LearningCardRoute
+  '/learning-card_/$cardId': typeof LearningCardCardIdRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/' | '/learning-card'
+  fullPaths: '/' | '/learning-card' | '/learning-card/$cardId'
   fileRoutesByTo: FileRoutesByTo
-  to: '/' | '/learning-card'
-  id: '__root__' | '/' | '/learning-card'
+  to: '/' | '/learning-card' | '/learning-card/$cardId'
+  id: '__root__' | '/' | '/learning-card' | '/learning-card_/$cardId'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
   LearningCardRoute: typeof LearningCardRoute
+  LearningCardCardIdRoute: typeof LearningCardCardIdRoute
 }
 
 declare module '@tanstack/react-router' {
@@ -65,12 +75,20 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof LearningCardRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/learning-card_/$cardId': {
+      id: '/learning-card_/$cardId'
+      path: '/learning-card/$cardId'
+      fullPath: '/learning-card/$cardId'
+      preLoaderRoute: typeof LearningCardCardIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
   }
 }
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
   LearningCardRoute: LearningCardRoute,
+  LearningCardCardIdRoute: LearningCardCardIdRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)

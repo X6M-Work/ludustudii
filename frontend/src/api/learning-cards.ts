@@ -1,17 +1,23 @@
-import { useMutation, useQueryClient } from '@tanstack/react-query'
+import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 export interface CreateLearningCardRequest {
   title: string
   description: string
 }
 
+export interface CreateLearningCardResponse {
+  id: string
+}
+
 export interface LearningCard {
   id: string
+  title: string
+  description: string
 }
 
 export async function createLearningCard(
   payload: CreateLearningCardRequest,
-): Promise<LearningCard> {
+): Promise<CreateLearningCardResponse> {
   const response = await fetch('/api/lcards', {
     method: 'POST',
     headers: {
@@ -38,3 +44,19 @@ export function useCreateLearningCard() {
   })
 }
 
+export async function getLearningCard(id: string): Promise<LearningCard> {
+  const response = await fetch(`/api/lcards/${encodeURIComponent(id)}`)
+
+  if (!response.ok) {
+    throw new Error(`Failed to load learning card: ${response.statusText}`)
+  }
+
+  return response.json()
+}
+
+export function useLearningCard(id: string) {
+  return useQuery({
+    queryKey: ['lcards', id],
+    queryFn: () => getLearningCard(id),
+  })
+}
