@@ -79,6 +79,30 @@ export function useUpdateLearningCard() {
   })
 }
 
+// Expected delete endpoint contract: DELETE /api/lcards/:id returns no content.
+export async function deleteLearningCard(id: string): Promise<void> {
+  const response = await fetch(`/api/lcards/${encodeURIComponent(id)}`, {
+    method: 'DELETE',
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to delete learning card: ${response.statusText}`)
+  }
+}
+
+export function useDeleteLearningCard() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: deleteLearningCard,
+    onSuccess: (_data, id) => {
+      // Drop the deleted card's cache entry so it is not refetched into a 404.
+      queryClient.removeQueries({ queryKey: ['lcards', id], exact: true })
+      queryClient.invalidateQueries({ queryKey: ['lcards'] })
+    },
+  })
+}
+
 export async function getLearningCard(id: string): Promise<LearningCard> {
   const response = await fetch(`/api/lcards/${encodeURIComponent(id)}`)
 

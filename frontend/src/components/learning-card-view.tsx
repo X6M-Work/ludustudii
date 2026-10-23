@@ -1,7 +1,22 @@
-import { type ReactNode } from 'react'
+import { useState, type ReactNode } from 'react'
 import Markdown, { type Components } from 'react-markdown'
 import { useNavigate } from '@tanstack/react-router'
-import { useLearningCard, type LearningCard } from '@/api/learning-cards'
+import {
+  useDeleteLearningCard,
+  useLearningCard,
+  type LearningCard,
+} from '@/api/learning-cards'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from '@/components/ui/alert-dialog'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -76,21 +91,68 @@ function LearningCardContent({ card }: { card: LearningCard }) {
       <LearningCardDisplay
         card={card}
         action={
-          <Button
-            variant="outline"
-            size="sm"
-            onClick={() =>
-              navigate({
-                to: '/learning-card/$cardId',
-                params: { cardId: card.id },
-              })
-            }
-          >
-            Update
-          </Button>
+          <div className="flex gap-2">
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                navigate({
+                  to: '/learning-card/$cardId',
+                  params: { cardId: card.id },
+                })
+              }
+            >
+              Update
+            </Button>
+            <DeleteLearningCardButton cardId={card.id} />
+          </div>
         }
       />
     </div>
+  )
+}
+
+function DeleteLearningCardButton({ cardId }: { cardId: string }) {
+  const [open, setOpen] = useState(false)
+  const deleteCard = useDeleteLearningCard()
+
+  return (
+    <AlertDialog
+      open={open}
+      onOpenChange={(nextOpen) => {
+        // Keep the dialog open until the request settles
+        if (deleteCard.isPending) return
+        if (!nextOpen) deleteCard.reset()
+        setOpen(nextOpen)
+      }}
+    >
+      <AlertDialogTrigger render={<Button variant="destructive" size="sm" />}>
+        Delete
+      </AlertDialogTrigger>
+      <AlertDialogContent>
+        <AlertDialogHeader>
+          <AlertDialogTitle>Delete this learning card?</AlertDialogTitle>
+          <AlertDialogDescription>
+            This action cannot be undone. The card will be permanently removed.
+          </AlertDialogDescription>
+        </AlertDialogHeader>
+        {deleteCard.isError && <FieldError>{deleteCard.error.message}</FieldError>}
+        <AlertDialogFooter>
+          <AlertDialogCancel disabled={deleteCard.isPending}>Cancel</AlertDialogCancel>
+          <AlertDialogAction
+            variant="destructive"
+            disabled={deleteCard.isPending}
+            onClick={() =>
+              deleteCard.mutate(cardId, {
+                onSuccess: () => setOpen(false),
+              })
+            }
+          >
+            {deleteCard.isPending ? 'Deleting...' : 'Delete'}
+          </AlertDialogAction>
+        </AlertDialogFooter>
+      </AlertDialogContent>
+    </AlertDialog>
   )
 }
 
