@@ -1,3 +1,4 @@
+import { type ReactNode } from 'react'
 import Markdown, { type Components } from 'react-markdown'
 import { useNavigate } from '@tanstack/react-router'
 import { useLearningCard, type LearningCard } from '@/api/learning-cards'
@@ -72,31 +73,46 @@ function LearningCardContent({ card }: { card: LearningCard }) {
 
   return (
     <div className="mx-auto max-w-xl p-6">
-      <Card>
-        <CardHeader>
-          <CardTitle className="wrap-break-word">
-            <Markdown components={markdownComponents}>{card.title}</Markdown>
-          </CardTitle>
-          <CardAction>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() =>
-                navigate({
-                  to: '/learning-card/$cardId',
-                  params: { cardId: card.id },
-                })
-              }
-            >
-              Update
-            </Button>
-          </CardAction>
-        </CardHeader>
-        <Separator />
-        <CardContent className="wrap-break-word">
-          <Markdown components={markdownComponents}>{card.description}</Markdown>
-        </CardContent>
-      </Card>
+      <LearningCardDisplay
+        card={card}
+        action={
+          <Button
+            variant="outline"
+            size="sm"
+            onClick={() =>
+              navigate({
+                to: '/learning-card/$cardId',
+                params: { cardId: card.id },
+              })
+            }
+          >
+            Update
+          </Button>
+        }
+      />
     </div>
+  )
+}
+
+export function LearningCardDisplay({
+  card,
+  action,
+}: {
+  card: Pick<LearningCard, 'title' | 'description'>
+  action?: ReactNode
+}) {
+  return (
+    <Card className="min-w-0">
+      <CardHeader>
+        <CardTitle className="min-w-0 wrap-break-word">
+          <Markdown components={markdownComponents}>{card.title}</Markdown>
+        </CardTitle>
+        {action && <CardAction>{action}</CardAction>}
+      </CardHeader>
+      <Separator />
+      <CardContent className="min-w-0 wrap-break-word">
+        <Markdown components={markdownComponents}>{card.description}</Markdown>
+      </CardContent>
+    </Card>
   )
 }

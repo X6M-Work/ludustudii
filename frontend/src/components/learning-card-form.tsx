@@ -5,6 +5,7 @@ import {
   useUpdateLearningCard,
   type LearningCard,
 } from '@/api/learning-cards'
+import { LearningCardDisplay } from '@/components/learning-card-view'
 import { Button } from '@/components/ui/button'
 import {
   Card,
@@ -72,8 +73,8 @@ export function LearningCardForm({ card }: LearningCardFormProps) {
   })
 
   return (
-    <div className="mx-auto max-w-xl p-6">
-      <Card>
+    <div className="mx-auto grid max-w-6xl grid-cols-1 items-start gap-6 p-6 md:grid-cols-2">
+      <Card className="min-w-0">
         <CardHeader>
           <CardTitle>{isEditing ? 'Update Card' : 'Add Card'}</CardTitle>
         </CardHeader>
@@ -192,6 +193,9 @@ export function LearningCardForm({ card }: LearningCardFormProps) {
           </form>
         </CardContent>
       </Card>
+      <form.Subscribe selector={(state) => state.values}>
+        {(values) => <LearningCardDisplay card={values} />}
+      </form.Subscribe>
     </div>
   )
 }
