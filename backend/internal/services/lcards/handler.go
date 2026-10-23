@@ -18,4 +18,5 @@ func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
 	mux.HandleFunc("GET /api/lcards", h.list)
 	mux.HandleFunc("GET /api/lcards/{id}", h.get)
 	mux.HandleFunc("PUT /api/lcards/{id}", h.update)
+	mux.HandleFunc("DELETE /api/lcards/{id}", h.delete)
 }
