@@ -31,12 +31,12 @@ const validateTitle = ({ value }: { value: string }) => {
   return undefined
 }
 
-const validateContent = ({ value }: { value: string }) => {
+const validateDescription = ({ value }: { value: string }) => {
   if (!value.trim()) {
-    return { message: 'Content is required' }
+    return { message: 'Description is required' }
   }
   if (value.length > 2000) {
-    return { message: 'Content must be at most 2000 characters' }
+    return { message: 'Description must be at most 2000 characters' }
   }
   return undefined
 }
@@ -47,7 +47,7 @@ function LearningCardForm() {
   const form = useForm({
     defaultValues: {
       title: '',
-      content: '',
+      description: '',
     },
     onSubmit: async ({ value, formApi }) => {
       await createLearningCard.mutateAsync(value)
@@ -109,10 +109,10 @@ function LearningCardForm() {
               </form.Field>
 
               <form.Field
-                name="content"
+                name="description"
                 validators={{
-                  onChange: validateContent,
-                  onSubmit: validateContent,
+                  onChange: validateDescription,
+                  onSubmit: validateDescription,
                 }}
               >
                 {(field) => {
@@ -120,7 +120,7 @@ function LearningCardForm() {
                   return (
                     <Field data-invalid={isInvalid}>
                       <div className="flex items-center justify-between">
-                        <FieldLabel htmlFor={field.name}>Content</FieldLabel>
+                        <FieldLabel htmlFor={field.name}>Description</FieldLabel>
                         <FieldDescription>
                           {field.state.value.length}/2000
                         </FieldDescription>
@@ -128,13 +128,13 @@ function LearningCardForm() {
                       <Textarea 
                         className="min-h-50"
                         id={field.name}
+                        placeholder="Enter description..."
                         name={field.name}
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
                         maxLength={2000}
                         aria-invalid={isInvalid}
-                        placeholder="Enter content..."
                       />
                       <div className="min-h-4">
                         {isInvalid && (

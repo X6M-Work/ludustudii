@@ -2,7 +2,7 @@ import { useMutation, useQueryClient } from '@tanstack/react-query'
 
 export interface CreateLearningCardRequest {
   title: string
-  content: string
+  description: string
 }
 
 export interface LearningCard {

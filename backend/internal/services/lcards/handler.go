@@ -14,5 +14,5 @@ func NewHandler(db *sql.DB) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("POST /lcards", h.create)
+	mux.HandleFunc("POST /api/lcards", h.create)
 }

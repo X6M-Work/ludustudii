@@ -26,10 +26,16 @@ func NewHandler(clientApp *ClientApp) *Handler {
 }
 
 func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("GET /", h.serve)
+	mux.HandleFunc("/", h.serve)
 }
 
 func (h *Handler) serve(w http.ResponseWriter, r *http.Request) {
+	if r.Method != http.MethodGet && r.Method != http.MethodHead {
+		w.Header().Set("Allow", "GET, HEAD")
+		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
+		return
+	}
+
 	reqPath := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
 
 	if reqPath == "" || reqPath == "index.html" {
