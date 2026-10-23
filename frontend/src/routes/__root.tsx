@@ -18,8 +18,9 @@ const TanStackRouterDevtools =
 function RootComponent() {
   return (
     <React.Fragment>
-      <nav>
-        <Link to="/learning-card">Learning Card</Link>
+      <nav className="flex gap-4 p-6">
+        <Link to="/learning-cards">Learning Cards</Link>
+        <Link to="/learning-card">Add Card</Link>
       </nav>
       <Outlet />
       <React.Suspense>

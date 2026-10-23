@@ -1,5 +1,5 @@
 import Markdown, { type Components } from 'react-markdown'
-import { useLearningCard } from '@/api/learning-cards'
+import { useLearningCard, type LearningCard } from '@/api/learning-cards'
 import {
   Card,
   CardContent,
@@ -30,43 +30,53 @@ const markdownComponents: Components = {
   hr: () => <Separator className="my-4" />,
 }
 
-interface LearningCardViewProps {
-  cardId: string
+type LearningCardViewProps =
+  | { cardId: string; card?: never }
+  | { card: LearningCard; cardId?: never }
+
+export function LearningCardView(props: LearningCardViewProps) {
+  if (props.card) {
+    return <LearningCardContent card={props.card} />
+  }
+
+  return <LearningCardById cardId={props.cardId} />
 }
 
-export function LearningCardView({ cardId }: LearningCardViewProps) {
+function LearningCardById({ cardId }: { cardId: string }) {
   const learningCard = useLearningCard(cardId)
+
+  if (learningCard.isSuccess) {
+    return <LearningCardContent card={learningCard.data} />
+  }
 
   return (
     <div className="mx-auto max-w-xl p-6">
       <Card>
-        {learningCard.isPending && (
-          <CardContent className="text-muted-foreground">Loading...</CardContent>
-        )}
-
-        {learningCard.isError && (
-          <CardContent>
+        <CardContent>
+          {learningCard.isPending ? (
+            <span className="text-muted-foreground">Loading...</span>
+          ) : (
             <FieldError>{learningCard.error.message}</FieldError>
-          </CardContent>
-        )}
+          )}
+        </CardContent>
+      </Card>
+    </div>
+  )
+}
 
-        {learningCard.isSuccess && (
-          <>
-            <CardHeader>
-              <CardTitle className="wrap-break-word">
-                <Markdown components={markdownComponents}>
-                  {learningCard.data.title}
-                </Markdown>
-              </CardTitle>
-            </CardHeader>
-            <Separator />
-            <CardContent className="wrap-break-word">
-              <Markdown components={markdownComponents}>
-                {learningCard.data.description}
-              </Markdown>
-            </CardContent>
-          </>
-        )}
+function LearningCardContent({ card }: { card: LearningCard }) {
+  return (
+    <div className="mx-auto max-w-xl p-6">
+      <Card>
+        <CardHeader>
+          <CardTitle className="wrap-break-word">
+            <Markdown components={markdownComponents}>{card.title}</Markdown>
+          </CardTitle>
+        </CardHeader>
+        <Separator />
+        <CardContent className="wrap-break-word">
+          <Markdown components={markdownComponents}>{card.description}</Markdown>
+        </CardContent>
       </Card>
     </div>
   )

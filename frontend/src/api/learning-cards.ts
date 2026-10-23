@@ -60,3 +60,26 @@ export function useLearningCard(id: string) {
     queryFn: () => getLearningCard(id),
   })
 }
+
+// Expected list endpoint contract: GET /api/lcards returns LearningCard[].
+export async function getLearningCards(signal?: AbortSignal): Promise<LearningCard[]> {
+  const response = await fetch('/api/lcards', { signal })
+
+  if (!response.ok) {
+    throw new Error(`Failed to load learning cards: ${response.statusText}`)
+  }
+
+  const cards: unknown = await response.json()
+  if (!Array.isArray(cards)) {
+    throw new Error('Expected a list of learning cards')
+  }
+
+  return cards
+}
+
+export function useLearningCards() {
+  return useQuery({
+    queryKey: ['lcards', 'list'],
+    queryFn: ({ signal }) => getLearningCards(signal),
+  })
+}
