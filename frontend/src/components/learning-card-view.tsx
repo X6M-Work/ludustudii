@@ -1,7 +1,10 @@
 import Markdown, { type Components } from 'react-markdown'
+import { useNavigate } from '@tanstack/react-router'
 import { useLearningCard, type LearningCard } from '@/api/learning-cards'
+import { Button } from '@/components/ui/button'
 import {
   Card,
+  CardAction,
   CardContent,
   CardHeader,
   CardTitle,
@@ -65,6 +68,8 @@ function LearningCardById({ cardId }: { cardId: string }) {
 }
 
 function LearningCardContent({ card }: { card: LearningCard }) {
+  const navigate = useNavigate()
+
   return (
     <div className="mx-auto max-w-xl p-6">
       <Card>
@@ -72,6 +77,20 @@ function LearningCardContent({ card }: { card: LearningCard }) {
           <CardTitle className="wrap-break-word">
             <Markdown components={markdownComponents}>{card.title}</Markdown>
           </CardTitle>
+          <CardAction>
+            <Button
+              variant="outline"
+              size="sm"
+              onClick={() =>
+                navigate({
+                  to: '/learning-card/$cardId',
+                  params: { cardId: card.id },
+                })
+              }
+            >
+              Update
+            </Button>
+          </CardAction>
         </CardHeader>
         <Separator />
         <CardContent className="wrap-break-word">

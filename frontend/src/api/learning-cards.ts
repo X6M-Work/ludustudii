@@ -9,6 +9,12 @@ export interface CreateLearningCardResponse {
   id: string
 }
 
+export interface UpdateLearningCardRequest {
+  id: string
+  title: string
+  description: string
+}
+
 export interface LearningCard {
   id: string
   title: string
@@ -38,6 +44,35 @@ export function useCreateLearningCard() {
 
   return useMutation({
     mutationFn: createLearningCard,
+    onSuccess: () => {
+      queryClient.invalidateQueries({ queryKey: ['lcards'] })
+    },
+  })
+}
+
+export async function updateLearningCard({
+  id,
+  title,
+  description,
+}: UpdateLearningCardRequest): Promise<void> {
+  const response = await fetch(`/api/lcards/${encodeURIComponent(id)}`, {
+    method: 'PUT',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({ title, description }),
+  })
+
+  if (!response.ok) {
+    throw new Error(`Failed to update learning card: ${response.statusText}`)
+  }
+}
+
+export function useUpdateLearningCard() {
+  const queryClient = useQueryClient()
+
+  return useMutation({
+    mutationFn: updateLearningCard,
     onSuccess: () => {
       queryClient.invalidateQueries({ queryKey: ['lcards'] })
     },
