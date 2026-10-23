@@ -8,6 +8,8 @@
       "extensions": [
         "golang.go",
         "google.google-antigravity",
+        "openai.chatgpt",
+        "anthropic.claude-code",
         "typescriptteam.native-preview"
       ]
     }
