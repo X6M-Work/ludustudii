@@ -53,7 +53,7 @@ func run() (err error) {
 
 	mux := http.NewServeMux()
 	// Register API routes
-	lcards.NewHandler(db).RegisterRoutes(mux)
+	lcards.RegisterRoutes(mux, db)
 	mux.HandleFunc("/api/", http.NotFound)
 	// Register SPA routes
 	spa.NewHandler(clientApp).RegisterRoutes(mux)
