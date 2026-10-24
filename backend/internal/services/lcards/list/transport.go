@@ -1,11 +1,11 @@
 package list
 
 import (
-	"encoding/json"
 	"log/slog"
 	"net/http"
 
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
+	"github.com/labstack/echo/v5"
 )
 
 type cardResponse struct {
@@ -14,7 +14,7 @@ type cardResponse struct {
 	Description string `json:"description"`
 }
 
-func writeResponse(w http.ResponseWriter, cards []domain.Card) {
+func writeResponse(c *echo.Context, cards []domain.Card) error {
 	// An empty collection must encode as [] rather than null.
 	resp := make([]cardResponse, 0, len(cards))
 	for _, card := range cards {
@@ -25,22 +25,10 @@ func writeResponse(w http.ResponseWriter, cards []domain.Card) {
 		})
 	}
 
-	data, err := json.Marshal(resp)
-	if err != nil {
-		slog.Error("failed to marshal response", "error", err)
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write(data); err != nil {
-		slog.Error("failed to write response", "error", err)
-	}
+	return c.JSON(http.StatusOK, resp)
 }
 
-func writeError(w http.ResponseWriter, err error) {
+func writeError(c *echo.Context, err error) error {
 	slog.Error("failed to get cards", "error", err)
-	http.Error(w, "failed to get cards", http.StatusInternalServerError)
+	return c.String(http.StatusInternalServerError, "failed to get cards\n")
 }
-

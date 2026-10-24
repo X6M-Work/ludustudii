@@ -1,13 +1,13 @@
 package get
 
 import (
-	"encoding/json"
 	"errors"
 	"log/slog"
 	"net/http"
 	"regexp"
 
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
+	"github.com/labstack/echo/v5"
 )
 
 var (
@@ -25,45 +25,33 @@ type response struct {
 	Description string `json:"description"`
 }
 
-func bindAndValidate(r *http.Request) (request, error) {
-	id := r.PathValue("id")
+func bindAndValidate(c *echo.Context) (request, error) {
+	id := c.Param("id")
 	if !uuidPattern.MatchString(id) {
 		return request{}, errInvalidCardID
 	}
 	return request{ID: id}, nil
 }
 
-func writeResponse(w http.ResponseWriter, card domain.Card) {
+func writeResponse(c *echo.Context, card domain.Card) error {
 	resp := response{
 		ID:          card.ID,
 		Title:       card.Title,
 		Description: card.Description,
 	}
 
-	data, err := json.Marshal(resp)
-	if err != nil {
-		slog.Error("failed to marshal response", "error", err)
-		http.Error(w, "failed to encode response", http.StatusInternalServerError)
-		return
-	}
-
-	w.Header().Set("Content-Type", "application/json")
-	w.WriteHeader(http.StatusOK)
-	if _, err := w.Write(data); err != nil {
-		slog.Error("failed to write response", "error", err)
-	}
+	return c.JSON(http.StatusOK, resp)
 }
 
-func writeError(w http.ResponseWriter, err error) {
+func writeError(c *echo.Context, err error) error {
 	switch {
 	case errors.Is(err, errInvalidCardID):
 		slog.Error("invalid card id", "error", err)
-		http.Error(w, errInvalidCardID.Error(), http.StatusBadRequest)
+		return c.String(http.StatusBadRequest, errInvalidCardID.Error()+"\n")
 	case errors.Is(err, domain.ErrCardNotFound):
-		http.Error(w, domain.ErrCardNotFound.Error(), http.StatusNotFound)
+		return c.String(http.StatusNotFound, domain.ErrCardNotFound.Error()+"\n")
 	default:
 		slog.Error("failed to get card", "error", err)
-		http.Error(w, "failed to get card", http.StatusInternalServerError)
+		return c.String(http.StatusInternalServerError, "failed to get card\n")
 	}
 }
-

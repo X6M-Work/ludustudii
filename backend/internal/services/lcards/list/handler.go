@@ -1,6 +1,6 @@
 package list
 
-import "net/http"
+import "github.com/labstack/echo/v5"
 
 type Handler struct {
 	store *Store
@@ -10,17 +10,15 @@ func NewHandler(store *Store) *Handler {
 	return &Handler{store: store}
 }
 
-func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+func (h *Handler) Handle(c *echo.Context) error {
+	ctx := c.Request().Context()
 
 	// Step 2: Fetch state
 	cards, err := h.store.List(ctx)
 	if err != nil {
-		writeError(w, err)
-		return
+		return writeError(c, err)
 	}
 
 	// Step 5: Handle response transport
-	writeResponse(w, cards)
+	return writeResponse(c, cards)
 }
-

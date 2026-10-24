@@ -9,6 +9,8 @@ import (
 	"path"
 	"strings"
 	"time"
+
+	"github.com/labstack/echo/v5"
 )
 
 type Handler struct {
@@ -25,22 +27,22 @@ func NewHandler(clientApp *ClientApp) *Handler {
 	}
 }
 
-func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc("/", h.serve)
+func (h *Handler) RegisterRoutes(e *echo.Echo) {
+	e.RouteNotFound("/*", h.serve)
 }
 
-func (h *Handler) serve(w http.ResponseWriter, r *http.Request) {
+func (h *Handler) serve(c *echo.Context) error {
+	w, r := c.Response(), c.Request()
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		w.Header().Set("Allow", "GET, HEAD")
-		http.Error(w, "method not allowed", http.StatusMethodNotAllowed)
-		return
+		return c.String(http.StatusMethodNotAllowed, "method not allowed\n")
 	}
 
 	reqPath := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
 
 	if reqPath == "" || reqPath == "index.html" {
 		serveIndexFile(w, r, h.indexFile)
-		return
+		return nil
 	}
 
 	stat, err := fs.Stat(h.rootFS, reqPath)
@@ -48,12 +50,11 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) {
 		if errors.Is(err, fs.ErrNotExist) {
 			// Do not serve index.html for missing static assets (.js, .css, .png, etc.)
 			if path.Ext(reqPath) != "" {
-				http.NotFound(w, r)
-				return
+				return c.String(http.StatusNotFound, "404 page not found\n")
 			}
 
 			serveIndexFile(w, r, h.indexFile)
-			return
+			return nil
 		}
 
 		slog.ErrorContext(r.Context(), "Failed to stat path",
@@ -62,13 +63,12 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) {
 			slog.Any("error", err),
 		)
 
-		http.Error(w, "Internal Server Error", http.StatusInternalServerError)
-		return
+		return c.String(http.StatusInternalServerError, "Internal Server Error\n")
 	}
 
 	if stat.IsDir() {
 		serveIndexFile(w, r, h.indexFile)
-		return
+		return nil
 	}
 
 	if strings.HasPrefix(reqPath, "assets/") {
@@ -78,6 +78,7 @@ func (h *Handler) serve(w http.ResponseWriter, r *http.Request) {
 	}
 
 	h.fileServer.ServeHTTP(w, r)
+	return nil
 }
 
 func serveIndexFile(w http.ResponseWriter, r *http.Request, f IndexFile) {

@@ -8,6 +8,7 @@ import (
 	"regexp"
 
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
+	"github.com/labstack/echo/v5"
 )
 
 var (
@@ -23,13 +24,14 @@ type request struct {
 	Description string `json:"description"`
 }
 
-func bindAndValidate(r *http.Request) (request, error) {
-	id := r.PathValue("id")
+func bindAndValidate(c *echo.Context) (request, error) {
+	id := c.Param("id")
 	if !uuidPattern.MatchString(id) {
 		return request{}, errInvalidCardID
 	}
 
-	r.Body = http.MaxBytesReader(nil, r.Body, 1<<20) // Max 1MB
+	r := c.Request()
+	r.Body = http.MaxBytesReader(c.Response(), r.Body, 1<<20) // Max 1MB
 
 	var req request
 	if err := json.NewDecoder(r.Body).Decode(&req); err != nil {
@@ -43,32 +45,31 @@ func bindAndValidate(r *http.Request) (request, error) {
 	return req, nil
 }
 
-func writeResponse(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusNoContent)
+func writeResponse(c *echo.Context) error {
+	return c.NoContent(http.StatusNoContent)
 }
 
-func writeError(w http.ResponseWriter, err error) {
+func writeError(c *echo.Context, err error) error {
 	switch {
 	case errors.Is(err, errInvalidCardID):
 		slog.Error("invalid card id", "error", err)
-		http.Error(w, errInvalidCardID.Error(), http.StatusBadRequest)
+		return c.String(http.StatusBadRequest, errInvalidCardID.Error()+"\n")
 	case errors.Is(err, errRequestBodyTooLarge):
 		slog.Error("request body too large", "error", err)
-		http.Error(w, errRequestBodyTooLarge.Error(), http.StatusRequestEntityTooLarge)
+		return c.String(http.StatusRequestEntityTooLarge, errRequestBodyTooLarge.Error()+"\n")
 	case errors.Is(err, errInvalidRequestBody):
 		slog.Error("failed to decode request body", "error", err)
-		http.Error(w, errInvalidRequestBody.Error(), http.StatusBadRequest)
+		return c.String(http.StatusBadRequest, errInvalidRequestBody.Error()+"\n")
 	case errors.Is(err, domain.ErrTitleRequired),
 		errors.Is(err, domain.ErrTitleTooLong),
 		errors.Is(err, domain.ErrDescriptionRequired),
 		errors.Is(err, domain.ErrDescriptionTooLong):
 		slog.Error("invalid request", "error", err)
-		http.Error(w, err.Error(), http.StatusBadRequest)
+		return c.String(http.StatusBadRequest, err.Error()+"\n")
 	case errors.Is(err, domain.ErrCardNotFound):
-		http.Error(w, domain.ErrCardNotFound.Error(), http.StatusNotFound)
+		return c.String(http.StatusNotFound, domain.ErrCardNotFound.Error()+"\n")
 	default:
 		slog.Error("failed to update card", "error", err)
-		http.Error(w, "failed to update card", http.StatusInternalServerError)
+		return c.String(http.StatusInternalServerError, "failed to update card\n")
 	}
 }
-

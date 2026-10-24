@@ -2,6 +2,7 @@ package main
 
 import (
 	"context"
+	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -15,6 +16,7 @@ import (
 	"github.com/apotourlyan/ludustudii/internal/environment"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards"
 	"github.com/apotourlyan/ludustudii/internal/spa"
+	"github.com/labstack/echo/v5"
 )
 
 func main() {
@@ -51,16 +53,11 @@ func run() (err error) {
 		}
 	}()
 
-	mux := http.NewServeMux()
-	// Register API routes
-	lcards.RegisterRoutes(mux, db)
-	mux.HandleFunc("/api/", http.NotFound)
-	// Register SPA routes
-	spa.NewHandler(clientApp).RegisterRoutes(mux)
+	e := newRouter(clientApp, db)
 
 	server := &http.Server{
 		Addr:         net.JoinHostPort("", vars.AppPort),
-		Handler:      mux,
+		Handler:      e,
 		ReadTimeout:  vars.AppReadTimeout,
 		WriteTimeout: vars.AppWriteTimeout,
 		IdleTimeout:  vars.AppIdleTimeout,
@@ -92,4 +89,22 @@ func run() (err error) {
 	}
 
 	return nil
+}
+
+// newRouter keeps API fallbacks separate from the SPA so unknown API URLs never
+// return the client application.
+func newRouter(clientApp *spa.ClientApp, db *sql.DB) *echo.Echo {
+	e := echo.NewWithConfig(echo.Config{
+		Router: echo.NewRouter(echo.RouterConfig{AutoHandleHEAD: true}),
+	})
+	e.Logger = slog.Default()
+	lcards.RegisterRoutes(e, db)
+	apiNotFound := func(c *echo.Context) error {
+		return c.String(http.StatusNotFound, "404 page not found\n")
+	}
+	e.RouteNotFound("/api/*", apiNotFound)
+	// A child route prevents Echo's terminal :id parameter from consuming slashes.
+	e.RouteNotFound("/api/lcards/:id/*", apiNotFound)
+	spa.NewHandler(clientApp).RegisterRoutes(e)
+	return e
 }

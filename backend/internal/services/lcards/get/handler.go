@@ -1,6 +1,6 @@
 package get
 
-import "net/http"
+import "github.com/labstack/echo/v5"
 
 type Handler struct {
 	store *Store
@@ -10,24 +10,21 @@ func NewHandler(store *Store) *Handler {
 	return &Handler{store: store}
 }
 
-func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) {
-	ctx := r.Context()
+func (h *Handler) Handle(c *echo.Context) error {
+	ctx := c.Request().Context()
 
 	// Step 1: Bind and validate request transport
-	req, err := bindAndValidate(r)
+	req, err := bindAndValidate(c)
 	if err != nil {
-		writeError(w, err)
-		return
+		return writeError(c, err)
 	}
 
 	// Step 2: Fetch state
 	card, err := h.store.Get(ctx, req.ID)
 	if err != nil {
-		writeError(w, err)
-		return
+		return writeError(c, err)
 	}
 
 	// Step 5: Handle response transport
-	writeResponse(w, card)
+	return writeResponse(c, card)
 }
-

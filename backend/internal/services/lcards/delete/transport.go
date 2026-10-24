@@ -7,6 +7,7 @@ import (
 	"regexp"
 
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
+	"github.com/labstack/echo/v5"
 )
 
 var (
@@ -18,28 +19,27 @@ type request struct {
 	ID string
 }
 
-func bindAndValidate(r *http.Request) (request, error) {
-	id := r.PathValue("id")
+func bindAndValidate(c *echo.Context) (request, error) {
+	id := c.Param("id")
 	if !uuidPattern.MatchString(id) {
 		return request{}, errInvalidCardID
 	}
 	return request{ID: id}, nil
 }
 
-func writeResponse(w http.ResponseWriter) {
-	w.WriteHeader(http.StatusNoContent)
+func writeResponse(c *echo.Context) error {
+	return c.NoContent(http.StatusNoContent)
 }
 
-func writeError(w http.ResponseWriter, err error) {
+func writeError(c *echo.Context, err error) error {
 	switch {
 	case errors.Is(err, errInvalidCardID):
 		slog.Error("invalid card id", "error", err)
-		http.Error(w, errInvalidCardID.Error(), http.StatusBadRequest)
+		return c.String(http.StatusBadRequest, errInvalidCardID.Error()+"\n")
 	case errors.Is(err, domain.ErrCardNotFound):
-		http.Error(w, domain.ErrCardNotFound.Error(), http.StatusNotFound)
+		return c.String(http.StatusNotFound, domain.ErrCardNotFound.Error()+"\n")
 	default:
 		slog.Error("failed to delete card", "error", err)
-		http.Error(w, "failed to delete card", http.StatusInternalServerError)
+		return c.String(http.StatusInternalServerError, "failed to delete card\n")
 	}
 }
-
