@@ -3,10 +3,17 @@ package update
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
-
-	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 )
+
+var ErrNotFound = errors.New("not found")
+
+type updateParams struct {
+	ID          string
+	Title       string
+	Description string
+}
 
 type Store struct {
 	db *sql.DB
@@ -16,11 +23,11 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
-func (s *Store) Update(ctx context.Context, card domain.Card) error {
+func (s *Store) Update(ctx context.Context, p updateParams) error {
 	query := `UPDATE learning_cards SET title = $1, description = $2 WHERE id = $3`
-	res, err := s.db.ExecContext(ctx, query, card.Title, card.Description, card.ID)
+	res, err := s.db.ExecContext(ctx, query, p.Title, p.Description, p.ID)
 	if err != nil {
-		return fmt.Errorf("update card: %w", err)
+		return fmt.Errorf("update: %w", err)
 	}
 
 	rowsAffected, err := res.RowsAffected()
@@ -28,9 +35,8 @@ func (s *Store) Update(ctx context.Context, card domain.Card) error {
 		return fmt.Errorf("check rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
-		return domain.ErrCardNotFound
+		return ErrNotFound
 	}
 
 	return nil
 }
-

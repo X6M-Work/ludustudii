@@ -17,6 +17,7 @@ import (
 	"github.com/apotourlyan/ludustudii/internal/services/lcards"
 	"github.com/apotourlyan/ludustudii/internal/spa"
 	"github.com/labstack/echo/v5"
+	"github.com/labstack/echo/v5/middleware"
 )
 
 func main() {
@@ -54,6 +55,7 @@ func run() (err error) {
 	}()
 
 	e := newRouter(clientApp, db)
+	e.Use(middleware.BodyLimit(1 << 20)) // 1 MB limit
 
 	server := &http.Server{
 		Addr:         net.JoinHostPort("", vars.AppPort),

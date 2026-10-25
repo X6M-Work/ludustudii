@@ -1,24 +1,56 @@
 package list
 
-import "github.com/labstack/echo/v5"
+import (
+	"context"
+	"log/slog"
+	"net/http"
 
-type Handler struct {
-	store *Store
+	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
+	"github.com/labstack/echo/v5"
+)
+
+const (
+	TextUnexpectedError = "unexpected error"
+)
+
+type executor interface {
+	List(ctx context.Context) ([]row, error)
 }
 
-func NewHandler(store *Store) *Handler {
-	return &Handler{store: store}
+type Handler struct {
+	store executor
+}
+
+func NewHandler(s executor) *Handler {
+	return &Handler{store: s}
 }
 
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 
-	// Step 2: Fetch state
-	cards, err := h.store.List(ctx)
+	data, err := h.store.List(ctx)
 	if err != nil {
-		return writeError(c, err)
+		slog.ErrorContext(ctx, TextUnexpectedError, "error", err)
+		return c.JSON(http.StatusInternalServerError, erresp.New(TextUnexpectedError))
 	}
 
-	// Step 5: Handle response transport
-	return writeResponse(c, cards)
+	return c.JSON(http.StatusOK, toResp(data))
+}
+
+type response struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
+
+func toResp(data []row) []response {
+	resp := make([]response, 0, len(data))
+	for _, d := range data {
+		resp = append(resp, response{
+			ID:          d.ID,
+			Title:       d.Title,
+			Description: d.Description,
+		})
+	}
+	return resp
 }

@@ -12,15 +12,15 @@ import (
 )
 
 func RegisterRoutes(e *echo.Echo, db *sql.DB) {
-	createHandler := create.NewHandler(create.NewStore(db))
-	listHandler := list.NewHandler(list.NewStore(db))
-	getHandler := get.NewHandler(get.NewStore(db))
-	updateHandler := update.NewHandler(update.NewStore(db))
-	deleteHandler := delete.NewHandler(delete.NewStore(db))
+	l := list.NewHandler(list.NewStore(db))
+	g := get.NewHandler(get.NewStore(db))
+	c := create.NewHandler(create.NewStore(db))
+	u := update.NewHandler(update.NewStore(db))
+	d := delete.NewHandler(delete.NewStore(db))
 
-	e.POST("/api/lcards", createHandler.Handle)
-	e.GET("/api/lcards", listHandler.Handle)
-	e.GET("/api/lcards/:id", getHandler.Handle)
-	e.PUT("/api/lcards/:id", updateHandler.Handle)
-	e.DELETE("/api/lcards/:id", deleteHandler.Handle)
+	e.GET("/api/lcards", l.Handle)
+	e.GET("/api/lcards/:id", g.Handle)
+	e.POST("/api/lcards", c.Handle)
+	e.PUT("/api/lcards/:id", u.Handle)
+	e.DELETE("/api/lcards/:id", d.Handle)
 }
