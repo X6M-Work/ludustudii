@@ -2,6 +2,7 @@ package validator
 
 import (
 	"fmt"
+	"strings"
 	"unicode/utf8"
 
 	"github.com/google/uuid"
@@ -23,7 +24,7 @@ func UUID7(field, val string) error {
 }
 
 func Required(field, val string) error {
-	if val == "" {
+	if strings.TrimSpace(val) == "" {
 		return NewFieldError(field, CodeRequired,
 			fmt.Errorf("%q: %w", field, ErrRequired))
 	}

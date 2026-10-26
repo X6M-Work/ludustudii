@@ -18,19 +18,19 @@ type request struct {
 	Description string `json:"description"`
 }
 
-type executor interface {
+type updater interface {
 	Update(ctx context.Context, p updateParams) error
 }
 
 type Handler struct {
-	store         executor
+	store         updater
 	bind          func(c *echo.Context, i any) error
 	sanitize      func(req *request)
 	validate      func(req request) error
 	validateParam func(id string) error
 }
 
-func NewHandler(s executor) *Handler {
+func NewHandler(s updater) *Handler {
 	return &Handler{
 		store:         s,
 		bind:          bind,

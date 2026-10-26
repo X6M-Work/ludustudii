@@ -12,16 +12,16 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-type deletor interface {
+type deleter interface {
 	Delete(ctx context.Context, id string) error
 }
 
 type Handler struct {
-	store         deletor
+	store         deleter
 	validateParam func(id string) error
 }
 
-func NewHandler(s deletor) *Handler {
+func NewHandler(s deleter) *Handler {
 	return &Handler{store: s, validateParam: validateParam}
 }
 
@@ -31,7 +31,7 @@ func (h *Handler) Handle(c *echo.Context) error {
 	id := c.Param("id")
 	if err := h.validateParam(id); err != nil {
 		slog.InfoContext(ctx, domain.TextInvalidID, "error", err)
-		return c.JSON(http.StatusBadRequest, erresp.Validation(err))
+		return c.JSON(http.StatusBadRequest, erresp.Param())
 	}
 
 	if err := h.store.Delete(ctx, id); err != nil {

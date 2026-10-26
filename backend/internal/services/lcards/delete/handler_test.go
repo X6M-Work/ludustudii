@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
+	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 	"github.com/labstack/echo/v5"
 )
@@ -114,6 +115,43 @@ func TestHandler_Handle(t *testing.T) {
 				if got.Code != tt.wantErrCode {
 					t.Errorf("err code: got %q, want %q", got.Code, tt.wantErrCode)
 				}
+			}
+		})
+	}
+}
+
+func TestValidateParam(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		id      string
+		wantErr bool
+	}{
+		{name: "valid uuid v7", id: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
+		{name: "empty", id: "", wantErr: true},
+		{name: "not a uuid", id: "not-a-uuid", wantErr: true},
+		{name: "uuid v4", id: "9b2f6f4e-3c1a-4d2b-8e5f-7a6b5c4d3e2f", wantErr: true},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := validateParam(tt.id)
+			if !tt.wantErr {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+
+			fe, ok := errors.AsType[*validator.FieldError](err)
+			if !ok {
+				t.Fatalf("error: got %v, want *validator.FieldError", err)
+			}
+			if fe.Field != "id" || fe.Code != validator.CodeInvalidUUID7 {
+				t.Errorf("field error: got %s/%s, want id/%s", fe.Field, fe.Code, validator.CodeInvalidUUID7)
 			}
 		})
 	}

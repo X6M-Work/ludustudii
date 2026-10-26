@@ -2,7 +2,6 @@ package get
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"log/slog"
 	"net/http"
@@ -43,7 +42,7 @@ func (h *Handler) Handle(c *echo.Context) error {
 
 	data, err := h.store.Get(ctx, id)
 	if err != nil {
-		if errors.Is(err, sql.ErrNoRows) {
+		if errors.Is(err, domain.ErrNotFound) {
 			slog.InfoContext(ctx, domain.TextNotFound, "error", err)
 			return c.JSON(http.StatusNotFound, erresp.NotFound())
 		}

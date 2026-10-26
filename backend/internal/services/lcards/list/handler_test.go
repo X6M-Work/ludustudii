@@ -76,10 +76,11 @@ func TestHandler_Handle(t *testing.T) {
 			c := e.NewContext(req, rec)
 
 			// Setup handler with mock store
-			h := NewHandler(&mockStore{})
+			m := &mockStore{}
 			if tt.store != nil {
-				tt.store(h.store.(*mockStore))
+				tt.store(m)
 			}
+			h := NewHandler(m)
 
 			// Call the handler and check the response
 			if err := h.Handle(c); err != nil {
@@ -111,6 +112,53 @@ func TestHandler_Handle(t *testing.T) {
 				if got.Code != tt.wantErrCode {
 					t.Errorf("err code: got %q, want %q", got.Code, tt.wantErrCode)
 				}
+			}
+		})
+	}
+}
+
+func TestToResp(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		data []row
+		want []response
+	}{
+		{
+			name: "nil",
+			data: nil,
+			want: []response{},
+		},
+		{
+			name: "empty",
+			data: []row{},
+			want: []response{},
+		},
+		{
+			name: "preserves order",
+			data: []row{
+				{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", Title: "Title 1", Description: "Description 1"},
+				{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066d", Title: "Title 2", Description: "Description 2"},
+			},
+			want: []response{
+				{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", Title: "Title 1", Description: "Description 1"},
+				{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066d", Title: "Title 2", Description: "Description 2"},
+			},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := toResp(tt.data)
+			// A nil slice would serialize to null instead of [].
+			if got == nil {
+				t.Fatal("resp: got nil, want non-nil slice")
+			}
+			if !reflect.DeepEqual(got, tt.want) {
+				t.Errorf("resp: got %+v, want %+v", got, tt.want)
 			}
 		})
 	}
