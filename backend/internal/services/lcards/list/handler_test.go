@@ -21,6 +21,31 @@ func (m *mockStore) List(ctx context.Context) ([]row, error) {
 	return m.listFn(ctx)
 }
 
+func testContext(t *testing.T) (*echo.Context, *httptest.ResponseRecorder) {
+	t.Helper()
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodGet, "/api/lcards", nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	return c, rec
+}
+
+func testHandler(t *testing.T, store func(*mockStore)) *Handler {
+	t.Helper()
+
+	m := &mockStore{
+		listFn: func(ctx context.Context) ([]row, error) {
+			t.Fatal("unexpected call to listFn")
+			return nil, errors.New("")
+		},
+	}
+	if store != nil {
+		store(m)
+	}
+
+	return &Handler{store: m}
+}
+
 func TestHandler_Handle(t *testing.T) {
 	t.Parallel()
 
@@ -70,17 +95,10 @@ func TestHandler_Handle(t *testing.T) {
 			t.Parallel()
 
 			// Setup Echo context and request/response recorder
-			e := echo.New()
-			req := httptest.NewRequest(http.MethodGet, "/api/lcards", nil)
-			rec := httptest.NewRecorder()
-			c := e.NewContext(req, rec)
+			c, rec := testContext(t)
 
 			// Setup handler with mock store
-			m := &mockStore{}
-			if tt.store != nil {
-				tt.store(m)
-			}
-			h := NewHandler(m)
+			h := testHandler(t, tt.store)
 
 			// Call the handler and check the response
 			if err := h.Handle(c); err != nil {

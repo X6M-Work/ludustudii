@@ -9,7 +9,6 @@ import (
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
-	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 	"github.com/labstack/echo/v5"
 )
@@ -20,6 +19,40 @@ type mockStore struct {
 
 func (m *mockStore) Delete(ctx context.Context, id string) error {
 	return m.deleteFn(ctx, id)
+}
+
+func testContext(t *testing.T, id string) (*echo.Context, *httptest.ResponseRecorder) {
+	t.Helper()
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodDelete, "/api/lcards/"+id, nil)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	c.SetPathValues(echo.PathValues{{Name: "id", Value: id}})
+	return c, rec
+}
+
+func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Handler {
+	t.Helper()
+
+	m := &mockStore{
+		deleteFn: func(ctx context.Context, id string) error {
+			t.Fatal("unexpected call to deleteFn")
+			return errors.New("")
+		},
+	}
+	if store != nil {
+		store(m)
+	}
+
+	h := &Handler{
+		store:           m,
+		validateParamID: func(id string) error { return nil },
+	}
+	if setup != nil {
+		setup(h)
+	}
+
+	return h
 }
 
 func TestHandler_Handle(t *testing.T) {
@@ -35,7 +68,7 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "param error",
 			setup: func(h *Handler) {
-				h.validateParam = func(id string) error {
+				h.validateParamID = func(id string) error {
 					return errors.New("")
 				}
 			},
@@ -80,21 +113,10 @@ func TestHandler_Handle(t *testing.T) {
 			t.Parallel()
 
 			// Setup Echo context and request/response recorder
-			e := echo.New()
-			req := httptest.NewRequest(http.MethodDelete, "/api/lcards/"+id, nil)
-			rec := httptest.NewRecorder()
-			c := e.NewContext(req, rec)
-			c.SetPathValues(echo.PathValues{{Name: "id", Value: id}})
+			c, rec := testContext(t, id)
 
 			// Setup handler with mock store
-			m := &mockStore{}
-			if tt.store != nil {
-				tt.store(m)
-			}
-			h := NewHandler(m)
-			if tt.setup != nil {
-				tt.setup(h)
-			}
+			h := testHandler(t, tt.store, tt.setup)
 
 			// Call the handler and check the response
 			if err := h.Handle(c); err != nil {
@@ -120,39 +142,33 @@ func TestHandler_Handle(t *testing.T) {
 	}
 }
 
-func TestValidateParam(t *testing.T) {
+func TestHandler_Wiring(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name    string
-		id      string
-		wantErr bool
-	}{
-		{name: "valid uuid v7", id: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
-		{name: "empty", id: "", wantErr: true},
-		{name: "not a uuid", id: "not-a-uuid", wantErr: true},
-		{name: "uuid v4", id: "9b2f6f4e-3c1a-4d2b-8e5f-7a6b5c4d3e2f", wantErr: true},
+	c, rec := testContext(t, "01A1730E-199D-7F9F-B59D-3BCD6F84066C")
+
+	var gotID string
+	m := &mockStore{
+		deleteFn: func(_ context.Context, id string) error {
+			gotID = id
+			return nil
+		},
+	}
+	h := NewHandler(m)
+
+	if err := h.Handle(c); err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+	if rec.Code != http.StatusNoContent {
+		t.Fatalf("status: got %d, want %d", rec.Code, http.StatusNoContent)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+	wantID := "01a1730e-199d-7f9f-b59d-3bcd6f84066c" // lowercased
+	if gotID != wantID {
+		t.Errorf("id: got %q, want %q", gotID, wantID)
+	}
 
-			err := validateParam(tt.id)
-			if !tt.wantErr {
-				if err != nil {
-					t.Fatalf("unexpected error: %v", err)
-				}
-				return
-			}
-
-			fe, ok := errors.AsType[*validator.FieldError](err)
-			if !ok {
-				t.Fatalf("error: got %v, want *validator.FieldError", err)
-			}
-			if fe.Field != "id" || fe.Code != validator.CodeInvalidUUID7 {
-				t.Errorf("field error: got %s/%s, want id/%s", fe.Field, fe.Code, validator.CodeInvalidUUID7)
-			}
-		})
+	if rec.Body.Len() != 0 {
+		t.Errorf("body: got %q, want empty", rec.Body.String())
 	}
 }

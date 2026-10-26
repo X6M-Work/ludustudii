@@ -10,6 +10,12 @@ const (
 )
 
 func ValidateTitle(val string) error {
+	if err := validator.Trimmed("title", val); err != nil {
+		return err
+	}
+	if err := validator.Normalized("title", val); err != nil {
+		return err
+	}
 	if err := validator.Required("title", val); err != nil {
 		return err
 	}
@@ -20,6 +26,12 @@ func ValidateTitle(val string) error {
 }
 
 func ValidateDescription(val string) error {
+	if err := validator.Trimmed("description", val); err != nil {
+		return err
+	}
+	if err := validator.Normalized("description", val); err != nil {
+		return err
+	}
 	if err := validator.Required("description", val); err != nil {
 		return err
 	}

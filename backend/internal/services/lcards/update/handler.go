@@ -8,6 +8,7 @@ import (
 	"strings"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
+	"github.com/apotourlyan/ludustudii/internal/kit/sanitizer"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 	"github.com/labstack/echo/v5"
@@ -23,28 +24,26 @@ type updater interface {
 }
 
 type Handler struct {
-	store         updater
-	bind          func(c *echo.Context, i any) error
-	sanitize      func(req *request)
-	validate      func(req request) error
-	validateParam func(id string) error
+	store           updater
+	bind            func(c *echo.Context, i any) error
+	validate        func(req request) error
+	validateParamID func(id string) error
 }
 
 func NewHandler(s updater) *Handler {
 	return &Handler{
-		store:         s,
-		bind:          bind,
-		sanitize:      sanitize,
-		validate:      validate,
-		validateParam: validateParam,
+		store:           s,
+		bind:            bind,
+		validate:        validate,
+		validateParamID: validateParamID,
 	}
 }
 
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 
-	id := c.Param("id")
-	if err := h.validateParam(id); err != nil {
+	id := strings.ToLower(c.Param("id"))
+	if err := h.validateParamID(id); err != nil {
 		slog.InfoContext(ctx, domain.TextInvalidID, "error", err)
 		return c.JSON(http.StatusBadRequest, erresp.Param())
 	}
@@ -55,7 +54,7 @@ func (h *Handler) Handle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, erresp.Binding())
 	}
 
-	h.sanitize(&req)
+	sanitize(&req)
 
 	if err := h.validate(req); err != nil {
 		slog.InfoContext(ctx, domain.TextValidation, "error", err)
@@ -85,13 +84,13 @@ func validate(req request) error {
 	)
 }
 
-func validateParam(id string) error {
+func validateParamID(id string) error {
 	return validator.UUID7("id", id)
 }
 
 func sanitize(req *request) {
-	req.Title = strings.TrimSpace(req.Title)
-	req.Description = strings.TrimSpace(req.Description)
+	req.Title = sanitizer.String(req.Title)
+	req.Description = sanitizer.String(req.Description)
 }
 
 func toParams(req request, id string) updateParams {

@@ -17,13 +17,13 @@ func TestValidateTitle(t *testing.T) {
 		wantCode string
 	}{
 		{name: "valid", val: "Title"},
-		{name: "single character", val: "a"},
-		{name: "at max length single-byte", val: strings.Repeat("a", TitleMaxLength)},
-		{name: "at max length multi-byte", val: strings.Repeat("é", TitleMaxLength)},
+		{name: "at min length", val: strings.Repeat("a", 1)},
+		{name: "at max length", val: strings.Repeat("\u00E9", TitleMaxLength)},
+		{name: "normalized", val: "Caf\u00E9"},
+		{name: "untrimmed", val: " Title ", wantCode: validator.CodeUntrimmed},
+		{name: "not normalized", val: "Cafe\u0301", wantCode: validator.CodeNormalized},
 		{name: "empty", val: "", wantCode: validator.CodeRequired},
-		{name: "whitespace", val: " \t\n ", wantCode: validator.CodeRequired},
-		{name: "over max length single-byte", val: strings.Repeat("a", TitleMaxLength+1), wantCode: validator.CodeMaxLength},
-		{name: "over max length multi-byte", val: strings.Repeat("é", TitleMaxLength+1), wantCode: validator.CodeMaxLength},
+		{name: "over max length", val: strings.Repeat("\u00E9", TitleMaxLength+1), wantCode: validator.CodeMaxLength},
 	}
 
 	for _, tt := range tests {
@@ -58,13 +58,13 @@ func TestValidateDescription(t *testing.T) {
 		wantCode string
 	}{
 		{name: "valid", val: "Description"},
-		{name: "single character", val: "a"},
-		{name: "at max length single-byte", val: strings.Repeat("a", DescriptionMaxLength)},
-		{name: "at max length multi-byte", val: strings.Repeat("é", DescriptionMaxLength)},
+		{name: "at min length", val: strings.Repeat("a", 1)},
+		{name: "at max length", val: strings.Repeat("\u00E9", DescriptionMaxLength)},
+		{name: "normalized", val: "Caf\u00E9"},
+		{name: "untrimmed", val: " Description ", wantCode: validator.CodeUntrimmed},
+		{name: "not normalized", val: "Cafe\u0301", wantCode: validator.CodeNormalized},
 		{name: "empty", val: "", wantCode: validator.CodeRequired},
-		{name: "whitespace", val: " \t\n ", wantCode: validator.CodeRequired},
-		{name: "over max length single-byte", val: strings.Repeat("a", DescriptionMaxLength+1), wantCode: validator.CodeMaxLength},
-		{name: "over max length multi-byte", val: strings.Repeat("é", DescriptionMaxLength+1), wantCode: validator.CodeMaxLength},
+		{name: "over max length", val: strings.Repeat("\u00E9", DescriptionMaxLength+1), wantCode: validator.CodeMaxLength},
 	}
 
 	for _, tt := range tests {

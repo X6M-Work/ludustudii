@@ -5,9 +5,9 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
-	"strings"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
+	"github.com/apotourlyan/ludustudii/internal/kit/sanitizer"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 	"github.com/labstack/echo/v5"
 )
@@ -28,7 +28,6 @@ type creator interface {
 type Handler struct {
 	store    creator
 	bind     func(c *echo.Context, i any) error
-	sanitize func(req *request)
 	validate func(req request) error
 }
 
@@ -36,7 +35,6 @@ func NewHandler(s creator) *Handler {
 	return &Handler{
 		store:    s,
 		bind:     bind,
-		sanitize: sanitize,
 		validate: validate,
 	}
 }
@@ -50,7 +48,7 @@ func (h *Handler) Handle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, erresp.Binding())
 	}
 
-	h.sanitize(&req)
+	sanitize(&req)
 
 	if err := h.validate(req); err != nil {
 		slog.InfoContext(ctx, domain.TextValidation, "error", err)
@@ -78,8 +76,8 @@ func validate(req request) error {
 }
 
 func sanitize(req *request) {
-	req.Title = strings.TrimSpace(req.Title)
-	req.Description = strings.TrimSpace(req.Description)
+	req.Title = sanitizer.String(req.Title)
+	req.Description = sanitizer.String(req.Description)
 }
 
 func toParams(req request) createParams {

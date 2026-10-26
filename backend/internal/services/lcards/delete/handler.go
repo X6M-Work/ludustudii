@@ -5,6 +5,7 @@ import (
 	"errors"
 	"log/slog"
 	"net/http"
+	"strings"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
@@ -17,19 +18,19 @@ type deleter interface {
 }
 
 type Handler struct {
-	store         deleter
-	validateParam func(id string) error
+	store           deleter
+	validateParamID func(id string) error
 }
 
 func NewHandler(s deleter) *Handler {
-	return &Handler{store: s, validateParam: validateParam}
+	return &Handler{store: s, validateParamID: validateParamID}
 }
 
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 
-	id := c.Param("id")
-	if err := h.validateParam(id); err != nil {
+	id := strings.ToLower(c.Param("id"))
+	if err := h.validateParamID(id); err != nil {
 		slog.InfoContext(ctx, domain.TextInvalidID, "error", err)
 		return c.JSON(http.StatusBadRequest, erresp.Param())
 	}
@@ -46,6 +47,6 @@ func (h *Handler) Handle(c *echo.Context) error {
 	return c.NoContent(http.StatusNoContent)
 }
 
-func validateParam(id string) error {
+func validateParamID(id string) error {
 	return validator.UUID7("id", id)
 }

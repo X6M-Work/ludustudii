@@ -7,12 +7,10 @@ import (
 	"errors"
 	"net/http"
 	"net/http/httptest"
-	"strings"
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
-	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 	"github.com/labstack/echo/v5"
 )
 
@@ -22,6 +20,41 @@ type mockStore struct {
 
 func (m *mockStore) Create(ctx context.Context, p createParams) (string, error) {
 	return m.createFn(ctx, p)
+}
+
+func testContext(t *testing.T, body []byte) (*echo.Context, *httptest.ResponseRecorder) {
+	t.Helper()
+	e := echo.New()
+	req := httptest.NewRequest(http.MethodPost, "/api/lcards", bytes.NewReader(body))
+	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	rec := httptest.NewRecorder()
+	c := e.NewContext(req, rec)
+	return c, rec
+}
+
+func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Handler {
+	t.Helper()
+
+	m := &mockStore{
+		createFn: func(ctx context.Context, p createParams) (string, error) {
+			t.Fatal("unexpected call to createFn")
+			return "", errors.New("")
+		},
+	}
+	if store != nil {
+		store(m)
+	}
+
+	h := &Handler{
+		store:    m,
+		bind:     func(*echo.Context, any) error { return nil },
+		validate: func(request) error { return nil },
+	}
+	if setup != nil {
+		setup(h)
+	}
+
+	return h
 }
 
 func TestHandler_Handle(t *testing.T) {
@@ -84,21 +117,10 @@ func TestHandler_Handle(t *testing.T) {
 			t.Parallel()
 
 			// Setup Echo context and request/response recorder
-			e := echo.New()
-			req := httptest.NewRequest(http.MethodPost, "/api/lcards", bytes.NewReader(body))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-			rec := httptest.NewRecorder()
-			c := e.NewContext(req, rec)
+			c, rec := testContext(t, body)
 
 			// Setup handler with mock store
-			m := &mockStore{}
-			if tt.store != nil {
-				tt.store(m)
-			}
-			h := NewHandler(m)
-			if tt.setup != nil {
-				tt.setup(h)
-			}
+			h := testHandler(t, tt.store, tt.setup)
 
 			// Call the handler and check the response
 			if err := h.Handle(c); err != nil {
@@ -135,99 +157,47 @@ func TestHandler_Handle(t *testing.T) {
 	}
 }
 
-func TestBind(t *testing.T) {
+func TestHandler_Wiring(t *testing.T) {
 	t.Parallel()
 
-	tests := []struct {
-		name    string
-		body    string
-		want    request
-		wantErr bool
-	}{
-		{
-			name: "valid body",
-			body: `{"title":"Title","description":"Description"}`,
-			want: request{Title: "Title", Description: "Description"},
-		},
-		{
-			name: "missing fields",
-			body: `{}`,
-			want: request{},
-		},
-		{
-			name:    "malformed json",
-			body:    `{"title":`,
-			wantErr: true,
-		},
-		{
-			name:    "wrong field type",
-			body:    `{"title":1}`,
-			wantErr: true,
+	body, _ := json.Marshal(request{
+		Title:       "\t Cafe\u0301 Title \n",       // decomposed é = e + ́
+		Description: "\t Cafe\u0301 Description \n", // decomposed é = e + ́
+	})
+	c, rec := testContext(t, body)
+
+	var gotParams createParams
+	m := &mockStore{
+		createFn: func(_ context.Context, p createParams) (string, error) {
+			gotParams = p
+			return "01a1730e-199d-7f9f-b59d-3bcd6f84066c", nil
 		},
 	}
+	h := NewHandler(m)
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
-
-			e := echo.New()
-			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
-			req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
-			c := e.NewContext(req, httptest.NewRecorder())
-
-			var got request
-			err := bind(c, &got)
-			if tt.wantErr {
-				if err == nil {
-					t.Fatal("expected error, got nil")
-				}
-				return
-			}
-			if err != nil {
-				t.Fatalf("unexpected error: %v", err)
-			}
-			if got != tt.want {
-				t.Errorf("req: got %+v, want %+v", got, tt.want)
-			}
-		})
+	if err := h.Handle(c); err != nil {
+		t.Fatalf("unexpected error: %v", err)
 	}
-}
-
-func TestSanitize(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name string
-		req  request
-		want request
-	}{
-		{
-			name: "trims",
-			req:  request{Title: " \t \n A title \t \n ", Description: " \n \t A description \n \t "},
-			want: request{Title: "A title", Description: "A description"},
-		},
-		{
-			name: "whitespace",
-			req:  request{Title: "   ", Description: "\t\n"},
-			want: request{},
-		},
-		{
-			name: "trimmed",
-			req:  request{Title: "Title", Description: "Description"},
-			want: request{Title: "Title", Description: "Description"},
-		},
+	if rec.Code != http.StatusCreated {
+		t.Fatalf("status: got %d, want %d", rec.Code, http.StatusCreated)
 	}
 
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
-			t.Parallel()
+	wantParams := createParams{
+		Title:       "Caf\u00E9 Title",       // composed é
+		Description: "Caf\u00E9 Description", // composed é
+	}
+	if gotParams != wantParams {
+		t.Errorf("params: got %+q, want %+q", gotParams, wantParams)
+	}
 
-			got := tt.req
-			sanitize(&got)
-			if got != tt.want {
-				t.Errorf("req: got %+v, want %+v", got, tt.want)
-			}
-		})
+	var gotResp response
+	if err := json.Unmarshal(rec.Body.Bytes(), &gotResp); err != nil {
+		t.Fatalf("unmarshal response: %v", err)
+	}
+
+	wantResp := response{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"}
+	if gotResp != wantResp {
+		t.Errorf("resp: got %+v, want %+v", gotResp, wantResp)
 	}
 }
 
@@ -242,49 +212,16 @@ func TestValidate(t *testing.T) {
 		wantErrs []fieldErr
 	}{
 		{
-			name: "all valid",
+			name: "valid",
 			req:  request{Title: "Title", Description: "Description"},
 		},
 		{
-			name: "all at max length",
-			req: request{
-				Title:       strings.Repeat("é", domain.TitleMaxLength),
-				Description: strings.Repeat("é", domain.DescriptionMaxLength),
-			},
-		},
-		{
-			name:     "title missing",
-			req:      request{Description: "Description"},
-			wantErrs: []fieldErr{{"title", validator.CodeRequired}},
-		},
-		{
-			name:     "description missing",
-			req:      request{Title: "Title"},
-			wantErrs: []fieldErr{{"description", validator.CodeRequired}},
-		},
-		{
-			name: "all missing",
+			name: "invalid",
 			req:  request{},
 			wantErrs: []fieldErr{
 				{"title", validator.CodeRequired},
 				{"description", validator.CodeRequired},
 			},
-		},
-		{
-			name: "title too long",
-			req: request{
-				Title:       strings.Repeat("a", domain.TitleMaxLength+1),
-				Description: "Description",
-			},
-			wantErrs: []fieldErr{{"title", validator.CodeMaxLength}},
-		},
-		{
-			name: "description too long",
-			req: request{
-				Title:       "Title",
-				Description: strings.Repeat("a", domain.DescriptionMaxLength+1),
-			},
-			wantErrs: []fieldErr{{"description", validator.CodeMaxLength}},
 		},
 	}
 

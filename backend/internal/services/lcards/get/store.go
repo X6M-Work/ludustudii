@@ -3,6 +3,7 @@ package get
 import (
 	"context"
 	"database/sql"
+	"errors"
 
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 )
@@ -27,7 +28,7 @@ func (s *Store) Get(ctx context.Context, id string) (row, error) {
 	err := s.db.
 		QueryRowContext(ctx, query, id).
 		Scan(&data.ID, &data.Title, &data.Description)
-	if err == sql.ErrNoRows {
+	if errors.Is(err, sql.ErrNoRows) {
 		return data, domain.ErrNotFound
 	}
 	return data, err

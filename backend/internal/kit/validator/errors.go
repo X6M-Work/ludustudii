@@ -4,6 +4,8 @@ import "errors"
 
 var (
 	ErrInvalidUUID7 = errors.New("is invalid uuid v7")
+	ErrUntrimmed    = errors.New("contains leading or trailing whitespace")
+	ErrNormalized   = errors.New("is not normalized")
 	ErrRequired     = errors.New("is required")
 	ErrMaxLength    = errors.New("exceeds maximum length")
 )
