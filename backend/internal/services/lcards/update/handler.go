@@ -13,14 +13,6 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-const (
-	TextInvalidParamID  = "invalid param id"
-	TextBindingError    = "body binding error"
-	TextValidationError = "validation error"
-	TextUnexpectedError = "unexpected error"
-	TextNotFound        = "card not found"
-)
-
 type request struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
@@ -31,43 +23,59 @@ type executor interface {
 }
 
 type Handler struct {
-	store executor
+	store         executor
+	bind          func(c *echo.Context, i any) error
+	sanitize      func(req *request)
+	validate      func(req request) error
+	validateParam func(id string) error
 }
 
 func NewHandler(s executor) *Handler {
-	return &Handler{store: s}
+	return &Handler{
+		store:         s,
+		bind:          bind,
+		sanitize:      sanitize,
+		validate:      validate,
+		validateParam: validateParam,
+	}
 }
 
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 
 	id := c.Param("id")
-	if err := validator.UUID7("id", id); err != nil {
-		slog.ErrorContext(ctx, TextInvalidParamID, "error", err)
-		return c.JSON(http.StatusBadRequest, erresp.New(TextInvalidParamID))
+	if err := h.validateParam(id); err != nil {
+		slog.InfoContext(ctx, domain.TextInvalidID, "error", err)
+		return c.JSON(http.StatusBadRequest, erresp.Param())
 	}
 
 	var req request
-	if err := c.Bind(&req); err != nil {
-		slog.ErrorContext(ctx, TextBindingError, "error", err)
-		return c.JSON(http.StatusBadRequest, erresp.New(TextBindingError))
+	if err := h.bind(c, &req); err != nil {
+		slog.InfoContext(ctx, domain.TextBinding, "error", err)
+		return c.JSON(http.StatusBadRequest, erresp.Binding())
 	}
 
-	if err := validate(sanitize(&req)); err != nil {
-		slog.ErrorContext(ctx, TextValidationError, "error", err)
-		return c.JSON(http.StatusBadRequest, erresp.New(TextValidationError))
+	h.sanitize(&req)
+
+	if err := h.validate(req); err != nil {
+		slog.InfoContext(ctx, domain.TextValidation, "error", err)
+		return c.JSON(http.StatusBadRequest, erresp.Validation(err))
 	}
 
 	if err := h.store.Update(ctx, toParams(req, id)); err != nil {
-		if errors.Is(err, ErrNotFound) {
-			slog.ErrorContext(ctx, TextNotFound, "error", err)
-			return c.JSON(http.StatusNotFound, erresp.New(TextNotFound))
+		if errors.Is(err, domain.ErrNotFound) {
+			slog.InfoContext(ctx, domain.TextNotFound, "error", err)
+			return c.JSON(http.StatusNotFound, erresp.NotFound())
 		}
-		slog.ErrorContext(ctx, TextUnexpectedError, "error", err)
-		return c.JSON(http.StatusInternalServerError, erresp.New(TextUnexpectedError))
+		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
+		return c.JSON(http.StatusInternalServerError, erresp.Unexpected())
 	}
 
 	return c.NoContent(http.StatusNoContent)
+}
+
+func bind(c *echo.Context, i any) error {
+	return c.Bind(i)
 }
 
 func validate(req request) error {
@@ -77,10 +85,13 @@ func validate(req request) error {
 	)
 }
 
-func sanitize(req *request) request {
+func validateParam(id string) error {
+	return validator.UUID7("id", id)
+}
+
+func sanitize(req *request) {
 	req.Title = strings.TrimSpace(req.Title)
 	req.Description = strings.TrimSpace(req.Description)
-	return *req
 }
 
 func toParams(req request, id string) updateParams {

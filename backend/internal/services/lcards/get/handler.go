@@ -9,53 +9,53 @@ import (
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
+	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 	"github.com/labstack/echo/v5"
 )
 
-const (
-	TextInvalidParamID  = "invalid param id"
-	TextUnexpectedError = "unexpected error"
-	TextNotFound        = "card not found"
-)
+type response struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
 
-type executor interface {
+type getter interface {
 	Get(ctx context.Context, id string) (row, error)
 }
 
 type Handler struct {
-	store executor
+	store         getter
+	validateParam func(id string) error
 }
 
-func NewHandler(s executor) *Handler {
-	return &Handler{store: s}
+func NewHandler(s getter) *Handler {
+	return &Handler{store: s, validateParam: validateParam}
 }
 
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 
 	id := c.Param("id")
-	if err := validator.UUID7("id", id); err != nil {
-		slog.ErrorContext(ctx, TextInvalidParamID, "error", err)
-		return c.JSON(http.StatusBadRequest, erresp.New(TextInvalidParamID))
+	if err := h.validateParam(id); err != nil {
+		slog.InfoContext(ctx, domain.TextInvalidID, "error", err)
+		return c.JSON(http.StatusBadRequest, erresp.Param())
 	}
 
 	data, err := h.store.Get(ctx, id)
 	if err != nil {
 		if errors.Is(err, sql.ErrNoRows) {
-			slog.ErrorContext(ctx, TextNotFound, "error", err)
-			return c.JSON(http.StatusNotFound, erresp.New(TextNotFound))
+			slog.InfoContext(ctx, domain.TextNotFound, "error", err)
+			return c.JSON(http.StatusNotFound, erresp.NotFound())
 		}
-		slog.ErrorContext(ctx, TextUnexpectedError, "error", err)
-		return c.JSON(http.StatusInternalServerError, erresp.New(TextUnexpectedError))
+		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
+		return c.JSON(http.StatusInternalServerError, erresp.Unexpected())
 	}
 
 	return c.JSON(http.StatusOK, toResp(data))
 }
 
-type response struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
+func validateParam(id string) error {
+	return validator.UUID7("id", id)
 }
 
 func toResp(data row) response {

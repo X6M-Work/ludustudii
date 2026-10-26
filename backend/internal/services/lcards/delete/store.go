@@ -3,11 +3,10 @@ package delete
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
-)
 
-var ErrNotFound = errors.New("not found")
+	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
+)
 
 type Store struct {
 	db *sql.DB
@@ -29,7 +28,7 @@ func (s *Store) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("check rows affected: %w", err)
 	}
 	if rows == 0 {
-		return ErrNotFound
+		return domain.ErrNotFound
 	}
 
 	return nil

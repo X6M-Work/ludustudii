@@ -3,11 +3,10 @@ package update
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
-)
 
-var ErrNotFound = errors.New("not found")
+	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
+)
 
 type updateParams struct {
 	ID          string
@@ -35,7 +34,7 @@ func (s *Store) Update(ctx context.Context, p updateParams) error {
 		return fmt.Errorf("check rows affected: %w", err)
 	}
 	if rowsAffected == 0 {
-		return ErrNotFound
+		return domain.ErrNotFound
 	}
 
 	return nil

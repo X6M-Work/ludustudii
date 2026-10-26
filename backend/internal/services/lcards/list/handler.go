@@ -6,22 +6,25 @@ import (
 	"net/http"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
+	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 	"github.com/labstack/echo/v5"
 )
 
-const (
-	TextUnexpectedError = "unexpected error"
-)
+type response struct {
+	ID          string `json:"id"`
+	Title       string `json:"title"`
+	Description string `json:"description"`
+}
 
-type executor interface {
+type lister interface {
 	List(ctx context.Context) ([]row, error)
 }
 
 type Handler struct {
-	store executor
+	store lister
 }
 
-func NewHandler(s executor) *Handler {
+func NewHandler(s lister) *Handler {
 	return &Handler{store: s}
 }
 
@@ -30,17 +33,11 @@ func (h *Handler) Handle(c *echo.Context) error {
 
 	data, err := h.store.List(ctx)
 	if err != nil {
-		slog.ErrorContext(ctx, TextUnexpectedError, "error", err)
-		return c.JSON(http.StatusInternalServerError, erresp.New(TextUnexpectedError))
+		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
+		return c.JSON(http.StatusInternalServerError, erresp.Unexpected())
 	}
 
 	return c.JSON(http.StatusOK, toResp(data))
-}
-
-type response struct {
-	ID          string `json:"id"`
-	Title       string `json:"title"`
-	Description string `json:"description"`
 }
 
 func toResp(data []row) []response {

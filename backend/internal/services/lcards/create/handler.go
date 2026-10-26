@@ -12,12 +12,6 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
-const (
-	TextBindingError    = "body binding error"
-	TextValidationError = "validation error"
-	TextUnexpectedError = "unexpected error"
-)
-
 type request struct {
 	Title       string `json:"title"`
 	Description string `json:"description"`
@@ -27,39 +21,53 @@ type response struct {
 	ID string `json:"id"`
 }
 
-type executor interface {
+type creator interface {
 	Create(ctx context.Context, p createParams) (string, error)
 }
 
 type Handler struct {
-	store executor
+	store    creator
+	bind     func(c *echo.Context, i any) error
+	sanitize func(req *request)
+	validate func(req request) error
 }
 
-func NewHandler(s executor) *Handler {
-	return &Handler{store: s}
+func NewHandler(s creator) *Handler {
+	return &Handler{
+		store:    s,
+		bind:     bind,
+		sanitize: sanitize,
+		validate: validate,
+	}
 }
 
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 
 	var req request
-	if err := c.Bind(&req); err != nil {
-		slog.ErrorContext(ctx, TextBindingError, "error", err)
-		return c.JSON(http.StatusBadRequest, erresp.New(TextBindingError))
+	if err := h.bind(c, &req); err != nil {
+		slog.InfoContext(ctx, domain.TextBinding, "error", err)
+		return c.JSON(http.StatusBadRequest, erresp.Binding())
 	}
 
-	if err := validate(sanitize(&req)); err != nil {
-		slog.ErrorContext(ctx, TextValidationError, "error", err)
-		return c.JSON(http.StatusBadRequest, erresp.New(TextValidationError))
+	h.sanitize(&req)
+
+	if err := h.validate(req); err != nil {
+		slog.InfoContext(ctx, domain.TextValidation, "error", err)
+		return c.JSON(http.StatusBadRequest, erresp.Validation(err))
 	}
 
 	id, err := h.store.Create(ctx, toParams(req))
 	if err != nil {
-		slog.ErrorContext(ctx, TextUnexpectedError, "error", err)
-		return c.JSON(http.StatusInternalServerError, erresp.New(TextUnexpectedError))
+		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
+		return c.JSON(http.StatusInternalServerError, erresp.Unexpected())
 	}
 
 	return c.JSON(http.StatusCreated, toResp(id))
+}
+
+func bind(c *echo.Context, i any) error {
+	return c.Bind(i)
 }
 
 func validate(req request) error {
@@ -69,10 +77,9 @@ func validate(req request) error {
 	)
 }
 
-func sanitize(req *request) request {
+func sanitize(req *request) {
 	req.Title = strings.TrimSpace(req.Title)
 	req.Description = strings.TrimSpace(req.Description)
-	return *req
 }
 
 func toParams(req request) createParams {
