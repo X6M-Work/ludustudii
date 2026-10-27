@@ -46,16 +46,22 @@ func Unexpected() ErrorResponse {
 func Validation(err error) ErrorResponse {
 	var errs []*validator.FieldError
 
-	if w, ok := err.(interface{ Unwrap() []error }); ok {
-		for _, e := range w.Unwrap() {
-			fe, ok := errors.AsType[*validator.FieldError](e)
-			if ok {
+	var collect func(error)
+	collect = func(err error) {
+		switch w := err.(type) {
+		case interface{ Unwrap() []error }:
+			for _, e := range w.Unwrap() {
+				collect(e)
+			}
+		case interface{ Unwrap() error }:
+			collect(w.Unwrap())
+		default:
+			if fe, ok := errors.AsType[*validator.FieldError](err); ok {
 				errs = append(errs, fe)
 			}
 		}
-	} else if fe, ok := errors.AsType[*validator.FieldError](err); ok {
-		errs = append(errs, fe)
 	}
+	collect(err)
 
 	return ErrorResponse{
 		Code:   CodeValidation,
