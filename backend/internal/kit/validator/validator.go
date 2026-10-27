@@ -20,7 +20,7 @@ const (
 func UUID7(field, val string) error {
 	id, err := uuid.Parse(val)
 	if err != nil ||
-		id.String() != strings.ToLower(val) ||
+		id.String() != val ||
 		id.Version() != 7 ||
 		id.Variant() != uuid.RFC4122 {
 		return NewFieldError(field, CodeInvalidUUID7,

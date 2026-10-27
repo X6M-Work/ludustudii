@@ -1,8 +1,6 @@
 package erresp
 
 import (
-	"errors"
-
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 )
 
@@ -48,6 +46,10 @@ func Validation(err error) ErrorResponse {
 
 	var collect func(error)
 	collect = func(err error) {
+		if fe, ok := err.(*validator.FieldError); ok {
+			errs = append(errs, fe)
+			return
+		}
 		switch w := err.(type) {
 		case interface{ Unwrap() []error }:
 			for _, e := range w.Unwrap() {
@@ -55,10 +57,6 @@ func Validation(err error) ErrorResponse {
 			}
 		case interface{ Unwrap() error }:
 			collect(w.Unwrap())
-		default:
-			if fe, ok := errors.AsType[*validator.FieldError](err); ok {
-				errs = append(errs, fe)
-			}
 		}
 	}
 	collect(err)

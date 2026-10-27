@@ -161,8 +161,8 @@ func TestHandler_Wiring(t *testing.T) {
 	t.Parallel()
 
 	body, _ := json.Marshal(request{
-		Title:       "\t Cafe\u0301 Title \n",       // decomposed é = e + ́
-		Description: "\t Cafe\u0301 Description \n", // decomposed é = e + ́
+		Title:       "\t Cafe\u0301 Title \n",       // decomposed é = e + U+0301
+		Description: "\t Cafe\u0301 Description \n", // decomposed é = e + U+0301
 	})
 	c, rec := testContext(t, body)
 

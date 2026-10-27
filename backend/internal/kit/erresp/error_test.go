@@ -41,9 +41,9 @@ func TestConstructors(t *testing.T) {
 func TestValidation(t *testing.T) {
 	t.Parallel()
 
-	first := validator.NewFieldError("name", "required", validator.ErrRequired)
-	second := validator.NewFieldError("description", "max_length", validator.ErrMaxLength)
-	third := validator.NewFieldError("id", "invalid_uuid", validator.ErrInvalidUUID7)
+	a := validator.NewFieldError("name", validator.CodeRequired, validator.ErrRequired)
+	b := validator.NewFieldError("description", validator.CodeMaxLength, validator.ErrMaxLength)
+	c := validator.NewFieldError("id", validator.CodeInvalidUUID7, validator.ErrInvalidUUID7)
 	unrelated := errors.New("unrelated")
 
 	tests := []struct {
@@ -54,34 +54,34 @@ func TestValidation(t *testing.T) {
 		{name: "nil"},
 		{name: "unrelated", err: unrelated},
 		{name: "wrapped unrelated", err: fmt.Errorf("context: %w", unrelated)},
-		{name: "field error", err: first, want: []*validator.FieldError{first}},
+		{name: "field error", err: a, want: []*validator.FieldError{a}},
 		{
 			name: "multiply wrapped field error",
-			err:  fmt.Errorf("outer: %w", fmt.Errorf("inner: %w", first)),
-			want: []*validator.FieldError{first},
+			err:  fmt.Errorf("outer: %w", fmt.Errorf("inner: %w", a)),
+			want: []*validator.FieldError{a},
 		},
 		{
 			name: "joined field errors",
-			err:  errors.Join(first, unrelated, second),
-			want: []*validator.FieldError{first, second},
+			err:  errors.Join(a, unrelated, b),
+			want: []*validator.FieldError{a, b},
 		},
 		{
 			name: "wrapped joined errors",
-			err:  fmt.Errorf("context: %w", errors.Join(first, second)),
-			want: []*validator.FieldError{first, second},
+			err:  fmt.Errorf("context: %w", errors.Join(a, b)),
+			want: []*validator.FieldError{a, b},
 		},
 		{
 			name: "nested joined and wrapped errors",
 			err: errors.Join(
-				fmt.Errorf("context: %w", errors.Join(first, unrelated, second)),
-				errors.Join(fmt.Errorf("context: %w", third)),
+				fmt.Errorf("context: %w", errors.Join(a, unrelated, b)),
+				errors.Join(fmt.Errorf("context: %w", c)),
 			),
-			want: []*validator.FieldError{first, second, third},
+			want: []*validator.FieldError{a, b, c},
 		},
 		{
 			name: "multiple wrapped errors",
-			err:  fmt.Errorf("first: %w; others: %w", first, errors.Join(second, third)),
-			want: []*validator.FieldError{first, second, third},
+			err:  fmt.Errorf("first: %w; others: %w", a, errors.Join(b, c)),
+			want: []*validator.FieldError{a, b, c},
 		},
 	}
 
