@@ -1,7 +1,7 @@
 services:
   app:
     container_name: ludustudii
-    image: golang:1.27.2
+    image: golang:1.27.3
     command: sleep infinity
     volumes:
       - ..:/workspace:cached
