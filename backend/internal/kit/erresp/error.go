@@ -5,11 +5,13 @@ import (
 )
 
 const (
-	CodeBinding    = "bind_error"
-	CodeNotFound   = "not_found"
-	CodeUnexpected = "unexpected_error"
-	CodeValidation = "validation_error"
-	CodeParam      = "param_error"
+	CodeBinding          = "bind_error"
+	CodeMethodNotAllowed = "method_not_allowed"
+	CodeNotFound         = "not_found"
+	CodePayloadTooLarge  = "payload_too_large"
+	CodeUnexpected       = "unexpected_error"
+	CodeValidation       = "validation_error"
+	CodeParam            = "param_error"
 )
 
 type ErrorResponse struct {
@@ -29,9 +31,21 @@ func Binding() ErrorResponse {
 	}
 }
 
+func MethodNotAllowed() ErrorResponse {
+	return ErrorResponse{
+		Code: CodeMethodNotAllowed,
+	}
+}
+
 func NotFound() ErrorResponse {
 	return ErrorResponse{
 		Code: CodeNotFound,
+	}
+}
+
+func PayloadTooLarge() ErrorResponse {
+	return ErrorResponse{
+		Code: CodePayloadTooLarge,
 	}
 }
 

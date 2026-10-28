@@ -18,7 +18,9 @@ func TestConstructors(t *testing.T) {
 	}{
 		{name: "New", new: func() ErrorResponse { return New("custom_error") }, code: "custom_error"},
 		{name: "Binding", new: Binding, code: "bind_error"},
+		{name: "MethodNotAllowed", new: MethodNotAllowed, code: "method_not_allowed"},
 		{name: "NotFound", new: NotFound, code: "not_found"},
+		{name: "PayloadTooLarge", new: PayloadTooLarge, code: "payload_too_large"},
 		{name: "Unexpected", new: Unexpected, code: "unexpected_error"},
 		{name: "Param", new: Param, code: "param_error"},
 	}

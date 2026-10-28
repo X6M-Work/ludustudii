@@ -23,4 +23,18 @@ func RegisterRoutes(e *echo.Echo, db *sql.DB) {
 	e.POST("/api/lcards", c.Handle)
 	e.PUT("/api/lcards/:id", u.Handle)
 	e.DELETE("/api/lcards/:id", d.Handle)
+
+	methodNotAllowed := func(allow string) echo.HandlerFunc {
+		return func(c *echo.Context) error {
+			c.Response().Header().Set(echo.HeaderAllow, allow)
+			return echo.ErrMethodNotAllowed
+		}
+	}
+	e.Any("/api/lcards", methodNotAllowed("GET, HEAD, POST"))
+	e.Any("/api/lcards/:id", methodNotAllowed("GET, HEAD, PUT, DELETE"))
+
+	// A child route prevents Echo's terminal :id parameter from consuming slashes.
+	e.RouteNotFound("/api/lcards/:id/*", func(c *echo.Context) error {
+		return echo.ErrNotFound
+	})
 }

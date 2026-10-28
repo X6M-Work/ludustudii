@@ -2,7 +2,6 @@ package main
 
 import (
 	"context"
-	"database/sql"
 	"errors"
 	"fmt"
 	"log/slog"
@@ -12,12 +11,10 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/apotourlyan/ludustudii/internal/app"
 	"github.com/apotourlyan/ludustudii/internal/database"
 	"github.com/apotourlyan/ludustudii/internal/environment"
-	"github.com/apotourlyan/ludustudii/internal/services/lcards"
 	"github.com/apotourlyan/ludustudii/internal/spa"
-	"github.com/labstack/echo/v5"
-	"github.com/labstack/echo/v5/middleware"
 )
 
 func main() {
@@ -54,8 +51,7 @@ func run() (err error) {
 		}
 	}()
 
-	e := newRouter(clientApp, db)
-	e.Use(middleware.BodyLimit(1 << 20)) // 1 MB limit
+	e := app.NewRouter(clientApp, db)
 
 	server := &http.Server{
 		Addr:         net.JoinHostPort("", vars.AppPort),
@@ -91,22 +87,4 @@ func run() (err error) {
 	}
 
 	return nil
-}
-
-// newRouter keeps API fallbacks separate from the SPA so unknown API URLs never
-// return the client application.
-func newRouter(clientApp *spa.ClientApp, db *sql.DB) *echo.Echo {
-	e := echo.NewWithConfig(echo.Config{
-		Router: echo.NewRouter(echo.RouterConfig{AutoHandleHEAD: true}),
-	})
-	e.Logger = slog.Default()
-	lcards.RegisterRoutes(e, db)
-	apiNotFound := func(c *echo.Context) error {
-		return c.String(http.StatusNotFound, "404 page not found\n")
-	}
-	e.RouteNotFound("/api/*", apiNotFound)
-	// A child route prevents Echo's terminal :id parameter from consuming slashes.
-	e.RouteNotFound("/api/lcards/:id/*", apiNotFound)
-	spa.NewHandler(clientApp).RegisterRoutes(e)
-	return e
 }
