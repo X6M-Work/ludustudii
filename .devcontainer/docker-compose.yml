@@ -10,12 +10,13 @@ services:
     environment:
       - APP_PORT=8080
       - DB_CONNECTION=postgres://ludus:ludus@db:5432/ludustudii_db?sslmode=disable
+      - DB_TEST_CONNECTION=postgres://tester:tester@db_test:5432/ludustudii_db_test?sslmode=disable
     ports:
       - "8080:8080"
       - "5173:5173"
 
   db:
-    container_name: ludustudiidb
+    container_name: ludustudii_db
     image: postgres:18-alpine
     restart: unless-stopped
     volumes:
@@ -27,7 +28,20 @@ services:
     ports:
       - "5432:5432"
   
+  db_test:
+    container_name: ludustudii_db_test
+    image: postgres:18-alpine
+    restart: unless-stopped
+    volumes:
+      - postgres-test-data:/var/lib/postgresql
+    environment:
+      POSTGRES_USER: tester
+      POSTGRES_PASSWORD: tester
+      POSTGRES_DB: ludustudii_db_test
+    ports:
+      - "5433:5432"
+
 volumes:
   postgres-data:
-  postgres-cfg-data:
+  postgres-test-data:
   spa-node-modules:

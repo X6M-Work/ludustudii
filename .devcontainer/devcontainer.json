@@ -11,7 +11,12 @@
         "openai.chatgpt",
         "anthropic.claude-code",
         "typescriptteam.native-preview"
-      ]
+      ],
+      "settings": {
+        "gopls": {
+          "buildFlags": ["-tags=integration"]
+        }
+      }
     }
   },
   "features": {
@@ -22,6 +27,7 @@
   "forwardPorts": [
     8080,
     5432,
+    5433,
     5173
   ],
   "portsAttributes": {
@@ -31,6 +37,9 @@
     "5432": {
       "label": "PostgreSQL"
     },
+    "5433": {
+      "label": "PostgreSQL Test"
+    },
     "5173": {
       "label": "SPA"
     }
@@ -39,7 +48,6 @@
     "onAutoForward": "ignore"
   },
   "containerEnv": {
-    "PORT": "8080",
     "LANG": "C.UTF-8"
   },
   "postCreateCommand": ".devcontainer/post-create.sh"
