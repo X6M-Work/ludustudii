@@ -15,6 +15,7 @@ func TestUUID7(t *testing.T) {
 		wantCode string
 	}{
 		{name: "lowercase", val: "0192f3a4-5b6c-7d8e-9f01-23456789abcd"},
+		{name: "uppercase", val: "0192F3A4-5B6C-7D8E-9F01-23456789ABCD", wantCode: CodeInvalidUUID7},
 		{name: "empty", val: "", wantCode: CodeInvalidUUID7},
 		{name: "not a uuid", val: "not-a-uuid", wantCode: CodeInvalidUUID7},
 		{name: "nil uuid", val: "00000000-0000-0000-0000-000000000000", wantCode: CodeInvalidUUID7},

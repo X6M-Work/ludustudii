@@ -3,12 +3,19 @@ package testkit
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/migrations"
+	"github.com/jackc/pgx/v5/pgconn"
+)
+
+const (
+	PgCodeCheckViolation            = "23514"
+	PgCodeInvalidTextRepresentation = "22P02"
 )
 
 var getTemplate func() (*Template, error)
@@ -43,7 +50,7 @@ func Run(m *testing.M) int {
 func NewDB(t *testing.T) *sql.DB {
 	t.Helper()
 	if getTemplate == nil {
-		t.Fatal("dbtesting: NewDB called without dbtesting.Run in TestMain")
+		t.Fatal("testkit: NewDB called without testkit.Run in TestMain")
 	}
 	tmpl, err := getTemplate()
 	if err != nil {
@@ -59,4 +66,28 @@ func NewDB(t *testing.T) *sql.DB {
 		}
 	})
 	return db
+}
+
+// AssertPgCode fails the test unless err wraps a *pgconn.PgError with the given
+// SQLSTATE code, and returns the underlying *pgconn.PgError.
+func AssertPgCode(t *testing.T, err error, code string) *pgconn.PgError {
+	t.Helper()
+	pgErr, ok := errors.AsType[*pgconn.PgError](err)
+	if !ok {
+		t.Fatalf("err: got %v, want *pgconn.PgError %s", err, code)
+	}
+	if pgErr.Code != code {
+		t.Fatalf("pg code: got %s (%s), want %s", pgErr.Code, pgErr.Message, code)
+	}
+	return pgErr
+}
+
+// AssertPgConstraint fails the test unless err is a Postgres check_violation
+// (23514) for the named constraint.
+func AssertPgConstraint(t *testing.T, err error, constraint string) {
+	t.Helper()
+	pgErr := AssertPgCode(t, err, PgCodeCheckViolation)
+	if pgErr.ConstraintName != constraint {
+		t.Errorf("pg constraint: got %q, want %q", pgErr.ConstraintName, constraint)
+	}
 }
