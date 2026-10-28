@@ -64,10 +64,6 @@ func NewTemplate(ctx context.Context, migrate func(context.Context, *sql.DB) err
 	if err := errors.Join(migrate(ctx, db), db.Close()); err != nil {
 		return nil, errors.Join(fmt.Errorf("migrate template: %w", err), template.Close())
 	}
-	// Terminate any lingering connections to the template database before cloning.
-	if _, err := template.admin.ExecContext(ctx, terminateSQL, name); err != nil {
-		return nil, errors.Join(fmt.Errorf("terminate template connections: %w", err), template.Close())
-	}
 	return template, nil
 }
 
@@ -134,8 +130,6 @@ func dropSQL(name string) string {
 	return fmt.Sprintf(
 		"DROP DATABASE IF EXISTS %s WITH (FORCE)", pgx.Identifier{name}.Sanitize())
 }
-
-const terminateSQL = `SELECT pg_terminate_backend(pid) FROM pg_stat_activity WHERE datname = $1 AND pid <> pg_backend_pid()`
 
 func generateName(prefix string) (string, error) {
 	b := make([]byte, 8)

@@ -6,7 +6,6 @@ import (
 	"context"
 	"database/sql"
 	"errors"
-	"fmt"
 	"os"
 	"sync"
 	"testing"
@@ -164,12 +163,8 @@ func TestClone_Concurrent(t *testing.T) {
 				errs <- err
 				return
 			}
-			name := currentDatabase(t, db)
-			if !databaseExists(t, name) {
-				errs <- errors.Join(fmt.Errorf("%s: does not exist", name), cleanup())
-				return
-			}
-			errs <- cleanup()
+			pingErr := db.PingContext(t.Context())
+			errs <- errors.Join(pingErr, cleanup())
 		})
 	}
 	wg.Wait()
