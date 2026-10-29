@@ -4,6 +4,7 @@ import (
 	"errors"
 	"fmt"
 	"log/slog"
+	"net/url"
 	"os"
 	"strconv"
 	"time"
@@ -54,6 +55,11 @@ func Load() (*Vars, error) {
 		errs = append(errs, fmt.Errorf("get env %s: not set", EnvDBConnectionString))
 	}
 
+	dbURL, err := url.Parse(dbConnectionString)
+	if err != nil {
+		errs = append(errs, fmt.Errorf("parse env %s: %w", EnvDBConnectionString, err))
+	}
+
 	dbMaxOpenConns, err := getEnvInt(EnvDBMaxOpenConns, DefaultDBMaxOpenConns)
 	errs = append(errs, err)
 
@@ -88,7 +94,7 @@ func Load() (*Vars, error) {
 	}
 
 	slog.Info("Environment variables loaded",
-		slog.String("DB_CONNECTION", dbConnectionString),
+		slog.String("DB_CONNECTION", dbURL.Redacted()),
 		slog.Int("DB_MAX_OPEN_CONNS", dbMaxOpenConns),
 		slog.Int("DB_MAX_IDLE_CONNS", dbMaxIdleConns),
 		slog.Duration("DB_CONN_MAX_LIFETIME", dbConnMaxLifetime),
