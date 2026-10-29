@@ -56,6 +56,9 @@ func Load() (*Vars, error) {
 	}
 
 	dbURL, err := url.Parse(dbConnectionString)
+	if err == nil && dbURL.Scheme != "postgres" && dbURL.Scheme != "postgresql" {
+		err = fmt.Errorf("want scheme 'postgres://', got scheme %q", dbURL.Scheme)
+	}
 	if err != nil {
 		errs = append(errs, fmt.Errorf("parse env %s: %w", EnvDBConnectionString, err))
 	}
