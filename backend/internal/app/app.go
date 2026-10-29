@@ -67,6 +67,7 @@ func Run() (err error) {
 	case err := <-errChan:
 		return err
 	case <-ctx.Done():
+		stop()
 		slog.Info("Shutting down HTTP server...")
 	}
 
