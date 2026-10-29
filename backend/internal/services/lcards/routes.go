@@ -4,10 +4,10 @@ import (
 	"database/sql"
 
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/create"
-	"github.com/apotourlyan/ludustudii/internal/services/lcards/delete"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/get"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/list"
+	"github.com/apotourlyan/ludustudii/internal/services/lcards/remove"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/update"
 	"github.com/labstack/echo/v5"
 )
@@ -17,7 +17,7 @@ func RegisterRoutes(e *echo.Echo, db *sql.DB) {
 	g := get.NewHandler(get.NewStore(db))
 	c := create.NewHandler(create.NewStore(db))
 	u := update.NewHandler(update.NewStore(db))
-	d := delete.NewHandler(delete.NewStore(db))
+	d := remove.NewHandler(remove.NewStore(db))
 
 	e.GET(domain.CardsPath, l.Handle)
 	e.GET(domain.CardsPath+"/:id", g.Handle)

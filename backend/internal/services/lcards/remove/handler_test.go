@@ -1,6 +1,6 @@
 //go:build unit
 
-package delete
+package remove
 
 import (
 	"context"
