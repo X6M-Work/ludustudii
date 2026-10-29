@@ -13,7 +13,7 @@ import (
 const MaxBodyBytes = 1 << 20
 
 // NewRouter builds the production handler: middleware, API routes, API
-// fallbacks, and the SPA. Shared by main and the API tests.
+// fallbacks, and the SPA. Shared by app.go and the API tests.
 func NewRouter(clientApp *spa.ClientApp, db *sql.DB) *echo.Echo {
 	e := echo.NewWithConfig(echo.Config{
 		Router:           echo.NewRouter(echo.RouterConfig{AutoHandleHEAD: true}),

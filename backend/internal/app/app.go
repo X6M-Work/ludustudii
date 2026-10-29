@@ -54,7 +54,7 @@ func Run() (err error) {
 
 	errChan := make(chan error, 1)
 	go func() {
-		slog.Info("Starting HTTP server", "port", server.Addr)
+		slog.Info("Starting HTTP server", "port", ev.AppPort)
 		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errChan <- fmt.Errorf("http server error: %w", err)
 		}
