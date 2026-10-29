@@ -24,6 +24,10 @@ func NewFieldError(field, code string, err error) *FieldError {
 	}
 }
 
-func (ve *FieldError) Error() string {
-	return ve.Err.Error()
+func (fe *FieldError) Error() string {
+	return fe.Err.Error()
 }
+
+// Unwrap exposes the underlying sentinel (ErrRequired, ErrMaxLength, ...) so
+// errors.Is works on a *FieldError and on joined errors that contain one.
+func (fe *FieldError) Unwrap() error { return fe.Err }

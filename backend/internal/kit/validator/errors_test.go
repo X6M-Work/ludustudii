@@ -4,6 +4,7 @@ package validator
 
 import (
 	"errors"
+	"fmt"
 	"testing"
 )
 
@@ -23,5 +24,21 @@ func TestFieldError_Error(t *testing.T) {
 	fe := NewFieldError("field", "code", errors.New("message"))
 	if got := fe.Error(); got != "message" {
 		t.Errorf("error: got %q, want %q", got, "message")
+	}
+}
+
+func TestFieldError_Unwrap(t *testing.T) {
+	t.Parallel()
+
+	fe := NewFieldError("field", CodeRequired, fmt.Errorf("%q: %w", "field", ErrRequired))
+	if !errors.Is(fe, ErrRequired) {
+		t.Errorf("errors.Is(fe, ErrRequired): got false, want true")
+	}
+	joined := errors.Join(errors.New("other"), fe)
+	if !errors.Is(joined, ErrRequired) {
+		t.Errorf("errors.Is(joined, ErrRequired): got false, want true")
+	}
+	if errors.Is(fe, ErrMaxLength) {
+		t.Errorf("errors.Is(fe, ErrMaxLength): got true, want false")
 	}
 }

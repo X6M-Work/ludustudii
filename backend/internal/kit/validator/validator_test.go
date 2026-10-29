@@ -64,8 +64,8 @@ func TestUUID7(t *testing.T) {
 			if fe.Field != "id" || fe.Code != tt.wantCode {
 				t.Errorf("field error: got %s/%s, want id/%s", fe.Field, fe.Code, tt.wantCode)
 			}
-			if !errors.Is(fe.Err, ErrInvalidUUID7) {
-				t.Errorf("err: got %v, want %v", fe.Err, ErrInvalidUUID7)
+			if !errors.Is(err, ErrInvalidUUID7) {
+				t.Errorf("err: got %v, want %v", err, ErrInvalidUUID7)
 			}
 		})
 	}
@@ -114,8 +114,8 @@ func TestTrimmed(t *testing.T) {
 			if fe.Field != "field" || fe.Code != tt.wantCode {
 				t.Errorf("field error: got %s/%s, want field/%s", fe.Field, fe.Code, tt.wantCode)
 			}
-			if !errors.Is(fe.Err, ErrUntrimmed) {
-				t.Errorf("err: got %v, want %v", fe.Err, ErrUntrimmed)
+			if !errors.Is(err, ErrUntrimmed) {
+				t.Errorf("err: got %v, want %v", err, ErrUntrimmed)
 			}
 		})
 	}
@@ -155,8 +155,8 @@ func TestNormalized(t *testing.T) {
 			if fe.Field != "field" || fe.Code != tt.wantCode {
 				t.Errorf("field error: got %s/%s, want field/%s", fe.Field, fe.Code, tt.wantCode)
 			}
-			if !errors.Is(fe.Err, ErrNormalized) {
-				t.Errorf("err: got %v, want %v", fe.Err, ErrNormalized)
+			if !errors.Is(err, ErrNormalized) {
+				t.Errorf("err: got %v, want %v", err, ErrNormalized)
 			}
 		})
 	}
@@ -194,8 +194,8 @@ func TestRequired(t *testing.T) {
 			if fe.Field != "field" || fe.Code != tt.wantCode {
 				t.Errorf("field error: got %s/%s, want field/%s", fe.Field, fe.Code, tt.wantCode)
 			}
-			if !errors.Is(fe.Err, ErrRequired) {
-				t.Errorf("err: got %v, want %v", fe.Err, ErrRequired)
+			if !errors.Is(err, ErrRequired) {
+				t.Errorf("err: got %v, want %v", err, ErrRequired)
 			}
 		})
 	}
@@ -236,8 +236,8 @@ func TestMaxLength(t *testing.T) {
 			if fe.Field != "field" || fe.Code != tt.wantCode {
 				t.Errorf("field error: got %s/%s, want field/%s", fe.Field, fe.Code, tt.wantCode)
 			}
-			if !errors.Is(fe.Err, ErrMaxLength) {
-				t.Errorf("err: got %v, want %v", fe.Err, ErrMaxLength)
+			if !errors.Is(err, ErrMaxLength) {
+				t.Errorf("err: got %v, want %v", err, ErrMaxLength)
 			}
 		})
 	}
