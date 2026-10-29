@@ -147,7 +147,7 @@ func TestList(t *testing.T) {
 			Path:   "/api/lcards",
 		})
 		testkit.AssertStatus(t, resp, body, http.StatusOK)
-		testkit.AssertJSON(t, body, `[]`)
+		testkit.AssertJSON(t, body, `{"items":[],"next_cursor":null}`)
 	})
 
 	t.Run("two seeded rows newest first", func(t *testing.T) {
@@ -166,11 +166,155 @@ func TestList(t *testing.T) {
 			Path:   "/api/lcards",
 		})
 		testkit.AssertStatus(t, resp, body, http.StatusOK)
-		testkit.AssertJSON(t, body, `[
-			{"id":"01a1730e-199d-7f9f-b59d-3bcd6f84066b","title":"Newer Title","description":"Newer Description"},
-			{"id":"01a1730e-199d-7f9f-b59d-3bcd6f84066a","title":"Older Title","description":"Older Description"}
-		]`)
+		testkit.AssertJSON(t, body, `{
+			"items": [
+				{"id":"01a1730e-199d-7f9f-b59d-3bcd6f84066b","title":"Newer Title","description":"Newer Description"},
+				{"id":"01a1730e-199d-7f9f-b59d-3bcd6f84066a","title":"Older Title","description":"Older Description"}
+			],
+			"next_cursor": null
+		}`)
 	})
+
+	t.Run("walk pages with limit 1", func(t *testing.T) {
+		t.Parallel()
+		srv, db := newServer(t)
+
+		const (
+			idA = "01a1730e-199d-7f9f-b59d-3bcd6f84066a"
+			idB = "01a1730e-199d-7f9f-b59d-3bcd6f84066b"
+			idC = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
+		)
+		insertCard(t, db, idA, "Title A", "Description A")
+		insertCard(t, db, idB, "Title B", "Description B")
+		insertCard(t, db, idC, "Title C", "Description C")
+
+		wantPages := []string{
+			`{"items":[{"id":"01a1730e-199d-7f9f-b59d-3bcd6f84066c","title":"Title C","description":"Description C"}],
+				"next_cursor":"01a1730e-199d-7f9f-b59d-3bcd6f84066c"}`,
+			`{"items":[{"id":"01a1730e-199d-7f9f-b59d-3bcd6f84066b","title":"Title B","description":"Description B"}],
+				"next_cursor":"01a1730e-199d-7f9f-b59d-3bcd6f84066b"}`,
+			`{"items":[{"id":"01a1730e-199d-7f9f-b59d-3bcd6f84066a","title":"Title A","description":"Description A"}],
+				"next_cursor":null}`,
+		}
+
+		path := "/api/lcards?limit=1"
+		var pages int
+		for {
+			if pages == len(wantPages) {
+				t.Fatalf("pages: got more than %d, want %d", pages, len(wantPages))
+			}
+
+			resp, body := testkit.Do(t, srv, testkit.DoOpts{
+				Method: http.MethodGet,
+				Path:   path,
+			})
+			testkit.AssertStatus(t, resp, body, http.StatusOK)
+			testkit.AssertJSON(t, body, wantPages[pages])
+			pages++
+
+			var got struct {
+				NextCursor *string `json:"next_cursor"`
+			}
+			if err := json.Unmarshal(body, &got); err != nil {
+				t.Fatalf("unmarshal response: %v\n%s", err, body)
+			}
+			if got.NextCursor == nil {
+				break
+			}
+			path = "/api/lcards?limit=1&cursor=" + *got.NextCursor
+		}
+		if pages != len(wantPages) {
+			t.Errorf("pages: got %v, want %v", pages, len(wantPages))
+		}
+	})
+
+	t.Run("default limit", func(t *testing.T) {
+		t.Parallel()
+		srv, db := newServer(t)
+
+		for range 21 {
+			insertCard(t, db, uuid.Must(uuid.NewV7()).String(), "Title", "Description")
+		}
+
+		resp, body := testkit.Do(t, srv, testkit.DoOpts{
+			Method: http.MethodGet,
+			Path:   "/api/lcards",
+		})
+		testkit.AssertStatus(t, resp, body, http.StatusOK)
+
+		var got struct {
+			Items []struct {
+				ID string `json:"id"`
+			} `json:"items"`
+			NextCursor *string `json:"next_cursor"`
+		}
+		if err := json.Unmarshal(body, &got); err != nil {
+			t.Fatalf("unmarshal response: %v\n%s", err, body)
+		}
+		if len(got.Items) != 20 {
+			t.Fatalf("items: got %v, want %v", len(got.Items), 20)
+		}
+		// The cursor must be the last item on the page, not just any non-null value.
+		if got.NextCursor == nil {
+			t.Fatalf("next_cursor: got %v, want %v", got.NextCursor, got.Items[19].ID)
+		}
+		if *got.NextCursor != got.Items[19].ID {
+			t.Errorf("next_cursor: got %v, want %v", *got.NextCursor, got.Items[19].ID)
+		}
+	})
+
+	invalid := []struct {
+		name  string
+		query string
+		want  string
+	}{
+		{
+			name:  "limit not an integer",
+			query: "?limit=abc",
+			want:  `{"code":"validation_error","errors":[{"field":"limit","code":"invalid_integer"}]}`,
+		},
+		{
+			name:  "limit not canonical",
+			query: "?limit=05",
+			want:  `{"code":"validation_error","errors":[{"field":"limit","code":"invalid_integer"}]}`,
+		},
+		{
+			name:  "limit below min",
+			query: "?limit=0",
+			want:  `{"code":"validation_error","errors":[{"field":"limit","code":"out_of_range"}]}`,
+		},
+		{
+			name:  "limit above max",
+			query: "?limit=101",
+			want:  `{"code":"validation_error","errors":[{"field":"limit","code":"out_of_range"}]}`,
+		},
+		{
+			name:  "cursor not a uuid",
+			query: "?cursor=not-a-uuid",
+			want:  `{"code":"validation_error","errors":[{"field":"cursor","code":"invalid_uuid7"}]}`,
+		},
+		{
+			name:  "limit and cursor invalid",
+			query: "?limit=0&cursor=bad",
+			want: `{"code":"validation_error","errors":[
+				{"field":"limit","code":"out_of_range"},
+				{"field":"cursor","code":"invalid_uuid7"}
+			]}`,
+		},
+	}
+	for _, tt := range invalid {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			srv, _ := newServer(t)
+
+			resp, body := testkit.Do(t, srv, testkit.DoOpts{
+				Method: http.MethodGet,
+				Path:   "/api/lcards" + tt.query,
+			})
+			testkit.AssertStatus(t, resp, body, http.StatusBadRequest)
+			testkit.AssertJSON(t, body, tt.want)
+		})
+	}
 }
 
 func TestGet(t *testing.T) {

@@ -242,3 +242,101 @@ func TestMaxLength(t *testing.T) {
 		})
 	}
 }
+
+func TestInteger(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		val      string
+		wantCode string
+	}{
+		{name: "zero", val: "0"},
+		{name: "positive", val: "5"},
+		{name: "multi-digit", val: "100"},
+		{name: "negative", val: "-5"},
+		{name: "empty", val: "", wantCode: CodeInvalidInteger},
+		{name: "letters", val: "abc", wantCode: CodeInvalidInteger},
+		{name: "plus sign", val: "+5", wantCode: CodeInvalidInteger},
+		{name: "leading zero", val: "05", wantCode: CodeInvalidInteger},
+		{name: "negative zero", val: "-0", wantCode: CodeInvalidInteger},
+		{name: "leading space", val: " 5", wantCode: CodeInvalidInteger},
+		{name: "trailing space", val: "5 ", wantCode: CodeInvalidInteger},
+		{name: "exponent", val: "1e2", wantCode: CodeInvalidInteger},
+		{name: "decimal", val: "1.0", wantCode: CodeInvalidInteger},
+		{name: "hex", val: "0x10", wantCode: CodeInvalidInteger},
+		{name: "underscore", val: "1_000", wantCode: CodeInvalidInteger},
+		{name: "overflow", val: "99999999999999999999", wantCode: CodeInvalidInteger},
+		{name: "fullwidth digit", val: "\uFF15", wantCode: CodeInvalidInteger},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := Integer("field", tt.val)
+			if tt.wantCode == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+
+			fe, ok := errors.AsType[*FieldError](err)
+			if !ok {
+				t.Fatalf("error: got %v, want *FieldError", err)
+			}
+			if fe.Field != "field" || fe.Code != tt.wantCode {
+				t.Errorf("field error: got %s/%s, want field/%s", fe.Field, fe.Code, tt.wantCode)
+			}
+			if !errors.Is(err, ErrInvalidInteger) {
+				t.Errorf("err: got %v, want %v", err, ErrInvalidInteger)
+			}
+		})
+	}
+}
+
+func TestIntRange(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		val      int
+		min      int
+		max      int
+		wantCode string
+	}{
+		{name: "at min", val: 1, min: 1, max: 100},
+		{name: "in range", val: 50, min: 1, max: 100},
+		{name: "at max", val: 100, min: 1, max: 100},
+		{name: "min equals max", val: 5, min: 5, max: 5},
+		{name: "below min", val: 0, min: 1, max: 100, wantCode: CodeOutOfRange},
+		{name: "negative", val: -1, min: 1, max: 100, wantCode: CodeOutOfRange},
+		{name: "above max", val: 101, min: 1, max: 100, wantCode: CodeOutOfRange},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := IntRange("field", tt.val, tt.min, tt.max)
+			if tt.wantCode == "" {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+
+			fe, ok := errors.AsType[*FieldError](err)
+			if !ok {
+				t.Fatalf("error: got %v, want *FieldError", err)
+			}
+			if fe.Field != "field" || fe.Code != tt.wantCode {
+				t.Errorf("field error: got %s/%s, want field/%s", fe.Field, fe.Code, tt.wantCode)
+			}
+			if !errors.Is(err, ErrOutOfRange) {
+				t.Errorf("err: got %v, want %v", err, ErrOutOfRange)
+			}
+		})
+	}
+}

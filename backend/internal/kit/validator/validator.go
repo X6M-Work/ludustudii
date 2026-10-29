@@ -2,6 +2,7 @@ package validator
 
 import (
 	"fmt"
+	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -10,11 +11,13 @@ import (
 )
 
 const (
-	CodeInvalidUUID7 = "invalid_uuid7"
-	CodeRequired     = "required"
-	CodeMaxLength    = "max_length"
-	CodeUntrimmed    = "untrimmed"
-	CodeNormalized   = "not_normalized"
+	CodeInvalidUUID7   = "invalid_uuid7"
+	CodeRequired       = "required"
+	CodeMaxLength      = "max_length"
+	CodeUntrimmed      = "untrimmed"
+	CodeNormalized     = "not_normalized"
+	CodeInvalidInteger = "invalid_integer"
+	CodeOutOfRange     = "out_of_range"
 )
 
 func UUID7(field, val string) error {
@@ -58,6 +61,24 @@ func MaxLength(field, val string, max int) error {
 	if curr > max {
 		return NewFieldError(field, CodeMaxLength,
 			fmt.Errorf("%q %d/%d: %w", field, curr, max, ErrMaxLength))
+	}
+	return nil
+}
+
+// Integer accepts only the canonical base-10 form, so "+5", "05" and " 5" fail.
+func Integer(field, val string) error {
+	n, err := strconv.Atoi(val)
+	if err != nil || strconv.Itoa(n) != val {
+		return NewFieldError(field, CodeInvalidInteger,
+			fmt.Errorf("%q: %w", field, ErrInvalidInteger))
+	}
+	return nil
+}
+
+func IntRange(field string, val, min, max int) error {
+	if val < min || val > max {
+		return NewFieldError(field, CodeOutOfRange,
+			fmt.Errorf("%q %d not in %d..%d: %w", field, val, min, max, ErrOutOfRange))
 	}
 	return nil
 }
