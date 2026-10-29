@@ -14,34 +14,15 @@
       ],
       "settings": {
         "gopls": {
-          "buildFlags": ["-tags=integration"]
-        }
+          "buildFlags": ["-tags=unit,integration"]
+        },
+        "go.testTags": "unit,integration"
       }
     }
   },
   "features": {
     "ghcr.io/devcontainers/features/node:2": {
       "version": "26"
-    }
-  },
-  "forwardPorts": [
-    8080,
-    5432,
-    5433,
-    5173
-  ],
-  "portsAttributes": {
-    "8080": {
-      "label": "API"
-    },
-    "5432": {
-      "label": "PostgreSQL"
-    },
-    "5433": {
-      "label": "PostgreSQL Test"
-    },
-    "5173": {
-      "label": "SPA"
     }
   },
   "otherPortsAttributes": {
