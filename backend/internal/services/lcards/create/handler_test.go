@@ -63,12 +63,13 @@ func TestHandler_Handle(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
-		name        string
-		setup       func(h *Handler)
-		store       func(*mockStore)
-		wantCode    int
-		wantResp    *response
-		wantErrCode string
+		name         string
+		setup        func(h *Handler)
+		store        func(*mockStore)
+		wantCode     int
+		wantResp     *response
+		wantErrCode  string
+		wantLocation string
 	}{
 		{
 			name: "binding error",
@@ -107,8 +108,9 @@ func TestHandler_Handle(t *testing.T) {
 					return "01a1730e-199d-7f9f-b59d-3bcd6f84066c", nil
 				}
 			},
-			wantCode: http.StatusCreated,
-			wantResp: &response{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
+			wantCode:     http.StatusCreated,
+			wantResp:     &response{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
+			wantLocation: "/api/lcards/01a1730e-199d-7f9f-b59d-3bcd6f84066c",
 		},
 	}
 
@@ -132,6 +134,11 @@ func TestHandler_Handle(t *testing.T) {
 			// Check the status code first
 			if rec.Code != tt.wantCode {
 				t.Fatalf("status: got %d, want %d", rec.Code, tt.wantCode)
+			}
+
+			// Check the Location header (set on success only)
+			if got := rec.Header().Get(echo.HeaderLocation); got != tt.wantLocation {
+				t.Errorf("location: got %q, want %q", got, tt.wantLocation)
 			}
 
 			// Check the response body if expected response is provided
@@ -200,6 +207,11 @@ func TestHandler_Wiring(t *testing.T) {
 	wantResp := response{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"}
 	if gotResp != wantResp {
 		t.Errorf("resp: got %+v, want %+v", gotResp, wantResp)
+	}
+
+	wantLocation := "/api/lcards/" + "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
+	if gotLocation := rec.Header().Get(echo.HeaderLocation); gotLocation != wantLocation {
+		t.Errorf("location: got %q, want %q", gotLocation, wantLocation)
 	}
 }
 

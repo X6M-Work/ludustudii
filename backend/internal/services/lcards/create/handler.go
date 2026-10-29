@@ -61,6 +61,7 @@ func (h *Handler) Handle(c *echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, erresp.Unexpected())
 	}
 
+	c.Response().Header().Set(echo.HeaderLocation, domain.CardsPath+"/"+id)
 	return c.JSON(http.StatusCreated, toResp(id))
 }
 

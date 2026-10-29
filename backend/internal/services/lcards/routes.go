@@ -5,6 +5,7 @@ import (
 
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/create"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/delete"
+	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/get"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/list"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/update"
@@ -18,11 +19,11 @@ func RegisterRoutes(e *echo.Echo, db *sql.DB) {
 	u := update.NewHandler(update.NewStore(db))
 	d := delete.NewHandler(delete.NewStore(db))
 
-	e.GET("/api/lcards", l.Handle)
-	e.GET("/api/lcards/:id", g.Handle)
-	e.POST("/api/lcards", c.Handle)
-	e.PUT("/api/lcards/:id", u.Handle)
-	e.DELETE("/api/lcards/:id", d.Handle)
+	e.GET(domain.CardsPath, l.Handle)
+	e.GET(domain.CardsPath+"/:id", g.Handle)
+	e.POST(domain.CardsPath, c.Handle)
+	e.PUT(domain.CardsPath+"/:id", u.Handle)
+	e.DELETE(domain.CardsPath+"/:id", d.Handle)
 
 	methodNotAllowed := func(allow string) echo.HandlerFunc {
 		return func(c *echo.Context) error {
@@ -30,11 +31,11 @@ func RegisterRoutes(e *echo.Echo, db *sql.DB) {
 			return echo.ErrMethodNotAllowed
 		}
 	}
-	e.Any("/api/lcards", methodNotAllowed("GET, HEAD, POST"))
-	e.Any("/api/lcards/:id", methodNotAllowed("GET, HEAD, PUT, DELETE"))
+	e.Any(domain.CardsPath, methodNotAllowed("GET, HEAD, POST"))
+	e.Any(domain.CardsPath+"/:id", methodNotAllowed("GET, HEAD, PUT, DELETE"))
 
 	// A child route prevents Echo's terminal :id parameter from consuming slashes.
-	e.RouteNotFound("/api/lcards/:id/*", func(c *echo.Context) error {
+	e.RouteNotFound(domain.CardsPath+"/:id/*", func(c *echo.Context) error {
 		return echo.ErrNotFound
 	})
 }

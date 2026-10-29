@@ -265,6 +265,11 @@ func TestCreate(t *testing.T) {
 		}
 		testkit.AssertJSON(t, body, fmt.Sprintf(`{"id":%q}`, got.ID))
 
+		wantLocation := "/api/lcards/" + got.ID
+		if location := resp.Header.Get(echo.HeaderLocation); location != wantLocation {
+			t.Errorf("location: got %q, want %q", location, wantLocation)
+		}
+
 		u, err := uuid.Parse(got.ID)
 		if err != nil {
 			t.Fatalf("parse id %q: %v", got.ID, err)
@@ -536,12 +541,17 @@ func TestLifecycle(t *testing.T) {
 		t.Fatalf("unmarshal POST response: %v\n%s", err, body)
 	}
 
+	location := resp.Header.Get(echo.HeaderLocation)
+	if location == "" {
+		t.Fatal("POST response: missing Location header")
+	}
+
 	path := "/api/lcards/" + created.ID
 
-	// 2. GET after create
+	// 2. GET after create, following the Location header
 	resp, body = testkit.Do(t, srv, testkit.DoOpts{
 		Method: http.MethodGet,
-		Path:   path,
+		Path:   location,
 	})
 	testkit.AssertStatus(t, resp, body, http.StatusOK)
 	testkit.AssertJSON(t, body, fmt.Sprintf(
