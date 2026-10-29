@@ -4,8 +4,8 @@ import (
 	"database/sql"
 	"log/slog"
 
+	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards"
-	"github.com/apotourlyan/ludustudii/internal/spa"
 	"github.com/labstack/echo/v5"
 	"github.com/labstack/echo/v5/middleware"
 )

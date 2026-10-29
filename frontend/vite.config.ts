@@ -29,7 +29,7 @@ export default defineConfig({
     },
   },
   build: {
-    outDir: path.resolve(__dirname, '../backend/internal/spa/dist'),
+    outDir: path.resolve(__dirname, '../backend/internal/infra/spa/dist'),
     emptyOutDir: true,
   },
 })

@@ -12,9 +12,9 @@ import (
 	"syscall"
 
 	"github.com/apotourlyan/ludustudii/internal/app"
-	"github.com/apotourlyan/ludustudii/internal/database"
-	"github.com/apotourlyan/ludustudii/internal/environment"
-	"github.com/apotourlyan/ludustudii/internal/spa"
+	"github.com/apotourlyan/ludustudii/internal/infra/env"
+	"github.com/apotourlyan/ludustudii/internal/infra/rdb"
+	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 )
 
 func main() {
@@ -25,7 +25,7 @@ func main() {
 }
 
 func run() (err error) {
-	vars, err := environment.Load()
+	vars, err := env.Load()
 	if err != nil {
 		return fmt.Errorf("load environment: %w", err)
 	}
@@ -35,7 +35,7 @@ func run() (err error) {
 		return fmt.Errorf("load client app: %w", err)
 	}
 
-	db, err := database.Connect(database.Options{
+	db, err := rdb.Connect(rdb.Options{
 		ConnectionString: vars.DBConnectionString,
 		MaxOpenConns:     vars.DBMaxOpenConns,
 		MaxIdleConns:     vars.DBMaxIdleConns,

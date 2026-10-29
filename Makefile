@@ -6,7 +6,7 @@ BINARY_NAME := ludustudii
 FRONTEND_DIR := frontend
 BACKEND_DIR := backend
 BUILD_DIR := backend/bin
-SPA_EMBED_DIR := backend/internal/spa/dist
+SPA_EMBED_DIR := backend/internal/infra/spa/dist
 MAIN_REL_DIR := ./cmd/server/api
 MIGRATIONS_DIR := backend/migrations
 

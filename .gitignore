@@ -31,7 +31,7 @@ backend/*.so
 backend/*.dylib
 
 # SPA asset copy target (if using Option A build step)
-backend/internal/spa/dist/
+backend/internal/infra/spa/dist/
 
 # Test artifacts
 *.test

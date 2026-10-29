@@ -13,7 +13,7 @@ import (
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/app"
-	"github.com/apotourlyan/ludustudii/internal/spa"
+	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 	"github.com/apotourlyan/ludustudii/internal/testkit"
 	"github.com/google/uuid"
 	"github.com/labstack/echo/v5"

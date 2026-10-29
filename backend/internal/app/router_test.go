@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/apotourlyan/ludustudii/internal/spa"
+	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 	"github.com/apotourlyan/ludustudii/internal/testkit"
 	"github.com/labstack/echo/v5"
 )
