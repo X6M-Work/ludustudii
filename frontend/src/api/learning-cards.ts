@@ -120,7 +120,9 @@ export function useLearningCard(id: string) {
   })
 }
 
-// Expected list endpoint contract: GET /api/lcards returns LearningCard[].
+// Expected list endpoint contract: GET /api/lcards returns
+// { items: LearningCard[], next_cursor: string | null }.
+// Only the first page is loaded; next_cursor is not followed yet.
 export async function getLearningCards(signal?: AbortSignal): Promise<LearningCard[]> {
   const response = await fetch('/api/lcards', { signal })
 
@@ -128,12 +130,17 @@ export async function getLearningCards(signal?: AbortSignal): Promise<LearningCa
     throw new Error(`Failed to load learning cards: ${response.statusText}`)
   }
 
-  const cards: unknown = await response.json()
-  if (!Array.isArray(cards)) {
-    throw new Error('Expected a list of learning cards')
+  const page: unknown = await response.json()
+  if (
+    typeof page !== 'object' ||
+    page === null ||
+    !('items' in page) ||
+    !Array.isArray(page.items)
+  ) {
+    throw new Error('Expected a page of learning cards')
   }
 
-  return cards
+  return page.items
 }
 
 export function useLearningCards() {
