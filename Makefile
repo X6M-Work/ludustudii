@@ -106,3 +106,9 @@ migrate-status:
 psql:
 	@echo "==> Connecting to PostgreSQL..."
 	@psql "$(DB_CONNECTION)"
+
+.PHONY: git-diff
+
+## git-diff: Copies the git diff to the system clipboard in a terminal-friendly format
+git-diff:
+	git diff HEAD | base64 | tr -d '\n' | awk '{print "\033]52;c;" $$0 "\007"}'
