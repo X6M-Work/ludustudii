@@ -8,6 +8,8 @@ import (
 	"os"
 	"strconv"
 	"time"
+
+	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 )
 
 const (
@@ -21,6 +23,8 @@ const (
 	EnvAppWriteTimeout    = "APP_WRITE_TIMEOUT"
 	EnvAppIdleTimeout     = "APP_IDLE_TIMEOUT"
 	EnvAppShutdownTimeout = "APP_SHUTDOWN_TIMEOUT"
+	EnvLogLevel           = "LOG_LEVEL"
+	EnvLogFormat          = "LOG_FORMAT"
 )
 
 const (
@@ -32,6 +36,8 @@ const (
 	DefaultAppWriteTimeout    = 10 * time.Second
 	DefaultAppIdleTimeout     = 90 * time.Second
 	DefaultAppShutdownTimeout = 15 * time.Second
+	DefaultLogLevel           = slog.LevelInfo
+	DefaultLogFormat          = logging.FormatJSON
 )
 
 type Vars struct {
@@ -45,6 +51,8 @@ type Vars struct {
 	AppWriteTimeout    time.Duration
 	AppIdleTimeout     time.Duration
 	AppShutdownTimeout time.Duration
+	LogLevel           *slog.LevelVar
+	LogFormat          logging.Format
 }
 
 func Load() (*Vars, error) {
@@ -92,22 +100,15 @@ func Load() (*Vars, error) {
 	appShutdownTimeout, err := getEnvDuration(EnvAppShutdownTimeout, DefaultAppShutdownTimeout)
 	errs = append(errs, err)
 
+	logLevel, err := getEnvLevel(EnvLogLevel, DefaultLogLevel)
+	errs = append(errs, err)
+
+	logFormat, err := getEnvFormat(EnvLogFormat, DefaultLogFormat)
+	errs = append(errs, err)
+
 	if err := errors.Join(errs...); err != nil {
 		return nil, err
 	}
-
-	slog.Info("Environment variables loaded",
-		slog.String("DB_CONNECTION", dbURL.Redacted()),
-		slog.Int("DB_MAX_OPEN_CONNS", dbMaxOpenConns),
-		slog.Int("DB_MAX_IDLE_CONNS", dbMaxIdleConns),
-		slog.Duration("DB_CONN_MAX_LIFETIME", dbConnMaxLifetime),
-		slog.Duration("DB_CONN_MAX_IDLE_TIME", dbConnMaxIdleTime),
-		slog.String("APP_PORT", appPort),
-		slog.Duration("APP_READ_TIMEOUT", appReadTimeout),
-		slog.Duration("APP_WRITE_TIMEOUT", appWriteTimeout),
-		slog.Duration("APP_IDLE_TIMEOUT", appIdleTimeout),
-		slog.Duration("APP_SHUTDOWN_TIMEOUT", appShutdownTimeout),
-	)
 
 	return &Vars{
 		DBConnectionString: dbConnectionString,
@@ -120,7 +121,32 @@ func Load() (*Vars, error) {
 		AppWriteTimeout:    appWriteTimeout,
 		AppIdleTimeout:     appIdleTimeout,
 		AppShutdownTimeout: appShutdownTimeout,
+		LogLevel:           logLevel,
+		LogFormat:          logFormat,
 	}, nil
+}
+
+// LogAttrs returns the loaded values as log attrs, with the database password
+// redacted.
+func (v *Vars) LogAttrs() []slog.Attr {
+	dbConnectionString := v.DBConnectionString
+	if dbURL, err := url.Parse(dbConnectionString); err == nil {
+		dbConnectionString = dbURL.Redacted()
+	}
+	return []slog.Attr{
+		slog.String(EnvDBConnectionString, dbConnectionString),
+		slog.Int(EnvDBMaxOpenConns, v.DBMaxOpenConns),
+		slog.Int(EnvDBMaxIdleConns, v.DBMaxIdleConns),
+		slog.Duration(EnvDBConnMaxLifetime, v.DBConnMaxLifetime),
+		slog.Duration(EnvDBConnMaxIdleTime, v.DBConnMaxIdleTime),
+		slog.String(EnvAppPort, v.AppPort),
+		slog.Duration(EnvAppReadTimeout, v.AppReadTimeout),
+		slog.Duration(EnvAppWriteTimeout, v.AppWriteTimeout),
+		slog.Duration(EnvAppIdleTimeout, v.AppIdleTimeout),
+		slog.Duration(EnvAppShutdownTimeout, v.AppShutdownTimeout),
+		slog.String(EnvLogLevel, v.LogLevel.Level().String()),
+		slog.String(EnvLogFormat, v.LogFormat.String()),
+	}
 }
 
 func getEnvInt(key string, defaultValue int) (int, error) {
@@ -142,6 +168,31 @@ func getEnvDuration(key string, defaultValue time.Duration) (time.Duration, erro
 	}
 	value, err := time.ParseDuration(valueStr)
 	if err != nil {
+		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+	return value, nil
+}
+
+func getEnvLevel(key string, defaultValue slog.Level) (*slog.LevelVar, error) {
+	var value slog.LevelVar
+	valueStr := os.Getenv(key)
+	if valueStr == "" {
+		value.Set(defaultValue)
+		return &value, nil
+	}
+	if err := value.UnmarshalText([]byte(valueStr)); err != nil {
+		return nil, fmt.Errorf("parse %s: %w", key, err)
+	}
+	return &value, nil
+}
+
+func getEnvFormat(key string, defaultValue logging.Format) (logging.Format, error) {
+	valueStr := os.Getenv(key)
+	if valueStr == "" {
+		return defaultValue, nil
+	}
+	var value logging.Format
+	if err := value.UnmarshalText([]byte(valueStr)); err != nil {
 		return 0, fmt.Errorf("parse %s: %w", key, err)
 	}
 	return value, nil

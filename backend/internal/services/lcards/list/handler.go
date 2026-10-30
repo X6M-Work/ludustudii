@@ -52,12 +52,12 @@ func (h *Handler) Handle(c *echo.Context) error {
 
 	var req request
 	if err := h.bind(c, &req); err != nil {
-		slog.InfoContext(ctx, domain.TextBinding, "error", err)
+		slog.DebugContext(ctx, domain.TextBinding, "error", err)
 		return c.JSON(http.StatusBadRequest, erresp.Binding())
 	}
 
 	if err := h.validate(req); err != nil {
-		slog.InfoContext(ctx, domain.TextValidation, "error", err)
+		slog.DebugContext(ctx, domain.TextValidation, "error", err)
 		return c.JSON(http.StatusBadRequest, erresp.Validation(err))
 	}
 

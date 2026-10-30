@@ -7,10 +7,12 @@ import (
 	"log/slog"
 	"net"
 	"net/http"
+	"os"
 	"os/signal"
 	"syscall"
 
 	"github.com/apotourlyan/ludustudii/internal/infra/env"
+	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 	"github.com/apotourlyan/ludustudii/internal/infra/rdb"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 )
@@ -20,6 +22,17 @@ func Run() (err error) {
 	if err != nil {
 		return fmt.Errorf("load environment: %w", err)
 	}
+
+	log, err := logging.New(logging.Options{
+		Level:  ev.LogLevel,
+		Format: ev.LogFormat,
+		Output: os.Stdout,
+	})
+	if err != nil {
+		return fmt.Errorf("create logger: %w", err)
+	}
+	slog.SetDefault(log)
+	slog.LogAttrs(context.Background(), slog.LevelInfo, "Environment variables loaded", ev.LogAttrs()...)
 
 	ca, err := spa.Load()
 	if err != nil {
@@ -42,7 +55,7 @@ func Run() (err error) {
 		}
 	}()
 
-	router := NewRouter(ca, db)
+	router := NewRouter(log, ca, db)
 
 	server := &http.Server{
 		Addr:         net.JoinHostPort("", ev.AppPort),

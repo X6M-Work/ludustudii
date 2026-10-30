@@ -44,26 +44,26 @@ func (h *Handler) Handle(c *echo.Context) error {
 
 	id := strings.ToLower(c.Param("id"))
 	if err := h.validateParamID(id); err != nil {
-		slog.InfoContext(ctx, domain.TextInvalidID, "error", err)
+		slog.DebugContext(ctx, domain.TextInvalidID, "error", err)
 		return c.JSON(http.StatusBadRequest, erresp.Param())
 	}
 
 	var req request
 	if err := h.bind(c, &req); err != nil {
-		slog.InfoContext(ctx, domain.TextBinding, "error", err)
+		slog.DebugContext(ctx, domain.TextBinding, "error", err)
 		return c.JSON(http.StatusBadRequest, erresp.Binding())
 	}
 
 	sanitize(&req)
 
 	if err := h.validate(req); err != nil {
-		slog.InfoContext(ctx, domain.TextValidation, "error", err)
+		slog.DebugContext(ctx, domain.TextValidation, "error", err)
 		return c.JSON(http.StatusBadRequest, erresp.Validation(err))
 	}
 
 	if err := h.store.Update(ctx, toParams(req, id)); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
-			slog.InfoContext(ctx, domain.TextNotFound, "error", err)
+			slog.DebugContext(ctx, domain.TextNotFound, "error", err)
 			return c.JSON(http.StatusNotFound, erresp.NotFound())
 		}
 		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
