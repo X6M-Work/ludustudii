@@ -139,11 +139,15 @@ func Load() (*Vars, error) {
 }
 
 // LogAttrs returns the loaded values as log attrs keyed by variable name. The
-// password in the user info of the database URL is redacted; credentials
-// passed as query parameters are not.
+// database password is redacted, whether it is in the URL's user info or in a
+// "password" query parameter.
 func (v *Vars) LogAttrs() []slog.Attr {
 	dbConnectionString := v.DBConnectionString
 	if dbURL, err := url.Parse(dbConnectionString); err == nil {
+		if q := dbURL.Query(); q.Has("password") {
+			q.Set("password", "xxxxx")
+			dbURL.RawQuery = q.Encode()
+		}
 		dbConnectionString = dbURL.Redacted()
 	}
 	return []slog.Attr{

@@ -144,3 +144,26 @@ func TestVars_LogAttrs(t *testing.T) {
 		t.Errorf("%s: got %q, want %q", EnvLogFormat, got[EnvLogFormat], "text")
 	}
 }
+
+func TestVars_LogAttrs_QueryPassword(t *testing.T) {
+	setRequired(t)
+	t.Setenv(EnvDBConnectionString, "postgres://localhost:5432/db?user=user&password=secret&sslmode=disable")
+
+	v, err := Load()
+	if err != nil {
+		t.Fatalf("unexpected error: %v", err)
+	}
+
+	for _, a := range v.LogAttrs() {
+		if a.Key != EnvDBConnectionString {
+			continue
+		}
+		got := a.Value.String()
+		if strings.Contains(got, "secret") {
+			t.Errorf("%s not redacted: %q", EnvDBConnectionString, got)
+		}
+		if !strings.Contains(got, "sslmode=disable") {
+			t.Errorf("%s lost other query parameters: %q", EnvDBConnectionString, got)
+		}
+	}
+}
