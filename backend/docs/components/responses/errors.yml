@@ -1,0 +1,87 @@
+InvalidQuery:
+  description: Invalid query parameters (validation_error), or query binding failure (bind_error).
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/errors.yml#/ErrorResponse'
+      example:
+        code: validation_error
+        errors:
+          - field: limit
+            code: out_of_range
+InvalidCardInput:
+  description: |
+    Malformed JSON, incompatible JSON types, or an unsupported/missing
+    Content-Type on a nonempty body returns bind_error (400, not 415).
+    Empty bodies and invalid field values return validation_error.
+    For PUT, an invalid path ID returns param_error before body binding.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/errors.yml#/ErrorResponse'
+      examples:
+        binding:
+          value:
+            code: bind_error
+        validation:
+          value:
+            code: validation_error
+            errors:
+              - field: title
+                code: required
+              - field: description
+                code: max_length
+        invalidId:
+          summary: PUT only
+          value:
+            code: param_error
+InvalidCardId:
+  description: Path ID is not a hyphenated UUIDv7 with the required variant.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/errors.yml#/ErrorResponse'
+      example:
+        code: param_error
+NotFound:
+  description: No card exists with this ID.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/errors.yml#/ErrorResponse'
+      example:
+        code: not_found
+PayloadTooLarge:
+  description: Request body exceeds the 1 MiB limit and is rejected by middleware.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/errors.yml#/ErrorResponse'
+      example:
+        code: payload_too_large
+UnexpectedError:
+  description: An unexpected server or storage error occurred. Internal details are not returned.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/errors.yml#/ErrorResponse'
+      example:
+        code: unexpected_error

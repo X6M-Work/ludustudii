@@ -1,0 +1,87 @@
+openapi: 3.0.3
+info:
+  title: Ludustudii API
+  version: 1.0.0
+  description: |
+    Backend API for managing learning cards. No authentication is required.
+
+    Requests with JSON bodies must use Content-Type: application/json
+    (media-type parameters are accepted). Titles and descriptions are normalized
+    to Unicode NFC and trimmed before validation and storage. Length limits
+    count Unicode code points after this sanitization.
+
+    Request bodies are limited to 1,048,576 bytes (1 MiB). The body-limit
+    middleware returns 413 when it detects an oversized body. If the limit is
+    encountered while a create/update handler binds a streamed body, the handler
+    can instead return 400 with bind_error.
+
+    Every response includes X-Request-Id, reusing the incoming header when
+    provided or generating an ID otherwise. Unknown /api/* paths return 404
+    with code not_found. Unsupported methods on the collection return 405
+    with code method_not_allowed and Allow: GET, HEAD, POST; unsupported methods
+    on an individual card return 405 with Allow: GET, HEAD, PUT, DELETE.
+    Deeper paths below a card return 404.
+servers:
+  - url: /
+    description: Current backend origin
+security: []
+tags:
+  - name: Learning cards
+    description: Create, read, replace, and delete learning cards.
+paths:
+  /api/lcards:
+    $ref: './paths/lcards.yml'
+  /api/lcards/{id}:
+    $ref: './paths/lcard_by_id.yml'
+components:
+  parameters:
+    CardId:
+      $ref: './components/parameters.yml#/CardId'
+    Limit:
+      $ref: './components/parameters.yml#/Limit'
+    Cursor:
+      $ref: './components/parameters.yml#/Cursor'
+  headers:
+    RequestId:
+      $ref: './components/headers.yml#/RequestId'
+  requestBodies:
+    LearningCardInput:
+      $ref: './components/requestBodies.yml#/LearningCardInput'
+  schemas:
+    CardId:
+      $ref: './components/schemas/lcard.yml#/CardId'
+    LearningCardInput:
+      $ref: './components/schemas/lcard.yml#/LearningCardInput'
+    LearningCard:
+      $ref: './components/schemas/lcard.yml#/LearningCard'
+    CreatedLearningCard:
+      $ref: './components/schemas/lcard.yml#/CreatedLearningCard'
+    LearningCardPage:
+      $ref: './components/schemas/lcard.yml#/LearningCardPage'
+    ErrorResponse:
+      $ref: './components/schemas/errors.yml#/ErrorResponse'
+    FieldError:
+      $ref: './components/schemas/errors.yml#/FieldError'
+  responses:
+    InvalidQuery:
+      $ref: './components/responses/errors.yml#/InvalidQuery'
+    InvalidCardInput:
+      $ref: './components/responses/errors.yml#/InvalidCardInput'
+    InvalidCardId:
+      $ref: './components/responses/errors.yml#/InvalidCardId'
+    NotFound:
+      $ref: './components/responses/errors.yml#/NotFound'
+    PayloadTooLarge:
+      $ref: './components/responses/errors.yml#/PayloadTooLarge'
+    UnexpectedError:
+      $ref: './components/responses/errors.yml#/UnexpectedError'
+    HeadSuccess:
+      $ref: './components/responses/head.yml#/HeadSuccess'
+    HeadInvalidInput:
+      $ref: './components/responses/head.yml#/HeadInvalidInput'
+    HeadNotFound:
+      $ref: './components/responses/head.yml#/HeadNotFound'
+    HeadPayloadTooLarge:
+      $ref: './components/responses/head.yml#/HeadPayloadTooLarge'
+    HeadUnexpectedError:
+      $ref: './components/responses/head.yml#/HeadUnexpectedError'

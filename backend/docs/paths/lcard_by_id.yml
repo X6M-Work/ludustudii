@@ -1,0 +1,79 @@
+parameters:
+  - $ref: '../components/parameters.yml#/CardId'
+get:
+  tags: [Learning cards]
+  operationId: getLearningCard
+  summary: Get a learning card
+  responses:
+    '200':
+      description: The requested card.
+      headers:
+        X-Request-Id:
+          $ref: '../components/headers.yml#/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/lcard.yml#/LearningCard'
+    '400':
+      $ref: '../components/responses/errors.yml#/InvalidCardId'
+    '404':
+      $ref: '../components/responses/errors.yml#/NotFound'
+    '413':
+      $ref: '../components/responses/errors.yml#/PayloadTooLarge'
+    '500':
+      $ref: '../components/responses/errors.yml#/UnexpectedError'
+head:
+  tags: [Learning cards]
+  operationId: headLearningCard
+  summary: Get card response headers
+  description: Executes the get operation with the same ID validation, without a response body.
+  responses:
+    '200':
+      $ref: '../components/responses/head.yml#/HeadSuccess'
+    '400':
+      $ref: '../components/responses/head.yml#/HeadInvalidInput'
+    '404':
+      $ref: '../components/responses/head.yml#/HeadNotFound'
+    '413':
+      $ref: '../components/responses/head.yml#/HeadPayloadTooLarge'
+    '500':
+      $ref: '../components/responses/head.yml#/HeadUnexpectedError'
+put:
+  tags: [Learning cards]
+  operationId: replaceLearningCard
+  summary: Replace a learning card's title and description
+  description: Both fields must be supplied. This operation does not create a missing card.
+  requestBody:
+    $ref: '../components/requestBodies.yml#/LearningCardInput'
+  responses:
+    '204':
+      description: Card updated successfully. No response body.
+      headers:
+        X-Request-Id:
+          $ref: '../components/headers.yml#/RequestId'
+    '400':
+      $ref: '../components/responses/errors.yml#/InvalidCardInput'
+    '404':
+      $ref: '../components/responses/errors.yml#/NotFound'
+    '413':
+      $ref: '../components/responses/errors.yml#/PayloadTooLarge'
+    '500':
+      $ref: '../components/responses/errors.yml#/UnexpectedError'
+delete:
+  tags: [Learning cards]
+  operationId: deleteLearningCard
+  summary: Delete a learning card
+  responses:
+    '204':
+      description: Card deleted successfully. No response body.
+      headers:
+        X-Request-Id:
+          $ref: '../components/headers.yml#/RequestId'
+    '400':
+      $ref: '../components/responses/errors.yml#/InvalidCardId'
+    '404':
+      $ref: '../components/responses/errors.yml#/NotFound'
+    '413':
+      $ref: '../components/responses/errors.yml#/PayloadTooLarge'
+    '500':
+      $ref: '../components/responses/errors.yml#/UnexpectedError'

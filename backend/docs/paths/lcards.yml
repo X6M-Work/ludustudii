@@ -1,0 +1,78 @@
+get:
+  tags: [Learning cards]
+  operationId: listLearningCards
+  summary: List learning cards
+  description: |
+    Returns cards ordered by descending UUIDv7 ID (newest first), using
+    keyset pagination. Pass next_cursor from the preceding response to
+    retrieve cards with smaller IDs. The cursor need not identify an
+    existing card. An empty limit or cursor is treated as omitted.
+  parameters:
+    - $ref: '../components/parameters.yml#/Limit'
+    - $ref: '../components/parameters.yml#/Cursor'
+  responses:
+    '200':
+      description: A page of cards; items is an empty array when no cards match.
+      headers:
+        X-Request-Id:
+          $ref: '../components/headers.yml#/RequestId'
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/lcard.yml#/LearningCardPage'
+          example:
+            items:
+              - id: 019a0000-0000-7000-8000-000000000001
+                title: OpenAPI
+                description: A specification for describing HTTP APIs.
+            next_cursor: null
+    '400':
+      $ref: '../components/responses/errors.yml#/InvalidQuery'
+    '413':
+      $ref: '../components/responses/errors.yml#/PayloadTooLarge'
+    '500':
+      $ref: '../components/responses/errors.yml#/UnexpectedError'
+head:
+  tags: [Learning cards]
+  operationId: headLearningCards
+  summary: Get collection response headers
+  description: Executes the list operation with the same query validation, without a response body.
+  parameters:
+    - $ref: '../components/parameters.yml#/Limit'
+    - $ref: '../components/parameters.yml#/Cursor'
+  responses:
+    '200':
+      $ref: '../components/responses/head.yml#/HeadSuccess'
+    '400':
+      $ref: '../components/responses/head.yml#/HeadInvalidInput'
+    '413':
+      $ref: '../components/responses/head.yml#/HeadPayloadTooLarge'
+    '500':
+      $ref: '../components/responses/head.yml#/HeadUnexpectedError'
+post:
+  tags: [Learning cards]
+  operationId: createLearningCard
+  summary: Create a learning card
+  requestBody:
+    $ref: '../components/requestBodies.yml#/LearningCardInput'
+  responses:
+    '201':
+      description: Card created. The body contains its ID and Location contains its relative URL.
+      headers:
+        X-Request-Id:
+          $ref: '../components/headers.yml#/RequestId'
+        Location:
+          description: Relative URL of the newly created card.
+          schema:
+            type: string
+            example: /api/lcards/019a0000-0000-7000-8000-000000000001
+      content:
+        application/json:
+          schema:
+            $ref: '../components/schemas/lcard.yml#/CreatedLearningCard'
+    '400':
+      $ref: '../components/responses/errors.yml#/InvalidCardInput'
+    '413':
+      $ref: '../components/responses/errors.yml#/PayloadTooLarge'
+    '500':
+      $ref: '../components/responses/errors.yml#/UnexpectedError'

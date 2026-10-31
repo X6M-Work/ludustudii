@@ -1,0 +1,25 @@
+HeadSuccess:
+  description: The corresponding GET succeeded. No response body.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+HeadInvalidInput:
+  description: Invalid query parameters or card ID. No response body.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+HeadNotFound:
+  description: No card exists with this ID. No response body.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+HeadPayloadTooLarge:
+  description: Request body exceeds the 1 MiB limit. No response body.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+HeadUnexpectedError:
+  description: An unexpected server or storage error occurred. No response body.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'

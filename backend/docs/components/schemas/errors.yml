@@ -1,0 +1,30 @@
+ErrorResponse:
+  type: object
+  required: [code]
+  properties:
+    code:
+      type: string
+      enum:
+        - bind_error
+        - validation_error
+        - param_error
+        - not_found
+        - method_not_allowed
+        - payload_too_large
+        - unexpected_error
+        - request_error
+    errors:
+      type: array
+      description: Per-field failures, included only for validation_error responses.
+      items:
+        $ref: '#/FieldError'
+FieldError:
+  type: object
+  required: [field, code]
+  properties:
+    field:
+      type: string
+      example: title
+    code:
+      type: string
+      enum: [invalid_uuid7, required, max_length, untrimmed, not_normalized, invalid_integer, out_of_range]

@@ -1,0 +1,13 @@
+LearningCardInput:
+  required: true
+  description: |
+    JSON card content. Both fields must be nonempty after trimming and NFC
+    normalization. Omitted or null fields are treated as empty and fail
+    validation. Unknown JSON properties are ignored.
+  content:
+    application/json:
+      schema:
+        $ref: 'schemas/lcard.yml#/LearningCardInput'
+      example:
+        title: OpenAPI
+        description: A specification for describing HTTP APIs.

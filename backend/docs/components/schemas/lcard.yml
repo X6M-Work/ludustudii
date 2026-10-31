@@ -1,0 +1,51 @@
+CardId:
+  type: string
+  format: uuid
+  description: Canonical lowercase, hyphenated UUIDv7 with the RFC 9562 variant.
+  pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+  example: 019a0000-0000-7000-8000-000000000001
+LearningCardInput:
+  type: object
+  required: [title, description]
+  properties:
+    title:
+      type: string
+      minLength: 1
+      maxLength: 200
+      description: Card title. Length constraints apply after NFC normalization and trimming.
+      example: OpenAPI
+    description:
+      type: string
+      minLength: 1
+      maxLength: 2000
+      description: Card description. Length constraints apply after NFC normalization and trimming.
+      example: A specification for describing HTTP APIs.
+LearningCard:
+  allOf:
+    - $ref: '#/LearningCardInput'
+    - type: object
+      required: [id]
+      properties:
+        id:
+          $ref: '#/CardId'
+CreatedLearningCard:
+  type: object
+  required: [id]
+  properties:
+    id:
+      $ref: '#/CardId'
+LearningCardPage:
+  type: object
+  required: [items, next_cursor]
+  properties:
+    items:
+      type: array
+      maxItems: 100
+      items:
+        $ref: '#/LearningCard'
+    next_cursor:
+      type: string
+      format: uuid
+      nullable: true
+      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
+      description: Last returned card's ID when more cards follow; null on the final page.
