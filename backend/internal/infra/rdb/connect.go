@@ -4,6 +4,7 @@ package rdb
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 	"time"
 
@@ -21,8 +22,8 @@ type Options struct {
 }
 
 // Connect opens a pgx-backed *sql.DB for opts.ConnectionString, configures
-// its pool and pings the database, giving up after 5 seconds. The caller must
-// close the returned DB.
+// its pool and pings the database, giving up after 5 seconds. If the ping
+// fails, the DB is closed. Otherwise the caller must close the returned DB.
 func Connect(opts Options) (*sql.DB, error) {
 	db, err := sql.Open("pgx", opts.ConnectionString)
 	if err != nil {
@@ -38,7 +39,7 @@ func Connect(opts Options) (*sql.DB, error) {
 	defer cancel()
 
 	if err := db.PingContext(ctx); err != nil {
-		return nil, fmt.Errorf("ping database: %w", err)
+		return nil, errors.Join(fmt.Errorf("ping database: %w", err), db.Close())
 	}
 
 	return db, nil
