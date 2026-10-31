@@ -28,21 +28,26 @@ LearningCardInput:
       description: Card description. Length is counted in code points of the canonical form.
       example: A specification for describing HTTP APIs.
 LearningCard:
-  allOf:
-    - $ref: '#/LearningCardInput'
-    - type: object
-      required: [id]
-      properties:
-        id:
-          $ref: '#/CardId'
+  type: object
+  additionalProperties: false
+  required: [id, title, description]
+  properties:
+    id:
+      $ref: '#/CardId'
+    title:
+      $ref: '#/LearningCardInput/properties/title'
+    description:
+      $ref: '#/LearningCardInput/properties/description'
 CreatedLearningCard:
   type: object
+  additionalProperties: false
   required: [id]
   properties:
     id:
       $ref: '#/CardId'
 LearningCardPage:
   type: object
+  additionalProperties: false
   required: [items, next_cursor]
   properties:
     items:

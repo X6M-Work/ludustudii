@@ -106,6 +106,27 @@ func TestRouting(t *testing.T) {
 		}
 	})
 
+	// AutoHandleHEAD runs the GET handler and suppresses its body for both
+	// successful lookups and errors. Both API paths document HEAD explicitly.
+	for _, status := range []int{http.StatusOK, http.StatusNotFound} {
+		t.Run(fmt.Sprintf("HEAD /api/lcards/{id} returns %d", status), func(t *testing.T) {
+			t.Parallel()
+			srv, db := newServer(t)
+			const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
+			if status == http.StatusOK {
+				insertCard(t, db, id, "Title", "Description")
+			}
+			resp, body := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodHead, Path: "/api/lcards/" + id})
+			testkit.AssertStatus(t, resp, body, status)
+			if len(body) != 0 {
+				t.Errorf("body: got %q, want empty", body)
+			}
+			if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, echo.MIMEApplicationJSON) {
+				t.Errorf("content-type: got %q, want JSON", ct)
+			}
+		})
+	}
+
 	t.Run("PATCH /api/lcards returns 405 with Allow header", func(t *testing.T) {
 		t.Parallel()
 		srv, _ := newServer(t)

@@ -14,19 +14,23 @@ import (
 
 // DoOpts describes a request sent by Do. Path is appended to the server URL;
 // empty ContentType and Body are not sent. Chunked sends Body without a
-// Content-Length, using chunked transfer encoding.
+// Content-Length, using chunked transfer encoding. Headers are copied before
+// ContentType is applied; a nonempty ContentType overrides that header.
 type DoOpts struct {
 	Method      string
 	Path        string
 	ContentType string
+	Headers     http.Header
 	Body        string
 	Chunked     bool
 }
 
-// Do sends the request described by o to s, with a 10-second timeout, and
-// returns the response together with its fully read body. It fails the test
-// if the request cannot be sent or the body cannot be read.
-func Do(t *testing.T, s *httptest.Server, o DoOpts) (*http.Response, []byte) {
+// Do sends the request described by o to s, with a 10-second timeout, without
+// following redirects, validates the response against the OpenAPI
+// specification, and returns the response together with its fully read body.
+// The request itself is not validated, so tests can send invalid input.
+// It fails the test if the request cannot be sent or the body cannot be read.
+func Do(t testing.TB, s *httptest.Server, o DoOpts) (*http.Response, []byte) {
 	t.Helper()
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
@@ -42,10 +46,17 @@ func Do(t *testing.T, s *httptest.Server, o DoOpts) (*http.Response, []byte) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	if o.Headers != nil {
+		req.Header = o.Headers.Clone()
+	}
 	if o.ContentType != "" {
 		req.Header.Set("Content-Type", o.ContentType)
 	}
-	resp, err := s.Client().Do(req)
+	client := *s.Client()
+	client.CheckRedirect = func(*http.Request, []*http.Request) error {
+		return http.ErrUseLastResponse
+	}
+	resp, err := client.Do(req)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -54,6 +65,7 @@ func Do(t *testing.T, s *httptest.Server, o DoOpts) (*http.Response, []byte) {
 	if err != nil {
 		t.Fatal(err)
 	}
+	ValidateResponse(t, req, resp, content)
 	return resp, content
 }
 

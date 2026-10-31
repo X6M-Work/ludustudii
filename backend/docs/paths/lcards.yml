@@ -65,6 +65,7 @@ post:
           $ref: '../components/headers.yml#/RequestId'
         Location:
           description: Relative URL of the newly created card.
+          required: true
           schema:
             type: string
             example: /api/lcards/019a0000-0000-7000-8000-000000000001

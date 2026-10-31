@@ -40,10 +40,12 @@ func NewRouter(log *slog.Logger, clientApp *spa.ClientApp, db *sql.DB) *echo.Ech
 	lcards.RegisterRoutes(e, db)
 
 	// Keeps API fallbacks separate from the SPA so unknown API URLs never
-	// return the client application.
-	e.RouteNotFound("/api/*", func(c *echo.Context) error {
-		return echo.ErrNotFound
-	})
+	// return the client application. "/api/*" does not match "/api" itself.
+	for _, p := range []string{"/api", "/api/*"} {
+		e.RouteNotFound(p, func(c *echo.Context) error {
+			return echo.ErrNotFound
+		})
+	}
 
 	spa.NewHandler(clientApp).RegisterRoutes(e)
 	return e

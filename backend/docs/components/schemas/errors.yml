@@ -1,5 +1,6 @@
 ErrorResponse:
   type: object
+  additionalProperties: false
   required: [code]
   properties:
     code:
@@ -22,6 +23,7 @@ ErrorResponse:
         $ref: '#/FieldError'
 FieldError:
   type: object
+  additionalProperties: false
   required: [field, code]
   properties:
     field:

@@ -19,7 +19,7 @@ info:
     Content-Length or only discovered while reading a chunked body.
 
     Every response includes X-Request-Id, reusing the incoming header when
-    provided or generating an ID otherwise. Unknown /api/* paths return 404
+    provided or generating an ID otherwise. /api and unknown /api/* paths return 404
     with code not_found. Unsupported methods on the collection return 405
     with code method_not_allowed and Allow: GET, HEAD, POST; unsupported methods
     on an individual card return 405 with Allow: GET, HEAD, PUT, DELETE.

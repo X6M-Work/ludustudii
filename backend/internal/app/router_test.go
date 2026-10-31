@@ -54,17 +54,19 @@ func TestNewRouter(t *testing.T) {
 		}
 	})
 
-	t.Run("unknown API path returns 404 JSON, not the SPA", func(t *testing.T) {
-		t.Parallel()
-		srv := newRouterServer(t)
+	for _, path := range []string{"/api", "/api/", "/api/nope"} {
+		t.Run("unknown API path "+path+" returns 404 JSON, not the SPA", func(t *testing.T) {
+			t.Parallel()
+			srv := newRouterServer(t)
 
-		resp, body := testkit.Do(t, srv, testkit.DoOpts{
-			Method: http.MethodGet,
-			Path:   "/api/nope",
+			resp, body := testkit.Do(t, srv, testkit.DoOpts{
+				Method: http.MethodGet,
+				Path:   path,
+			})
+			testkit.AssertStatus(t, resp, body, http.StatusNotFound)
+			testkit.AssertJSON(t, body, `{"code":"not_found"}`)
 		})
-		testkit.AssertStatus(t, resp, body, http.StatusNotFound)
-		testkit.AssertJSON(t, body, `{"code":"not_found"}`)
-	})
+	}
 
 	t.Run("panic in handler returns 500 unexpected_error", func(t *testing.T) {
 		t.Parallel()
@@ -195,16 +197,13 @@ func TestNewRouter_RequestLogging(t *testing.T) {
 		srv := httptest.NewServer(NewRouter(log, clientApp, nil))
 		t.Cleanup(srv.Close)
 
-		req, err := http.NewRequestWithContext(t.Context(), http.MethodGet, srv.URL+"/api/nope", nil)
-		if err != nil {
-			t.Fatal(err)
-		}
-		req.Header.Set(echo.HeaderXRequestID, "client-supplied-id")
-		resp, err := srv.Client().Do(req)
-		if err != nil {
-			t.Fatal(err)
-		}
-		resp.Body.Close()
+		resp, body := testkit.Do(t, srv, testkit.DoOpts{
+			Method:  http.MethodGet,
+			Path:    "/api/nope",
+			Headers: http.Header{echo.HeaderXRequestID: {"client-supplied-id"}},
+		})
+		testkit.AssertStatus(t, resp, body, http.StatusNotFound)
+		testkit.AssertJSON(t, body, `{"code":"not_found"}`)
 		srv.Close() // waits for the handler to return, so the record is written
 
 		if got := resp.Header.Get(echo.HeaderXRequestID); got != "client-supplied-id" {
