@@ -2,6 +2,9 @@ openapi: 3.0.3
 info:
   title: Ludustudii API
   version: 1.0.0
+  license:
+    name: MIT
+    url: https://opensource.org/licenses/MIT
   description: |
     Backend API for managing learning cards. No authentication is required.
 
@@ -37,6 +40,8 @@ components:
   parameters:
     CardId:
       $ref: './components/parameters.yml#/CardId'
+    RequestId:
+      $ref: './components/parameters.yml#/RequestId'
     Limit:
       $ref: './components/parameters.yml#/Limit'
     Cursor:
@@ -65,8 +70,10 @@ components:
   responses:
     InvalidQuery:
       $ref: './components/responses/errors.yml#/InvalidQuery'
-    InvalidCardInput:
-      $ref: './components/responses/errors.yml#/InvalidCardInput'
+    InvalidCreateInput:
+      $ref: './components/responses/errors.yml#/InvalidCreateInput'
+    InvalidReplaceInput:
+      $ref: './components/responses/errors.yml#/InvalidReplaceInput'
     InvalidCardId:
       $ref: './components/responses/errors.yml#/InvalidCardId'
     NotFound:

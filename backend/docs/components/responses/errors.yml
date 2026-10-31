@@ -12,12 +12,11 @@ InvalidQuery:
         errors:
           - field: limit
             code: out_of_range
-InvalidCardInput:
+InvalidCreateInput:
   description: |
     Malformed JSON, incompatible JSON types, or an unsupported/missing
     Content-Type on a nonempty body returns bind_error (400, not 415).
     Empty bodies and invalid field values return validation_error.
-    For PUT, an invalid path ID returns param_error before body binding.
   headers:
     X-Request-Id:
       $ref: '../headers.yml#/RequestId'
@@ -37,10 +36,34 @@ InvalidCardInput:
                 code: required
               - field: description
                 code: max_length
+InvalidReplaceInput:
+  description: |
+    An invalid path ID returns param_error before body binding. Malformed
+    JSON, incompatible JSON types, or an unsupported/missing Content-Type on
+    a nonempty body returns bind_error (400, not 415). Empty bodies and
+    invalid field values return validation_error.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/errors.yml#/ErrorResponse'
+      examples:
         invalidId:
-          summary: PUT only
           value:
             code: param_error
+        binding:
+          value:
+            code: bind_error
+        validation:
+          value:
+            code: validation_error
+            errors:
+              - field: title
+                code: required
+              - field: description
+                code: max_length
 InvalidCardId:
   description: Path ID is not a hyphenated UUIDv7 with the required variant.
   headers:

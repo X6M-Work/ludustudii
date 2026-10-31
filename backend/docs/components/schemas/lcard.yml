@@ -44,6 +44,7 @@ LearningCardPage:
       items:
         $ref: '#/LearningCard'
     next_cursor:
+      # Inlined rather than $ref'd: OpenAPI 3.0 cannot make a referenced schema nullable.
       type: string
       format: uuid
       nullable: true

@@ -1,4 +1,5 @@
 RequestId:
   description: Incoming X-Request-Id value, or a generated request ID when none was supplied.
+  required: true
   schema:
     type: string

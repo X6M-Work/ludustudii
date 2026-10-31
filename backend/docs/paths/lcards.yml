@@ -1,3 +1,5 @@
+parameters:
+  - $ref: '../components/parameters.yml#/RequestId'
 get:
   tags: [Learning cards]
   operationId: listLearningCards
@@ -71,7 +73,7 @@ post:
           schema:
             $ref: '../components/schemas/lcard.yml#/CreatedLearningCard'
     '400':
-      $ref: '../components/responses/errors.yml#/InvalidCardInput'
+      $ref: '../components/responses/errors.yml#/InvalidCreateInput'
     '413':
       $ref: '../components/responses/errors.yml#/PayloadTooLarge'
     '500':

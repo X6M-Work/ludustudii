@@ -1,5 +1,6 @@
 parameters:
   - $ref: '../components/parameters.yml#/CardId'
+  - $ref: '../components/parameters.yml#/RequestId'
 get:
   tags: [Learning cards]
   operationId: getLearningCard
@@ -52,7 +53,7 @@ put:
         X-Request-Id:
           $ref: '../components/headers.yml#/RequestId'
     '400':
-      $ref: '../components/responses/errors.yml#/InvalidCardInput'
+      $ref: '../components/responses/errors.yml#/InvalidReplaceInput'
     '404':
       $ref: '../components/responses/errors.yml#/NotFound'
     '413':

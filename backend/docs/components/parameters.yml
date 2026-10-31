@@ -8,6 +8,12 @@ CardId:
     format: uuid
     pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
     example: 019a0000-0000-7000-8000-000000000001
+RequestId:
+  name: X-Request-Id
+  in: header
+  description: Optional client-supplied request ID, echoed back in the X-Request-Id response header and included in server logs. A new ID is generated when omitted.
+  schema:
+    type: string
 Limit:
   name: limit
   in: query

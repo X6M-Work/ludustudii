@@ -16,6 +16,7 @@ ErrorResponse:
     errors:
       type: array
       description: Per-field failures, included only for validation_error responses.
+      minItems: 1
       items:
         $ref: '#/FieldError'
 FieldError:
@@ -27,4 +28,10 @@ FieldError:
       example: title
     code:
       type: string
+      description: |
+        Card fields (title, description) report required or max_length.
+        Query parameters report invalid_integer or out_of_range (limit) and
+        invalid_uuid7 (cursor). untrimmed and not_normalized are reserved:
+        card fields are trimmed and NFC-normalized before validation, so
+        these codes are not currently returned.
       enum: [invalid_uuid7, required, max_length, untrimmed, not_normalized, invalid_integer, out_of_range]
