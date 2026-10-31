@@ -7,6 +7,7 @@ import (
 	"log/slog"
 	"net/http"
 	"strconv"
+	"strings"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
@@ -53,8 +54,8 @@ func NewHandler(s lister) *Handler {
 // Handle responds 200 with a page of cards ordered newest first. The optional
 // limit query parameter sets the page size (domain.ListMinLimit to
 // domain.ListMaxLimit, default domain.ListDefaultLimit). The optional cursor
-// is the next_cursor of the previous page; next_cursor is null on the last
-// page. Invalid parameters get 400.
+// is the next_cursor of the previous page, matched case-insensitively;
+// next_cursor is null on the last page. Invalid parameters get 400.
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -63,6 +64,8 @@ func (h *Handler) Handle(c *echo.Context) error {
 		slog.DebugContext(ctx, domain.TextBinding, "error", err)
 		return c.JSON(http.StatusBadRequest, erresp.Binding())
 	}
+
+	sanitize(&req)
 
 	if err := h.validate(req); err != nil {
 		slog.DebugContext(ctx, domain.TextValidation, "error", err)
@@ -106,6 +109,12 @@ func validateCursor(val string) error {
 		return nil
 	}
 	return validator.UUID7("cursor", val)
+}
+
+// sanitize lowercases the cursor, so it is accepted in any case like the
+// card ID path parameter.
+func sanitize(req *request) {
+	req.Cursor = strings.ToLower(req.Cursor)
 }
 
 // toParams runs after validate, so Limit is either empty or a valid integer.

@@ -9,6 +9,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"reflect"
+	"strings"
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
@@ -199,6 +200,11 @@ func TestHandler_Wiring(t *testing.T) {
 			wantParams: listParams{Limit: 5, Cursor: id},
 		},
 		{
+			name:       "uppercase cursor",
+			target:     "/api/lcards?cursor=" + strings.ToUpper(id),
+			wantParams: listParams{Limit: domain.ListDefaultLimit, Cursor: id},
+		},
+		{
 			name:       "no query",
 			target:     "/api/lcards",
 			wantParams: listParams{Limit: domain.ListDefaultLimit, Cursor: ""},
@@ -308,6 +314,40 @@ func TestValidate(t *testing.T) {
 					t.Errorf("errors[%d]: got %s/%s, want %s/%s",
 						i, got[i].Field, got[i].Code, want.field, want.code)
 				}
+			}
+		})
+	}
+}
+
+func TestSanitize(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name string
+		req  request
+		want request
+	}{
+		{name: "empty", req: request{}, want: request{}},
+		{
+			name: "lowercase cursor unchanged",
+			req:  request{Limit: "5", Cursor: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
+			want: request{Limit: "5", Cursor: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
+		},
+		{
+			name: "uppercase cursor lowercased",
+			req:  request{Cursor: "01A1730E-199D-7F9F-B59D-3BCD6F84066C"},
+			want: request{Cursor: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
+		},
+	}
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			got := tt.req
+			sanitize(&got)
+			if got != tt.want {
+				t.Errorf("request: got %+v, want %+v", got, tt.want)
 			}
 		})
 	}

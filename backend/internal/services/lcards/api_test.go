@@ -230,6 +230,28 @@ func TestList(t *testing.T) {
 		}
 	})
 
+	t.Run("uppercase cursor", func(t *testing.T) {
+		t.Parallel()
+		srv, db := newServer(t)
+
+		const (
+			idA = "01a1730e-199d-7f9f-b59d-3bcd6f84066a"
+			idB = "01a1730e-199d-7f9f-b59d-3bcd6f84066b"
+		)
+		insertCard(t, db, idA, "Title A", "Description A")
+		insertCard(t, db, idB, "Title B", "Description B")
+
+		resp, body := testkit.Do(t, srv, testkit.DoOpts{
+			Method: http.MethodGet,
+			Path:   "/api/lcards?cursor=" + strings.ToUpper(idB),
+		})
+		testkit.AssertStatus(t, resp, body, http.StatusOK)
+		testkit.AssertJSON(t, body, `{
+			"items": [{"id":"01a1730e-199d-7f9f-b59d-3bcd6f84066a","title":"Title A","description":"Description A"}],
+			"next_cursor": null
+		}`)
+	})
+
 	t.Run("default limit", func(t *testing.T) {
 		t.Parallel()
 		srv, db := newServer(t)

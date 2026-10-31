@@ -26,6 +26,9 @@ Limit:
 Cursor:
   name: cursor
   in: query
-  description: Lowercase, hyphenated UUIDv7 from a previous page's next_cursor. Omit or send an empty value for the first page.
+  description: Hyphenated UUIDv7 from a previous page's next_cursor. Hexadecimal letters are case-insensitive. Omit or send an empty value for the first page.
   schema:
-    $ref: 'schemas/lcard.yml#/CardId'
+    type: string
+    format: uuid
+    pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
+    example: 019a0000-0000-7000-8000-000000000001
