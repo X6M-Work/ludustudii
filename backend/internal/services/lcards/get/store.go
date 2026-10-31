@@ -8,10 +8,12 @@ import (
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 )
 
+// Store reads learning cards from the database.
 type Store struct {
 	db *sql.DB
 }
 
+// NewStore returns a Store that uses db.
 func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
@@ -22,6 +24,7 @@ type row struct {
 	Description string
 }
 
+// Get returns the card with the given ID, or domain.ErrNotFound.
 func (s *Store) Get(ctx context.Context, id string) (row, error) {
 	query := `SELECT id, title, description FROM learning_cards WHERE id = $1`
 	var data row

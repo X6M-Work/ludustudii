@@ -1,3 +1,4 @@
+// Package create implements creating a learning card.
 package create
 
 import (
@@ -25,12 +26,14 @@ type creator interface {
 	Create(ctx context.Context, p createParams) (string, error)
 }
 
+// Handler serves the POST /api/lcards endpoint.
 type Handler struct {
 	store    creator
 	bind     func(c *echo.Context, i any) error
 	validate func(req request) error
 }
 
+// NewHandler returns a Handler that uses s for storage.
 func NewHandler(s creator) *Handler {
 	return &Handler{
 		store:    s,
@@ -39,6 +42,9 @@ func NewHandler(s creator) *Handler {
 	}
 }
 
+// Handle sanitizes and validates the JSON title and description, inserts the
+// card and responds 201 with its ID in the body and its URL in the Location
+// header. Invalid input gets 400.
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 

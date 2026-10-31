@@ -14,14 +14,18 @@ type updateParams struct {
 	Description string
 }
 
+// Store updates learning cards in the database.
 type Store struct {
 	db *sql.DB
 }
 
+// NewStore returns a Store that uses db.
 func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
+// Update sets the title and description of card p.ID, or returns
+// domain.ErrNotFound.
 func (s *Store) Update(ctx context.Context, p updateParams) error {
 	query := `UPDATE learning_cards SET title = $1, description = $2 WHERE id = $3`
 	res, err := s.db.ExecContext(ctx, query, p.Title, p.Description, p.ID)

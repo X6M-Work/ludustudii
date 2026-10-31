@@ -1,9 +1,11 @@
+// Package erresp defines the JSON body of API error responses.
 package erresp
 
 import (
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 )
 
+// Machine-readable error codes sent in ErrorResponse.Code.
 const (
 	CodeBinding          = "bind_error"
 	CodeMethodNotAllowed = "method_not_allowed"
@@ -14,47 +16,59 @@ const (
 	CodeParam            = "param_error"
 )
 
+// ErrorResponse is the JSON body of every API error response. Errors lists
+// the per-field failures of a validation error and is omitted otherwise.
 type ErrorResponse struct {
 	Code   string                  `json:"code"`
 	Errors []*validator.FieldError `json:"errors,omitempty"`
 }
 
+// New returns an ErrorResponse with the given code. Prefer the named
+// constructors for the codes this package defines.
 func New(code string) ErrorResponse {
 	return ErrorResponse{
 		Code: code,
 	}
 }
 
+// Binding returns the response for a request body that could not be decoded.
 func Binding() ErrorResponse {
 	return ErrorResponse{
 		Code: CodeBinding,
 	}
 }
 
+// MethodNotAllowed returns the response for a method the route does not support.
 func MethodNotAllowed() ErrorResponse {
 	return ErrorResponse{
 		Code: CodeMethodNotAllowed,
 	}
 }
 
+// NotFound returns the response for a route or resource that does not exist.
 func NotFound() ErrorResponse {
 	return ErrorResponse{
 		Code: CodeNotFound,
 	}
 }
 
+// PayloadTooLarge returns the response for a request body over the size limit.
 func PayloadTooLarge() ErrorResponse {
 	return ErrorResponse{
 		Code: CodePayloadTooLarge,
 	}
 }
 
+// Unexpected returns the response for a server-side failure; it carries no details.
 func Unexpected() ErrorResponse {
 	return ErrorResponse{
 		Code: CodeUnexpected,
 	}
 }
 
+// Validation returns a validation error response listing every
+// *validator.FieldError found in err's tree, in depth-first order. Errors of
+// other types are skipped.
 func Validation(err error) ErrorResponse {
 	var errs []*validator.FieldError
 
@@ -81,6 +95,7 @@ func Validation(err error) ErrorResponse {
 	}
 }
 
+// Param returns the response for an invalid path parameter.
 func Param() ErrorResponse {
 	return ErrorResponse{
 		Code: CodeParam,

@@ -1,3 +1,4 @@
+// Package list implements listing learning cards with keyset pagination.
 package list
 
 import (
@@ -33,12 +34,14 @@ type lister interface {
 	List(ctx context.Context, p listParams) (page, error)
 }
 
+// Handler serves the GET /api/lcards endpoint.
 type Handler struct {
 	store    lister
 	bind     func(c *echo.Context, i any) error
 	validate func(req request) error
 }
 
+// NewHandler returns a Handler that uses s for storage.
 func NewHandler(s lister) *Handler {
 	return &Handler{
 		store:    s,
@@ -47,6 +50,11 @@ func NewHandler(s lister) *Handler {
 	}
 }
 
+// Handle responds 200 with a page of cards ordered newest first. The optional
+// limit query parameter sets the page size (domain.ListMinLimit to
+// domain.ListMaxLimit, default domain.ListDefaultLimit). The optional cursor
+// is the next_cursor of the previous page; next_cursor is null on the last
+// page. Invalid parameters get 400.
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 

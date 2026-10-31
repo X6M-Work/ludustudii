@@ -1,3 +1,4 @@
+// Package get implements fetching a single learning card.
 package get
 
 import (
@@ -23,15 +24,19 @@ type getter interface {
 	Get(ctx context.Context, id string) (row, error)
 }
 
+// Handler serves the GET /api/lcards/:id endpoint.
 type Handler struct {
 	store           getter
 	validateParamID func(id string) error
 }
 
+// NewHandler returns a Handler that uses s for storage.
 func NewHandler(s getter) *Handler {
 	return &Handler{store: s, validateParamID: validateParamID}
 }
 
+// Handle responds 200 with the card whose ID is the :id path parameter, 400 if
+// the ID is not a UUIDv7 (case-insensitive) and 404 if no card has it.
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 

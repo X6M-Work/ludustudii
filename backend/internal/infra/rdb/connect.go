@@ -1,3 +1,4 @@
+// Package rdb connects to the relational (PostgreSQL) database.
 package rdb
 
 import (
@@ -9,6 +10,8 @@ import (
 	_ "github.com/jackc/pgx/v5/stdlib"
 )
 
+// Options configures the connection pool opened by Connect. The pool fields
+// are passed to the matching *sql.DB setters.
 type Options struct {
 	ConnectionString string
 	MaxOpenConns     int
@@ -17,6 +20,9 @@ type Options struct {
 	ConnMaxIdleTime  time.Duration
 }
 
+// Connect opens a pgx-backed *sql.DB for opts.ConnectionString, configures
+// its pool and pings the database, giving up after 5 seconds. The caller must
+// close the returned DB.
 func Connect(opts Options) (*sql.DB, error) {
 	db, err := sql.Open("pgx", opts.ConnectionString)
 	if err != nil {

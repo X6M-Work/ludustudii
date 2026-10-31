@@ -1,3 +1,6 @@
+// Command api runs the ludustudii HTTP server: the JSON API under /api and the
+// embedded single-page client application. It is configured through
+// environment variables; see package env.
 package main
 
 import (

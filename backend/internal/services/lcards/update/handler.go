@@ -1,3 +1,4 @@
+// Package update implements replacing a learning card's content.
 package update
 
 import (
@@ -23,6 +24,7 @@ type updater interface {
 	Update(ctx context.Context, p updateParams) error
 }
 
+// Handler serves the PUT /api/lcards/:id endpoint.
 type Handler struct {
 	store           updater
 	bind            func(c *echo.Context, i any) error
@@ -30,6 +32,7 @@ type Handler struct {
 	validateParamID func(id string) error
 }
 
+// NewHandler returns a Handler that uses s for storage.
 func NewHandler(s updater) *Handler {
 	return &Handler{
 		store:           s,
@@ -39,6 +42,10 @@ func NewHandler(s updater) *Handler {
 	}
 }
 
+// Handle sanitizes and validates the JSON title and description, replaces
+// them on the card whose ID is the :id path parameter and responds 204.
+// Invalid input or an ID that is not a UUIDv7 (case-insensitive) gets 400,
+// and an unknown ID gets 404.
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 

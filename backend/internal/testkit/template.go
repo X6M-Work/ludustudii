@@ -29,10 +29,12 @@ type Template struct {
 	cloneMu sync.Mutex
 }
 
-// NewTemplate creates and migrates a template using DB_TEST_CONNECTION.
-// The configured role must be able to create databases and connect to postgres.
-// The caller must close the template after all copies are closed.
-// Setup, including migration, is limited to 10 seconds or the context deadline.
+// NewTemplate creates a template database through the server and role in
+// DB_TEST_CONNECTION and migrates it with migrate. The role must be able to
+// create databases, and the database named in the connection string must
+// exist; it is used for administrative statements only. The caller must close
+// the template after all copies are closed. Setup, including migration, is
+// limited to 10 seconds or the context deadline, whichever comes first.
 func NewTemplate(ctx context.Context, migrate func(context.Context, *sql.DB) error) (*Template, error) {
 	ctx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()
@@ -70,7 +72,8 @@ func NewTemplate(ctx context.Context, migrate func(context.Context, *sql.DB) err
 // Clone returns a connection to a fresh copy and a cleanup function that closes
 // the connection and drops the copy. The caller must invoke cleanup when done.
 // Clone may be called concurrently. Database creation is limited to 10 seconds
-// or the context deadline. Cleanup uses an independent 10-second timeout.
+// or the context deadline, whichever comes first. Cleanup uses an independent
+// 10-second timeout.
 func (t *Template) Clone(ctx context.Context) (*sql.DB, func() error, error) {
 	ctx, cancel := context.WithTimeout(ctx, dbTimeout)
 	defer cancel()

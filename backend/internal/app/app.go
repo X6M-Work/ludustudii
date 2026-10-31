@@ -1,3 +1,5 @@
+// Package app wires the server together: configuration, logging, database,
+// router and HTTP server lifecycle.
 package app
 
 import (
@@ -17,6 +19,12 @@ import (
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 )
 
+// Run loads the environment, sets the default logger, loads the embedded
+// client app, connects to the database and serves HTTP until the server fails
+// or the process receives SIGINT or SIGTERM. On a signal it shuts the server
+// down gracefully within the configured shutdown timeout; a second signal
+// during shutdown terminates the process immediately. The database is closed
+// before Run returns.
 func Run() (err error) {
 	ev, err := env.Load()
 	if err != nil {

@@ -1,3 +1,4 @@
+// Package env loads the server configuration from environment variables.
 package env
 
 import (
@@ -12,6 +13,7 @@ import (
 	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 )
 
+// Names of the environment variables read by Load.
 const (
 	EnvDBConnectionString = "DB_CONNECTION"
 	EnvDBMaxOpenConns     = "DB_MAX_OPEN_CONNS"
@@ -27,6 +29,7 @@ const (
 	EnvLogFormat          = "LOG_FORMAT"
 )
 
+// Values Load uses for optional variables that are unset or empty.
 const (
 	DefaultDBMaxOpenConns     = 10
 	DefaultDBMaxIdleConns     = 5
@@ -40,6 +43,8 @@ const (
 	DefaultLogFormat          = logging.FormatJSON
 )
 
+// Vars holds the configuration read by Load. Field names mirror the Env
+// constants.
 type Vars struct {
 	DBConnectionString string
 	DBMaxOpenConns     int
@@ -55,6 +60,13 @@ type Vars struct {
 	LogFormat          logging.Format
 }
 
+// Load reads the configuration from the environment. DB_CONNECTION and
+// APP_PORT are required, and DB_CONNECTION must be a postgres:// or
+// postgresql:// URL. The other variables are optional and fall back to the
+// Default constants. Durations use time.ParseDuration syntax, LOG_LEVEL uses
+// slog.Level names (such as "debug" or "warn") and LOG_FORMAT is "json" or
+// "text". Load reports every invalid or missing variable, joined into one
+// error.
 func Load() (*Vars, error) {
 	var errs []error
 
@@ -126,8 +138,9 @@ func Load() (*Vars, error) {
 	}, nil
 }
 
-// LogAttrs returns the loaded values as log attrs, with the database password
-// redacted.
+// LogAttrs returns the loaded values as log attrs keyed by variable name. The
+// password in the user info of the database URL is redacted; credentials
+// passed as query parameters are not.
 func (v *Vars) LogAttrs() []slog.Attr {
 	dbConnectionString := v.DBConnectionString
 	if dbURL, err := url.Parse(dbConnectionString); err == nil {

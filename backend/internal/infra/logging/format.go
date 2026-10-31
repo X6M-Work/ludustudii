@@ -11,6 +11,7 @@ const (
 	FormatText
 )
 
+// String implements fmt.Stringer. Unknown values print as "Format(n)".
 func (f Format) String() string {
 	switch f {
 	case FormatJSON:
@@ -21,7 +22,8 @@ func (f Format) String() string {
 	return fmt.Sprintf("Format(%d)", int(f))
 }
 
-// MarshalText implements encoding.TextMarshaler.
+// MarshalText implements encoding.TextMarshaler. It returns an error for
+// values other than FormatJSON and FormatText.
 func (f Format) MarshalText() ([]byte, error) {
 	switch f {
 	case FormatJSON, FormatText:

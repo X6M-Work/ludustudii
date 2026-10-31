@@ -6,10 +6,12 @@ import (
 	"fmt"
 )
 
+// Store reads pages of learning cards from the database.
 type Store struct {
 	db *sql.DB
 }
 
+// NewStore returns a Store that uses db.
 func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
@@ -30,6 +32,10 @@ type page struct {
 	NextCursor string
 }
 
+// List returns up to p.Limit cards ordered by descending ID, which for UUIDv7
+// is newest first, starting after p.Cursor if it is set. NextCursor is the
+// last returned ID when more cards follow, and empty otherwise. p.Limit must
+// be at least 1.
 func (s *Store) List(ctx context.Context, p listParams) (page, error) {
 	if p.Limit < 1 {
 		return page{}, fmt.Errorf("invalid limit %d < 1", p.Limit)

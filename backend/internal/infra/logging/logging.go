@@ -1,3 +1,5 @@
+// Package logging builds slog loggers that add request-scoped attrs stored in
+// the context.
 package logging
 
 import (
@@ -44,15 +46,17 @@ func (h ctxHandler) WithGroup(name string) slog.Handler {
 	return ctxHandler{inner: h.inner.WithGroup(name)}
 }
 
+// Options configures a logger built by New.
 type Options struct {
 	Level  slog.Leveler
 	Format Format
 	Output io.Writer
 }
 
-// New builds a logger that writes opts.Format records to opts.Output and
-// includes the attrs stored in the context by WithAttrs. It returns an error
-// if opts.Format is not FormatJSON or FormatText.
+// New builds a logger that writes opts.Format records at opts.Level or above
+// to opts.Output and includes the attrs stored in the context by WithAttrs. A
+// nil opts.Level means slog.LevelInfo. It returns an error if opts.Format is
+// not FormatJSON or FormatText.
 func New(opts Options) (*slog.Logger, error) {
 	ho := &slog.HandlerOptions{Level: opts.Level}
 	var h slog.Handler

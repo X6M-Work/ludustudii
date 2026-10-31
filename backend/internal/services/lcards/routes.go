@@ -1,3 +1,5 @@
+// Package lcards provides the learning cards API. Each endpoint lives in its
+// own subpackage with a Handler and a Store; shared rules are in domain.
 package lcards
 
 import (
@@ -12,6 +14,16 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
+// RegisterRoutes registers the learning card endpoints under domain.CardsPath:
+//
+//	GET    /api/lcards       list cards, newest first (list)
+//	POST   /api/lcards       create a card (create)
+//	GET    /api/lcards/:id   get a card (get)
+//	PUT    /api/lcards/:id   replace a card's title and description (update)
+//	DELETE /api/lcards/:id   delete a card (remove)
+//
+// Other methods on these paths get 405 with an Allow header, and deeper paths
+// get 404.
 func RegisterRoutes(e *echo.Echo, db *sql.DB) {
 	l := list.NewHandler(list.NewStore(db))
 	g := get.NewHandler(get.NewStore(db))

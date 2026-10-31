@@ -7,6 +7,13 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
+// httpErrorHandler writes an erresp.ErrorResponse for errors returned by
+// handlers and middleware. It keeps the error's status code, mapping 404, 405
+// and 413 to their named codes and any other 4xx to "request_error". Errors
+// without a status, and 5xx errors, are logged and reported as a 500
+// "unexpected_error" so internal details never reach the client. HEAD
+// requests get the status only. Nothing is written if the response has
+// already been committed.
 func httpErrorHandler(c *echo.Context, err error) {
 	if r, _ := echo.UnwrapResponse(c.Response()); r != nil && r.Committed {
 		return

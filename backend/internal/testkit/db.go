@@ -1,3 +1,5 @@
+// Package testkit provides helpers for tests: isolated PostgreSQL databases
+// cloned from a migrated template, and HTTP request and assertion helpers.
 package testkit
 
 import (
@@ -13,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgconn"
 )
 
+// PostgreSQL SQLSTATE codes for use with AssertPgCode.
 const (
 	PgCodeCheckViolation            = "23514"
 	PgCodeInvalidTextRepresentation = "22P02"
@@ -21,8 +24,8 @@ const (
 var getTemplate func() (*Template, error)
 
 // Run configures a shared migrated template database created lazily on the
-// first call to NewDB, runs the test suite, and closes the template if one was
-// created. Call it from TestMain:
+// first call to NewDB, runs the test suite, closes the template if one was
+// created, and returns the exit code of m.Run. Call it from TestMain:
 //
 //	func TestMain(m *testing.M) {
 //		os.Exit(testkit.Run(m))
@@ -46,7 +49,8 @@ func Run(m *testing.M) int {
 }
 
 // NewDB returns a connection to an isolated, migrated database copy that is
-// closed and dropped when the test finishes. Run must be called in TestMain.
+// closed and dropped when the test finishes. Run must be called in TestMain,
+// and DB_TEST_CONNECTION must be set (see NewTemplate).
 func NewDB(t *testing.T) *sql.DB {
 	t.Helper()
 	if getTemplate == nil {

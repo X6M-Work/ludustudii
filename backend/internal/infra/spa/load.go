@@ -1,3 +1,5 @@
+// Package spa serves the single-page client application embedded from the
+// dist directory, which the frontend build populates.
 package spa
 
 import (
@@ -11,16 +13,20 @@ import (
 //go:embed all:dist
 var spaFS embed.FS
 
+// ClientApp is the embedded client build, rooted at dist.
 type ClientApp struct {
 	RootFS    fs.FS
 	IndexFile IndexFile
 }
 
+// IndexFile is the preloaded index.html with a strong ETag derived from its
+// content.
 type IndexFile struct {
 	ETag       string
 	IndexBytes []byte
 }
 
+// Load returns the embedded client app. It fails if dist has no index.html.
 func Load() (*ClientApp, error) {
 	rootFS, err := fs.Sub(spaFS, "dist")
 	if err != nil {

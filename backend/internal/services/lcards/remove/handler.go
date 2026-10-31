@@ -1,3 +1,4 @@
+// Package remove implements deleting a learning card.
 package remove
 
 import (
@@ -17,15 +18,19 @@ type deleter interface {
 	Delete(ctx context.Context, id string) error
 }
 
+// Handler serves the DELETE /api/lcards/:id endpoint.
 type Handler struct {
 	store           deleter
 	validateParamID func(id string) error
 }
 
+// NewHandler returns a Handler that uses s for storage.
 func NewHandler(s deleter) *Handler {
 	return &Handler{store: s, validateParamID: validateParamID}
 }
 
+// Handle deletes the card whose ID is the :id path parameter and responds 204,
+// 400 if the ID is not a UUIDv7 (case-insensitive) or 404 if no card has it.
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 

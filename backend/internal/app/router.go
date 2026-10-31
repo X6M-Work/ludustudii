@@ -12,10 +12,14 @@ import (
 	"github.com/labstack/echo/v5/middleware"
 )
 
+// MaxBodyBytes is the largest request body the router accepts; larger bodies
+// are rejected with 413 Payload Too Large.
 const MaxBodyBytes = 1 << 20
 
-// NewRouter builds the production handler: middleware, API routes, API
-// fallbacks, and the SPA.
+// NewRouter builds the production handler: middleware (panic recovery,
+// request IDs, request logging and the body limit), API routes, API
+// fallbacks, and the SPA. Each request's context carries its request ID, so
+// loggers built by logging.New include it as "request_id".
 func NewRouter(log *slog.Logger, clientApp *spa.ClientApp, db *sql.DB) *echo.Echo {
 	e := echo.NewWithConfig(echo.Config{
 		Router:           echo.NewRouter(echo.RouterConfig{AutoHandleHEAD: true}),
@@ -46,7 +50,8 @@ func NewRouter(log *slog.Logger, clientApp *spa.ClientApp, db *sql.DB) *echo.Ech
 }
 
 // requestLogger logs one "request" record per request, after the error
-// handler has written the response so the status is final.
+// handler has written the response so the status is final. The record is
+// logged at Error for 5xx statuses, Warn for 4xx and Info otherwise.
 func requestLogger(log *slog.Logger) echo.MiddlewareFunc {
 	return middleware.RequestLoggerWithConfig(middleware.RequestLoggerConfig{
 		LogMethod:    true,

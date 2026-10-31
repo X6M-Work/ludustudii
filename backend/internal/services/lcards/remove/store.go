@@ -8,14 +8,17 @@ import (
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 )
 
+// Store deletes learning cards from the database.
 type Store struct {
 	db *sql.DB
 }
 
+// NewStore returns a Store that uses db.
 func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
+// Delete deletes the card with the given ID, or returns domain.ErrNotFound.
 func (s *Store) Delete(ctx context.Context, id string) error {
 	query := `DELETE FROM learning_cards WHERE id = $1`
 	res, err := s.db.ExecContext(ctx, query, id)

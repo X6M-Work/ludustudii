@@ -13,12 +13,18 @@ import (
 	"github.com/labstack/echo/v5"
 )
 
+// Handler serves the client app for GET and HEAD requests. Paths that name a
+// file serve that file; files under assets/ are content-hashed by the build
+// and cached as immutable, others are revalidated. The root, directories and
+// extensionless paths that match no file serve index.html so the client-side
+// router can handle them. Missing paths with an extension get 404.
 type Handler struct {
 	fileServer http.Handler
 	rootFS     fs.FS
 	indexFile  IndexFile
 }
 
+// NewHandler returns a Handler that serves clientApp.
 func NewHandler(clientApp *ClientApp) *Handler {
 	return &Handler{
 		fileServer: http.FileServerFS(clientApp.RootFS),
@@ -27,6 +33,8 @@ func NewHandler(clientApp *ClientApp) *Handler {
 	}
 }
 
+// RegisterRoutes registers the handler as e's catch-all for paths no other
+// route matches. Register it after all other routes.
 func (h *Handler) RegisterRoutes(e *echo.Echo) {
 	e.RouteNotFound("/*", h.serve)
 }
