@@ -9,14 +9,14 @@ info:
     Backend API for managing learning cards. No authentication is required.
 
     Requests with JSON bodies must use Content-Type: application/json
-    (media-type parameters are accepted). Titles and descriptions are normalized
+    (media-type parameters are accepted); other or missing Content-Types on a
+    nonempty body return 415 with code unsupported_media_type. Titles and descriptions are normalized
     to Unicode NFC and trimmed before validation and storage. Length limits
     count Unicode code points after this sanitization.
 
-    Request bodies are limited to 1,048,576 bytes (1 MiB). The body-limit
-    middleware returns 413 when it detects an oversized body. If the limit is
-    encountered while a create/update handler binds a streamed body, the handler
-    can instead return 400 with bind_error.
+    Request bodies are limited to 1,048,576 bytes (1 MiB). Oversized bodies
+    return 413 with code payload_too_large, whether the size is declared in
+    Content-Length or only discovered while reading a chunked body.
 
     Every response includes X-Request-Id, reusing the incoming header when
     provided or generating an ID otherwise. Unknown /api/* paths return 404
@@ -80,6 +80,8 @@ components:
       $ref: './components/responses/errors.yml#/NotFound'
     PayloadTooLarge:
       $ref: './components/responses/errors.yml#/PayloadTooLarge'
+    UnsupportedMediaType:
+      $ref: './components/responses/errors.yml#/UnsupportedMediaType'
     UnexpectedError:
       $ref: './components/responses/errors.yml#/UnexpectedError'
     HeadSuccess:

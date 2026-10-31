@@ -7,13 +7,14 @@ import (
 
 // Machine-readable error codes sent in ErrorResponse.Code.
 const (
-	CodeBinding          = "bind_error"
-	CodeMethodNotAllowed = "method_not_allowed"
-	CodeNotFound         = "not_found"
-	CodePayloadTooLarge  = "payload_too_large"
-	CodeUnexpected       = "unexpected_error"
-	CodeValidation       = "validation_error"
-	CodeParam            = "param_error"
+	CodeBinding              = "bind_error"
+	CodeMethodNotAllowed     = "method_not_allowed"
+	CodeNotFound             = "not_found"
+	CodePayloadTooLarge      = "payload_too_large"
+	CodeUnexpected           = "unexpected_error"
+	CodeValidation           = "validation_error"
+	CodeParam                = "param_error"
+	CodeUnsupportedMediaType = "unsupported_media_type"
 )
 
 // ErrorResponse is the JSON body of every API error response. Errors lists
@@ -56,6 +57,14 @@ func NotFound() ErrorResponse {
 func PayloadTooLarge() ErrorResponse {
 	return ErrorResponse{
 		Code: CodePayloadTooLarge,
+	}
+}
+
+// UnsupportedMediaType returns the response for a request body whose
+// Content-Type the endpoint does not accept.
+func UnsupportedMediaType() ErrorResponse {
+	return ErrorResponse{
+		Code: CodeUnsupportedMediaType,
 	}
 }
 

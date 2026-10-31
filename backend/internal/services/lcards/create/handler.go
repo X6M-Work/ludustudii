@@ -44,13 +44,18 @@ func NewHandler(s creator) *Handler {
 
 // Handle sanitizes and validates the JSON title and description, inserts the
 // card and responds 201 with its ID in the body and its URL in the Location
-// header. Invalid input gets 400.
+// header. Invalid input gets 400. An oversized body (413) or an unsupported
+// Content-Type (415) is returned for the router's error handler to report.
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 
 	var req request
 	if err := h.bind(c, &req); err != nil {
 		slog.DebugContext(ctx, domain.TextBinding, "error", err)
+		switch echo.StatusCode(err) {
+		case http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType:
+			return err
+		}
 		return c.JSON(http.StatusBadRequest, erresp.Binding())
 	}
 

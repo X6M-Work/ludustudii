@@ -442,8 +442,8 @@ func TestCreate(t *testing.T) {
 			Path:   "/api/lcards",
 			Body:   `{"title":"Title","description":"Description"}`,
 		})
-		testkit.AssertStatus(t, resp, body, http.StatusBadRequest)
-		testkit.AssertJSON(t, body, `{"code":"bind_error"}`)
+		testkit.AssertStatus(t, resp, body, http.StatusUnsupportedMediaType)
+		testkit.AssertJSON(t, body, `{"code":"unsupported_media_type"}`)
 	})
 
 	t.Run("malformed JSON", func(t *testing.T) {
@@ -492,8 +492,8 @@ func TestCreate(t *testing.T) {
 			ContentType: echo.MIMEApplicationXML,
 			Body:        `<request><Title>Title</Title><Description>Description</Description></request>`,
 		})
-		testkit.AssertStatus(t, resp, body, http.StatusBadRequest)
-		testkit.AssertJSON(t, body, `{"code":"bind_error"}`)
+		testkit.AssertStatus(t, resp, body, http.StatusUnsupportedMediaType)
+		testkit.AssertJSON(t, body, `{"code":"unsupported_media_type"}`)
 	})
 
 	t.Run("body over MaxBodyBytes", func(t *testing.T) {
@@ -505,6 +505,23 @@ func TestCreate(t *testing.T) {
 			Path:        "/api/lcards",
 			ContentType: echo.MIMEApplicationJSON,
 			Body:        strings.Repeat("a", app.MaxBodyBytes+1),
+		})
+		testkit.AssertStatus(t, resp, body, http.StatusRequestEntityTooLarge)
+		testkit.AssertJSON(t, body, `{"code":"payload_too_large"}`)
+	})
+
+	// Without a Content-Length the body-limit middleware cannot reject the
+	// request up front; the limit is hit while the handler binds the body.
+	t.Run("chunked body over MaxBodyBytes", func(t *testing.T) {
+		t.Parallel()
+		srv, _ := newServer(t)
+
+		resp, body := testkit.Do(t, srv, testkit.DoOpts{
+			Method:      http.MethodPost,
+			Path:        "/api/lcards",
+			ContentType: echo.MIMEApplicationJSON,
+			Body:        strings.Repeat("a", app.MaxBodyBytes+1),
+			Chunked:     true,
 		})
 		testkit.AssertStatus(t, resp, body, http.StatusRequestEntityTooLarge)
 		testkit.AssertJSON(t, body, `{"code":"payload_too_large"}`)
@@ -586,8 +603,8 @@ func TestUpdate(t *testing.T) {
 			ContentType: echo.MIMEApplicationXML,
 			Body:        `<request><Title>New Title</Title><Description>New Description</Description></request>`,
 		})
-		testkit.AssertStatus(t, resp, body, http.StatusBadRequest)
-		testkit.AssertJSON(t, body, `{"code":"bind_error"}`)
+		testkit.AssertStatus(t, resp, body, http.StatusUnsupportedMediaType)
+		testkit.AssertJSON(t, body, `{"code":"unsupported_media_type"}`)
 
 		if row := getCard(t, db, id); row != original {
 			t.Errorf("stored row: got %+q, want %+q", row, original)
@@ -618,6 +635,32 @@ func TestUpdate(t *testing.T) {
 				{"field": "title", "code": "required"}
 			]
 		}`)
+
+		if row := getCard(t, db, id); row != original {
+			t.Errorf("stored row: got %+q, want %+q", row, original)
+		}
+	})
+
+	t.Run("chunked body over MaxBodyBytes", func(t *testing.T) {
+		t.Parallel()
+		srv, db := newServer(t)
+
+		const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
+		original := cardRow{
+			Title:       "Original Title",
+			Description: "Original Description",
+		}
+		insertCard(t, db, id, original.Title, original.Description)
+
+		resp, body := testkit.Do(t, srv, testkit.DoOpts{
+			Method:      http.MethodPut,
+			Path:        "/api/lcards/" + id,
+			ContentType: echo.MIMEApplicationJSON,
+			Body:        strings.Repeat("a", app.MaxBodyBytes+1),
+			Chunked:     true,
+		})
+		testkit.AssertStatus(t, resp, body, http.StatusRequestEntityTooLarge)
+		testkit.AssertJSON(t, body, `{"code":"payload_too_large"}`)
 
 		if row := getCard(t, db, id); row != original {
 			t.Errorf("stored row: got %+q, want %+q", row, original)

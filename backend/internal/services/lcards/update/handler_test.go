@@ -170,6 +170,43 @@ func TestHandler_Handle(t *testing.T) {
 	}
 }
 
+// Bind errors that carry a 413 or 415 status are returned unwritten so the
+// router's error handler reports them; other bind errors stay bind_error.
+func TestHandler_HandleBindStatusError(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name     string
+		err      error
+		wantCode int
+	}{
+		{name: "payload too large", err: echo.ErrStatusRequestEntityTooLarge, wantCode: http.StatusRequestEntityTooLarge},
+		{name: "unsupported media type", err: echo.ErrUnsupportedMediaType, wantCode: http.StatusUnsupportedMediaType},
+	}
+
+	const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
+	body, _ := json.Marshal(request{Title: "Title", Description: "Description"})
+
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			c, rec := testContext(t, id, body)
+			h := testHandler(t, nil, func(h *Handler) {
+				h.bind = func(*echo.Context, any) error { return tt.err }
+			})
+
+			err := h.Handle(c)
+			if got := echo.StatusCode(err); got != tt.wantCode {
+				t.Fatalf("returned error status: got %d (%v), want %d", got, err, tt.wantCode)
+			}
+			if rec.Body.Len() != 0 {
+				t.Errorf("body: got %q, want empty", rec.Body.String())
+			}
+		})
+	}
+}
+
 func TestHandler_Wiring(t *testing.T) {
 	t.Parallel()
 

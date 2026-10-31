@@ -14,9 +14,8 @@ InvalidQuery:
             code: out_of_range
 InvalidCreateInput:
   description: |
-    Malformed JSON, incompatible JSON types, or an unsupported/missing
-    Content-Type on a nonempty body returns bind_error (400, not 415).
-    Empty bodies and invalid field values return validation_error.
+    Malformed JSON or incompatible JSON types return bind_error. Empty
+    bodies and invalid field values return validation_error.
   headers:
     X-Request-Id:
       $ref: '../headers.yml#/RequestId'
@@ -39,8 +38,7 @@ InvalidCreateInput:
 InvalidReplaceInput:
   description: |
     An invalid path ID returns param_error before body binding. Malformed
-    JSON, incompatible JSON types, or an unsupported/missing Content-Type on
-    a nonempty body returns bind_error (400, not 415). Empty bodies and
+    JSON or incompatible JSON types return bind_error. Empty bodies and
     invalid field values return validation_error.
   headers:
     X-Request-Id:
@@ -87,7 +85,7 @@ NotFound:
       example:
         code: not_found
 PayloadTooLarge:
-  description: Request body exceeds the 1 MiB limit and is rejected by middleware.
+  description: Request body exceeds the 1 MiB limit.
   headers:
     X-Request-Id:
       $ref: '../headers.yml#/RequestId'
@@ -97,6 +95,17 @@ PayloadTooLarge:
         $ref: '../schemas/errors.yml#/ErrorResponse'
       example:
         code: payload_too_large
+UnsupportedMediaType:
+  description: A nonempty request body was sent without Content-Type application/json.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/errors.yml#/ErrorResponse'
+      example:
+        code: unsupported_media_type
 UnexpectedError:
   description: An unexpected server or storage error occurred. Internal details are not returned.
   headers:

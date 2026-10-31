@@ -11,6 +11,7 @@ ErrorResponse:
         - not_found
         - method_not_allowed
         - payload_too_large
+        - unsupported_media_type
         - unexpected_error
         - request_error
     errors:

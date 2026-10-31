@@ -58,6 +58,8 @@ put:
       $ref: '../components/responses/errors.yml#/NotFound'
     '413':
       $ref: '../components/responses/errors.yml#/PayloadTooLarge'
+    '415':
+      $ref: '../components/responses/errors.yml#/UnsupportedMediaType'
     '500':
       $ref: '../components/responses/errors.yml#/UnexpectedError'
 delete:

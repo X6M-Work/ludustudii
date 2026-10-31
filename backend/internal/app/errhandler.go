@@ -8,8 +8,8 @@ import (
 )
 
 // httpErrorHandler writes an erresp.ErrorResponse for errors returned by
-// handlers and middleware. It keeps the error's status code, mapping 404, 405
-// and 413 to their named codes and any other 4xx to "request_error". Errors
+// handlers and middleware. It keeps the error's status code, mapping 404, 405,
+// 413 and 415 to their named codes and any other 4xx to "request_error". Errors
 // without a status, and 5xx errors, are logged and reported as a 500
 // "unexpected_error" so internal details never reach the client. HEAD
 // requests get the status only. Nothing is written if the response has
@@ -28,6 +28,8 @@ func httpErrorHandler(c *echo.Context, err error) {
 		resp = erresp.MethodNotAllowed()
 	case http.StatusRequestEntityTooLarge:
 		resp = erresp.PayloadTooLarge()
+	case http.StatusUnsupportedMediaType:
+		resp = erresp.UnsupportedMediaType()
 	default:
 		if code == 0 || code >= http.StatusInternalServerError {
 			c.Logger().ErrorContext(c.Request().Context(), "Unhandled error",

@@ -23,6 +23,7 @@ func TestConstructors(t *testing.T) {
 		{name: "MethodNotAllowed", new: MethodNotAllowed, code: "method_not_allowed"},
 		{name: "NotFound", new: NotFound, code: "not_found"},
 		{name: "PayloadTooLarge", new: PayloadTooLarge, code: "payload_too_large"},
+		{name: "UnsupportedMediaType", new: UnsupportedMediaType, code: "unsupported_media_type"},
 		{name: "Unexpected", new: Unexpected, code: "unexpected_error"},
 		{name: "Param", new: Param, code: "param_error"},
 	}

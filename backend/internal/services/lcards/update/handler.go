@@ -45,7 +45,8 @@ func NewHandler(s updater) *Handler {
 // Handle sanitizes and validates the JSON title and description, replaces
 // them on the card whose ID is the :id path parameter and responds 204.
 // Invalid input or an ID that is not a UUIDv7 (case-insensitive) gets 400,
-// and an unknown ID gets 404.
+// and an unknown ID gets 404. An oversized body (413) or an unsupported
+// Content-Type (415) is returned for the router's error handler to report.
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -58,6 +59,10 @@ func (h *Handler) Handle(c *echo.Context) error {
 	var req request
 	if err := h.bind(c, &req); err != nil {
 		slog.DebugContext(ctx, domain.TextBinding, "error", err)
+		switch echo.StatusCode(err) {
+		case http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType:
+			return err
+		}
 		return c.JSON(http.StatusBadRequest, erresp.Binding())
 	}
 

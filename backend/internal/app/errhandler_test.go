@@ -48,6 +48,13 @@ func TestHTTPErrorHandler(t *testing.T) {
 			wantJSON:   `{"code":"payload_too_large"}`,
 		},
 		{
+			name:       "POST 415 unsupported_media_type",
+			method:     http.MethodPost,
+			err:        echo.ErrUnsupportedMediaType,
+			wantStatus: http.StatusUnsupportedMediaType,
+			wantJSON:   `{"code":"unsupported_media_type"}`,
+		},
+		{
 			name:       "GET plain error becomes 500 unexpected_error",
 			method:     http.MethodGet,
 			err:        errors.New("boom"),

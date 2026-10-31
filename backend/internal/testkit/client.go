@@ -13,12 +13,14 @@ import (
 )
 
 // DoOpts describes a request sent by Do. Path is appended to the server URL;
-// empty ContentType and Body are not sent.
+// empty ContentType and Body are not sent. Chunked sends Body without a
+// Content-Length, using chunked transfer encoding.
 type DoOpts struct {
 	Method      string
 	Path        string
 	ContentType string
 	Body        string
+	Chunked     bool
 }
 
 // Do sends the request described by o to s, with a 10-second timeout, and
@@ -31,6 +33,10 @@ func Do(t *testing.T, s *httptest.Server, o DoOpts) (*http.Response, []byte) {
 	var r io.Reader
 	if o.Body != "" {
 		r = strings.NewReader(o.Body)
+		if o.Chunked {
+			// Hiding the reader's type stops NewRequest from setting ContentLength.
+			r = io.MultiReader(r)
+		}
 	}
 	req, err := http.NewRequestWithContext(ctx, o.Method, s.URL+o.Path, r)
 	if err != nil {
