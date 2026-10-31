@@ -6,19 +6,26 @@ CardId:
   example: 019a0000-0000-7000-8000-000000000001
 LearningCardInput:
   type: object
+  description: |
+    Length constraints apply to the canonical form of each field: NFC
+    normalized, with leading and trailing white space removed, counted in
+    Unicode code points. Clients should validate that form. The server also
+    accepts untrimmed or non-NFC input and canonicalizes it before validation
+    and storage, so stored and returned values always satisfy the constraints
+    as written.
   required: [title, description]
   properties:
     title:
       type: string
       minLength: 1
       maxLength: 200
-      description: Card title. Length constraints apply after NFC normalization and trimming.
+      description: Card title. Length is counted in code points of the canonical form.
       example: OpenAPI
     description:
       type: string
       minLength: 1
       maxLength: 2000
-      description: Card description. Length constraints apply after NFC normalization and trimming.
+      description: Card description. Length is counted in code points of the canonical form.
       example: A specification for describing HTTP APIs.
 LearningCard:
   allOf:

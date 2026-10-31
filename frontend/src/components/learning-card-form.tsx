@@ -22,22 +22,41 @@ import {
 } from '@/components/ui/field'
 import { Textarea } from '@/components/ui/textarea'
 
+const TITLE_MAX_LENGTH = 200
+const DESCRIPTION_MAX_LENGTH = 2000
+
+// The maxLength attribute counts UTF-16 code units of the raw value, so it
+// only caps runaway pastes; validation reports the real limit.
+const INPUT_SLACK = 2
+
+// The server stores fields in this form and checks their length after
+// applying it. JS trim() also strips U+FEFF and keeps U+0085, unlike Go's
+// strings.TrimSpace; at worst the server rejects what the form accepted.
+const canonicalize = (value: string) => value.normalize('NFC').trim()
+
+// Counts code points, as the server does, rather than UTF-16 code units.
+const canonicalLength = (value: string) => [...canonicalize(value)].length
+
 const validateTitle = ({ value }: { value: string }) => {
-  if (!value.trim()) {
+  const length = canonicalLength(value)
+  if (length === 0) {
     return { message: 'Title is required' }
   }
-  if (value.length > 200) {
-    return { message: 'Title must be at most 200 characters' }
+  if (length > TITLE_MAX_LENGTH) {
+    return { message: `Title must be at most ${TITLE_MAX_LENGTH} characters` }
   }
   return undefined
 }
 
 const validateDescription = ({ value }: { value: string }) => {
-  if (!value.trim()) {
+  const length = canonicalLength(value)
+  if (length === 0) {
     return { message: 'Description is required' }
   }
-  if (value.length > 2000) {
-    return { message: 'Description must be at most 2000 characters' }
+  if (length > DESCRIPTION_MAX_LENGTH) {
+    return {
+      message: `Description must be at most ${DESCRIPTION_MAX_LENGTH} characters`,
+    }
   }
   return undefined
 }
@@ -59,14 +78,18 @@ export function LearningCardForm({ card }: LearningCardFormProps) {
       description: card?.description ?? '',
     },
     onSubmit: async ({ value, formApi }) => {
+      const input = {
+        title: canonicalize(value.title),
+        description: canonicalize(value.description),
+      }
       if (card) {
         await updateLearningCard.mutateAsync({
           id: card.id,
-          ...value,
+          ...input,
         })
         await navigate({ to: '/learning-cards' })
       } else {
-        await createLearningCard.mutateAsync(value)
+        await createLearningCard.mutateAsync(input)
         formApi.reset()
       }
     },
@@ -101,7 +124,7 @@ export function LearningCardForm({ card }: LearningCardFormProps) {
                       <div className="flex items-center justify-between">
                         <FieldLabel htmlFor={field.name}>Title</FieldLabel>
                         <FieldDescription>
-                          {field.state.value.length}/200
+                          {canonicalLength(field.state.value)}/{TITLE_MAX_LENGTH}
                         </FieldDescription>
                       </div>
                       <Textarea
@@ -111,7 +134,7 @@ export function LearningCardForm({ card }: LearningCardFormProps) {
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
-                        maxLength={200}
+                        maxLength={TITLE_MAX_LENGTH * INPUT_SLACK}
                         aria-invalid={isInvalid}
                         placeholder="Enter title..."
                       />
@@ -139,7 +162,7 @@ export function LearningCardForm({ card }: LearningCardFormProps) {
                       <div className="flex items-center justify-between">
                         <FieldLabel htmlFor={field.name}>Description</FieldLabel>
                         <FieldDescription>
-                          {field.state.value.length}/2000
+                          {canonicalLength(field.state.value)}/{DESCRIPTION_MAX_LENGTH}
                         </FieldDescription>
                       </div>
                       <Textarea
@@ -150,7 +173,7 @@ export function LearningCardForm({ card }: LearningCardFormProps) {
                         value={field.state.value}
                         onBlur={field.handleBlur}
                         onChange={(e) => field.handleChange(e.target.value)}
-                        maxLength={2000}
+                        maxLength={DESCRIPTION_MAX_LENGTH * INPUT_SLACK}
                         aria-invalid={isInvalid}
                       />
                       <div className="min-h-4">

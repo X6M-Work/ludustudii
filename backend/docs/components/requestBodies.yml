@@ -1,9 +1,10 @@
 LearningCardInput:
   required: true
   description: |
-    JSON card content. Both fields must be nonempty after trimming and NFC
-    normalization. Omitted or null fields are treated as empty and fail
-    validation. Unknown JSON properties are ignored.
+    JSON card content. Each field is NFC normalized and trimmed, then must be
+    1 to its maximum length in code points (see LearningCardInput). Omitted or
+    null fields are treated as empty and fail validation. Unknown JSON
+    properties are ignored.
   content:
     application/json:
       schema:
