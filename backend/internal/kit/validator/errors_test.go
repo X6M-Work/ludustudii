@@ -13,7 +13,7 @@ func TestNewFieldError(t *testing.T) {
 
 	err := errors.New("message")
 	got := NewFieldError("field", "code", err)
-	if got.Field != "field" || got.Code != "code" || got.Err != err {
+	if got.Field != "field" || got.Code != "code" || got.Err != err { //nolint:errorlint // The constructor must retain the exact error, not a wrapper.
 		t.Errorf("field error: got %+v, want field/code/%v", got, err)
 	}
 }

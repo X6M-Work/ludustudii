@@ -204,6 +204,13 @@ func clearRefs(v reflect.Value, seen map[uintptr]bool) {
 		for _, k := range v.MapKeys() {
 			clearRefs(v.MapIndex(k), seen)
 		}
+	case reflect.Invalid, reflect.Bool, reflect.String,
+		reflect.Int, reflect.Int8, reflect.Int16, reflect.Int32, reflect.Int64,
+		reflect.Uint, reflect.Uint8, reflect.Uint16, reflect.Uint32, reflect.Uint64, reflect.Uintptr,
+		reflect.Float32, reflect.Float64, reflect.Complex64, reflect.Complex128,
+		reflect.Chan, reflect.Func, reflect.UnsafePointer:
+		// These kinds have no traversable fields or elements containing refs.
+		return
 	}
 }
 

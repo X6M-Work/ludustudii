@@ -83,11 +83,11 @@ func Validation(err error) ErrorResponse {
 
 	var collect func(error)
 	collect = func(err error) {
-		if fe, ok := err.(*validator.FieldError); ok {
+		if fe, ok := err.(*validator.FieldError); ok { //nolint:errorlint // Match this node only; recursion visits every error-tree branch.
 			errs = append(errs, fe)
 			return
 		}
-		switch w := err.(type) {
+		switch w := err.(type) { //nolint:errorlint // Inspect this node's unwrap method; errors.As would search descendants again.
 		case interface{ Unwrap() []error }:
 			for _, e := range w.Unwrap() {
 				collect(e)

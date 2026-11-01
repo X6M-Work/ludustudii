@@ -25,17 +25,17 @@ Final lint output is zero issues in both variants.
 | ineffassign | 0 | No findings. |
 | staticcheck | 3 | Replace three identical-field struct literals with conversions. |
 | unused | 0 | No findings. |
-| errorlint | 3 | Scoped exclusions preserve the depth-first error-tree walker and exact constructor error identity test. |
+| errorlint | 3 | Explained inline directives preserve the depth-first error-tree walker and exact constructor error identity test. |
 | rowserrcheck | 0 | No findings. |
 | sqlclosecheck | 0 | No findings. |
 | bodyclose | 47 | Scoped exclusions for testkit.Do calls: the helper already consumes and closes the response body. |
 | noctx | 21 | Use httptest.NewRequestWithContext(t.Context(), ...) in tests. |
 | usetesting | 7 | Use t.Context() in logging tests. |
 | contextcheck | 2 | Derive cleanup contexts with context.WithoutCancel; use a private context-taking close helper without changing the exported API. |
-| exhaustive | 1 | Exclude the reflective test walker switch, which intentionally ignores scalar leaves. |
+| exhaustive | 1 | Explicitly enumerate non-traversable reflection kinds as leaves in the test walker. |
 | nilerr | 0 | No findings. |
 | nilnil | 0 | No findings. |
-| gosec | 3 | Exclude two intentional CLI artifact-writing diagnostics and one environment-name false positive. |
+| gosec | 3 | Targeted inline #nosec directives cover intentional CLI artifact writing and an environment-name false positive. |
 | revive | 1 | Document the exported logging format constant block. |
 | godot | 0 | No findings. |
 | sloglint | 15 | Use snake_case log keys and slog.DiscardHandler; update log-key/redaction tests. |
@@ -72,21 +72,20 @@ The intentionally excluded linters requested by the user remain disabled.
   prohibitions remain active there.
 - bodyclose: only test sources calling `testkit.Do`, plus the bare `Do` call in
   `internal/testkit/openapi_test.go`; Do reads and closes the body before returning.
-- errorlint: only assertion/switch diagnostics in `internal/kit/erresp/error.go`;
+- Inline `nolint:errorlint`: only assertion/switch diagnostics in `internal/kit/erresp/error.go`;
   this code walks every branch itself, whereas errors.As would skip or duplicate
   siblings. Also the `got.Err != err` constructor test in
   `internal/kit/validator/errors_test.go`, which pins exact error identity.
-- exhaustive: only the `switch v.Kind()` in `apispec/bundle_test.go`; it traverses
-  containers and intentionally ignores scalar kinds.
-- gosec G306/G703: only `cmd/tools/bundlespec/main.go`; the local generator
+- Inline `#nosec G306 G703`: only `cmd/tools/bundlespec/main.go`; the local generator
   intentionally writes a public specification with mode 0644 to its CLI output path.
-- gosec G101: only the `EnvAppWriteTimeout = "APP_WRITE_TIMEOUT"` declaration
+- Inline `#nosec G101`: only the `EnvAppWriteTimeout = "APP_WRITE_TIMEOUT"` declaration
   in `internal/infra/env/load.go`; an environment variable name is not a credential.
 - depguard excludes test files from its architecture rules, allowing in-package
   handler tests to use their existing seams and test helpers. Both root and nested
   kit/services files are covered. Production imports of testkit are forbidden.
 
-No nolint directives were added. No exported parameter/result types changed.
+Source-specific exceptions use explained inline directives; shared policies stay in the
+YAML exclusions. No exported parameter/result types changed.
 Stores, in-package tests, and intentional package-level domain values retain their design.
 `rdb.Connect` did not produce a contextcheck finding; its API was left as-is.
 No further decisions are required.

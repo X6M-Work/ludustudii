@@ -21,7 +21,7 @@ func main() {
 		fmt.Fprintln(os.Stderr, "bundlespec:", err)
 		os.Exit(1)
 	}
-	if err := os.WriteFile(os.Args[1], b, 0o644); err != nil {
+	if err := os.WriteFile(os.Args[1], b, 0o644); err != nil { // #nosec G306 G703 -- This local CLI writes a public spec to the caller-selected output path.
 		fmt.Fprintln(os.Stderr, "bundlespec:", err)
 		os.Exit(1)
 	}

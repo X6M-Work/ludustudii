@@ -22,7 +22,7 @@ const (
 	EnvDBConnMaxIdleTime  = "DB_CONN_MAX_IDLE_TIME"
 	EnvAppPort            = "APP_PORT"
 	EnvAppReadTimeout     = "APP_READ_TIMEOUT"
-	EnvAppWriteTimeout    = "APP_WRITE_TIMEOUT"
+	EnvAppWriteTimeout    = "APP_WRITE_TIMEOUT" // #nosec G101 -- Environment variable name, not a credential.
 	EnvAppIdleTimeout     = "APP_IDLE_TIMEOUT"
 	EnvAppShutdownTimeout = "APP_SHUTDOWN_TIMEOUT"
 	EnvAppAPIDocs         = "APP_API_DOCS"

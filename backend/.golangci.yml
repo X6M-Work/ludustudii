@@ -3,37 +3,56 @@ version: "2"
 run:
   build-tags: [unit, integration, apidocs]
 linters:
+  # Standard checks enabled by default:
+  # errcheck: Finds unchecked error return values.
+  # govet: Detects suspicious constructs and common mistakes.
+  # ineffassign: Finds assignments whose values are never used.
+  # staticcheck: Detects bugs and suggests code simplifications.
+  # unused: Finds unused declarations.
   default: standard
   enable:
-    - errorlint
-    - rowserrcheck
-    - sqlclosecheck
-    - bodyclose
-    - noctx
-    - usetesting
-    - contextcheck
-    - exhaustive
-    - nilerr
-    - nilnil
-    - gosec
-    - revive
-    - godot
-    - sloglint
-    - depguard
-    - forbidigo
-    - thelper
-    - tparallel
-    - nolintlint
-    - usestdlibvars
-    - copyloopvar
-    - intrange
-    - unconvert
-    - misspell
-    - errname
-    - perfsprint
-    - modernize
-    - unparam
-    - gocritic
+    # Errors and control flow.
+    - errorlint # Checks error comparisons, assertions, and wrapping.
+    - nilerr # Finds nil error returns after checking a non-nil error.
+    - nilnil # Flags returning both a nil value and a nil error.
+    - exhaustive # Checks that enum switches cover every value.
+
+    # Resource ownership and request contexts.
+    - rowserrcheck # Checks that SQL row iteration errors are inspected.
+    - sqlclosecheck # Finds SQL rows and statements that are not closed.
+    - bodyclose # Finds HTTP response bodies that are not closed.
+    - noctx # Flags HTTP requests made without an explicit context.
+    - contextcheck # Checks that calls inherit the caller's context.
+
+    # Security and architecture boundaries.
+    - gosec # Detects potentially insecure Go code.
+    - depguard # Enforces package import boundaries.
+    - forbidigo # Forbids selected APIs, such as direct environment access.
+
+    # Tests and test helpers.
+    - usetesting # Suggests testing APIs such as t.Context and t.Setenv.
+    - thelper # Checks test helper parameters and calls to Helper.
+    - tparallel # Checks consistent use of parallel tests and cleanup.
+
+    # Documentation, naming, and logging.
+    - revive # Checks exported declarations and package documentation here.
+    - godot # Checks that documentation comments end with a period.
+    - misspell # Finds common spelling mistakes in comments.
+    - errname # Checks error type names and sentinel error names.
+    - sloglint # Enforces structured logging arguments, keys, and context use.
+    - nolintlint # Requires specific linters and explanations in nolint directives.
+
+    # Simplification and efficiency.
+    - usestdlibvars # Suggests standard library constants for known literal values.
+    - copyloopvar # Finds unnecessary copies of loop variables.
+    - intrange # Suggests ranging over integers for suitable counting loops.
+    - unconvert # Finds unnecessary type conversions.
+    - perfsprint # Suggests simpler alternatives to formatting calls.
+    - modernize # Suggests modern Go language and standard library features.
+
+    # Trial checks retained after a quiet baseline.
+    - unparam # Finds unused function parameters and always-identical results.
+    - gocritic # Detects suspicious constructs and suggests style improvements.
   settings:
     usetesting:
       context-background: true
@@ -102,29 +121,10 @@ linters:
       - path: 'internal/testkit/openapi_test\.go$'
         source: ':= Do\('
         linters: [bodyclose]
-      # Walk every error-tree branch; errors.As would skip or duplicate siblings.
-      - path: 'internal/kit/erresp/error\.go$'
-        text: '(type assertion on error|type switch on error)'
-        linters: [errorlint]
-      # This constructor test checks exact error identity, not unwrap matching.
-      - path: 'internal/kit/validator/errors_test\.go$'
-        source: 'got\.Err != err'
-        linters: [errorlint]
-      # The reflective walker only descends into containers; scalar kinds are leaves.
-      - path: 'apispec/bundle_test\.go$'
-        source: 'switch v\.Kind\(\)'
-        linters: [exhaustive]
-      # The local CLI intentionally accepts its output path and writes a public spec.
-      - path: 'cmd/tools/bundlespec/main\.go$'
-        text: 'G(306|703):'
-        linters: [gosec]
-      # This is an environment variable name, not a hardcoded credential.
-      - path: 'internal/infra/env/load\.go$'
-        source: 'EnvAppWriteTimeout\s*= "APP_WRITE_TIMEOUT"'
-        text: 'G101:'
-        linters: [gosec]
 formatters:
-  enable: [gofumpt, goimports]
+  enable:
+    - gofumpt # Applies stricter Go source formatting.
+    - goimports # Adds missing imports, removes unused imports, and sorts them.
   exclusions:
     generated: lax
     paths:
