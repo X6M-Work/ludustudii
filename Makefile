@@ -5,6 +5,7 @@ SHELL := /bin/bash
 BINARY_NAME := ludustudii
 FRONTEND_DIR := frontend
 BACKEND_DIR := backend
+GO_TOOL := go -C $(BACKEND_DIR) tool -modfile=tools/go.mod
 BUILD_DIR := backend/bin
 SPA_EMBED_DIR := backend/internal/infra/spa/dist
 SCALAR_SRC := $(FRONTEND_DIR)/node_modules/@scalar/api-reference/dist/browser/standalone.js
@@ -64,7 +65,7 @@ dev:
 	@echo "==> Starting local development servers..."
 	@mkdir -p $(dir $(LOG_FILE))
 	@trap 'kill 0' INT TERM EXIT; \
-		(go -C $(BACKEND_DIR) tool air) 2>&1 | (trap '' INT TERM; exec tee -a $(LOG_FILE)) & \
+		($(GO_TOOL) air) 2>&1 | (trap '' INT TERM; exec tee -a $(LOG_FILE)) & \
 		(cd $(FRONTEND_DIR) && npm run dev) & \
 		wait
 
@@ -177,21 +178,21 @@ migrate-up migrate-down migrate-status psql: require-db
 ## ---- Usage: make migrate-create NAME=migration_name
 migrate-create:
 	@if [ -z "$(NAME)" ]; then echo "Error: NAME is required (e.g., make migrate-create NAME=add_users)"; exit 1; fi
-	@go -C $(BACKEND_DIR) tool goose -dir $(MIGRATIONS_DIR) create $(NAME) sql
+	@$(GO_TOOL) goose -dir $(MIGRATIONS_DIR) create $(NAME) sql
 
 ## migrate-up: Applies all pending database migrations
 migrate-up:
-	@go -C $(BACKEND_DIR) tool goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" up
-	@go -C $(BACKEND_DIR) tool goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" version
+	@$(GO_TOOL) goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" up
+	@$(GO_TOOL) goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" version
 
 ## migrate-down: Rolls back the most recently applied database migration (down by one)
 migrate-down:
-	@go -C $(BACKEND_DIR) tool goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" down
-	@go -C $(BACKEND_DIR) tool goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" version
+	@$(GO_TOOL) goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" down
+	@$(GO_TOOL) goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" version
 
 ## migrate-status: Shows the status of all database migrations
 migrate-status:
-	@go -C $(BACKEND_DIR) tool goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" status
+	@$(GO_TOOL) goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" status
 
 .PHONY: psql
 
@@ -244,13 +245,14 @@ lint-verify:
 
 ## vuln: Checks backend packages for known vulnerabilities
 vuln: $(SPA_EMBED_DIR)/index.html
-	go -C $(BACKEND_DIR) tool govulncheck ./...
+	$(GO_TOOL) govulncheck ./...
 
 .PHONY: tidy-check generate-check
 
-## tidy-check: Fails if go.mod/go.sum are not tidy
+## tidy-check: Fails if app or tool go.mod/go.sum files are not tidy
 tidy-check:
 	go -C $(BACKEND_DIR) mod tidy -diff
+	go -C $(BACKEND_DIR)/tools mod tidy -diff
 
 ## generate-check: Fails if generation changes tracked backend files
 generate-check: $(SPA_EMBED_DIR)/index.html

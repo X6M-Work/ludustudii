@@ -2,8 +2,8 @@
 set -e
 
 echo "Installing Go tools..."
-# Install the versions tracked by backend/go.mod for editor and PATH access.
-go -C backend install \
+# Install the versions tracked by backend/tools/go.mod for editor and PATH access.
+go -C backend/tools install \
   github.com/air-verse/air \
   github.com/go-delve/delve/cmd/dlv \
   golang.org/x/tools/cmd/stringer \

@@ -29,6 +29,7 @@ backend/
 │   └── tools/bundlespec/  # bundles the OpenAPI spec into one JSON file
 ├── apispec/               # OpenAPI spec (openapi.yml, paths/, components/), embedded
 ├── migrations/            # goose SQL migrations, embedded (see goose.md)
+├── tools/                 # separate module for pinned development tools
 └── internal/
     ├── app/               # wiring: config, logger, DB, router, error handler, graceful shutdown
     ├── infra/             # env, logging, rdb (Postgres), spa, apidocs
@@ -160,14 +161,19 @@ port 5173 for the client app. To serve a real embedded client build on port
 
 Run `make` or `make help` to list every target.
 
-Air, Delve, goose, stringer and govulncheck are tracked as tools in `backend/go.mod`, with
-checksums in `backend/go.sum`. The devcontainer installs those pinned versions
-for editor and PATH access; Make targets use `go -C backend tool` to select the
-module's versions. From `backend`, run tools directly with `go tool air`,
-`go tool dlv`, `go tool goose`, `go tool stringer` or `go tool govulncheck`.
+Air, Delve, goose, stringer and govulncheck are tracked as tools in the separate
+`backend/tools/go.mod` module, with checksums in `backend/tools/go.sum`. This
+keeps tool dependencies separate from the app's dependency graph. The devcontainer
+installs those pinned versions for editor and PATH access. Make targets use
+`go -C backend tool -modfile=tools/go.mod` to select them while running from
+`backend`. From that directory, run `go tool -modfile=tools/go.mod <tool>`, where
+`<tool>` is `air`, `dlv`, `goose`, `stringer` or `govulncheck`.
 
-To update a tool, run `go -C backend get -tool <package>@<version>` and commit
-both module files. Keep the goose CLI and library on the same version.
+To update a tool, run `go -C backend/tools get -tool <package>@<version>`, then
+`go -C backend/tools mod tidy`, and commit both tool module files. Keep the goose
+CLI in `backend/tools/go.mod` and library in `backend/go.mod` on the same version;
+when updating goose, also run `go -C backend get github.com/pressly/goose/v3@<version>`
+and `go -C backend mod tidy`, and commit both app module files.
 The standalone linter is pinned separately by `GOLANGCI_VERSION` in
 `.devcontainer/post-create.sh`.
 
@@ -303,7 +309,7 @@ standalone golangci-lint binary; lint tooling is kept out of `go.mod`.
 | `make lint-fix` | Apply available automatic lint fixes. |
 | `make fmt` | Format Go source with gofumpt and goimports. |
 | `make fmt-check` | Fail if any Go file needs formatting. |
-| `make tidy-check` | Fail if `backend/go.mod` or `backend/go.sum` needs tidying. |
+| `make tidy-check` | Fail if the app or tool module's `go.mod` or `go.sum` needs tidying. |
 | `make generate-check` | Regenerate backend files and fail if generation changes tracked backend files. |
 | `make lint-verify` | Validate `backend/.golangci.yml`. |
 | `make vuln` | Check backend packages for known vulnerabilities with govulncheck. |
