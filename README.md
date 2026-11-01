@@ -160,11 +160,11 @@ port 5173 for the client app. To serve a real embedded client build on port
 
 Run `make` or `make help` to list every target.
 
-Air, Delve, goose and stringer are tracked as tools in `backend/go.mod`, with
+Air, Delve, goose, stringer and govulncheck are tracked as tools in `backend/go.mod`, with
 checksums in `backend/go.sum`. The devcontainer installs those pinned versions
 for editor and PATH access; Make targets use `go -C backend tool` to select the
 module's versions. From `backend`, run tools directly with `go tool air`,
-`go tool dlv`, `go tool goose` or `go tool stringer`.
+`go tool dlv`, `go tool goose`, `go tool stringer` or `go tool govulncheck`.
 
 To update a tool, run `go -C backend get -tool <package>@<version>` and commit
 both module files. Keep the goose CLI and library on the same version.
@@ -279,6 +279,7 @@ standalone golangci-lint binary; lint tooling is kept out of `go.mod`.
 | `make lint-fix` | Apply available automatic lint fixes. |
 | `make lint-fmt` | Format Go source with gofumpt and goimports. |
 | `make lint-verify` | Validate `backend/.golangci.yml`. |
+| `make vuln` | Check backend packages for known vulnerabilities with govulncheck. |
 
 Lint uses the `unit,integration,apidocs` build tags so tests are included.
 The alternate `script_none.go` build is intentionally omitted from linting.

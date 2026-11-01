@@ -7,6 +7,7 @@ go -C backend install \
   github.com/air-verse/air \
   github.com/go-delve/delve/cmd/dlv \
   golang.org/x/tools/cmd/stringer \
+  golang.org/x/vuln/cmd/govulncheck \
   github.com/pressly/goose/v3/cmd/goose
 # Pin the standalone binary; keep lint tooling out of the backend module.
 GOLANGCI_VERSION=v2.15.0

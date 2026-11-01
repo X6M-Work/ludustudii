@@ -203,3 +203,9 @@ lint-fmt:
 ## lint-verify: Validates the backend golangci-lint configuration
 lint-verify:
 	cd $(BACKEND_DIR) && golangci-lint config verify
+
+.PHONY: vuln
+
+## vuln: Checks backend packages for known vulnerabilities
+vuln: $(SPA_EMBED_DIR)/index.html
+	go -C $(BACKEND_DIR) tool govulncheck ./...
