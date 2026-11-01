@@ -257,5 +257,6 @@ tidy-check:
 ## generate-check: Fails if generation changes tracked backend files
 generate-check: $(SPA_EMBED_DIR)/index.html
 	@cd $(BACKEND_DIR) && snap() { git ls-files -z | xargs -0 sha256sum; }; \
-		before=$$(snap) && go generate ./... && [ "$$before" = "$$(snap)" ] || \
+		before=$$(snap) && go generate ./... || exit 1; \
+		[ "$$before" = "$$(snap)" ] || \
 		{ echo "generate-check: generated files are stale; commit the regenerated output"; exit 1; }
