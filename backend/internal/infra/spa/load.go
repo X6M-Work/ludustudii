@@ -3,11 +3,11 @@
 package spa
 
 import (
-	"crypto/sha256"
 	"embed"
-	"encoding/hex"
 	"fmt"
 	"io/fs"
+
+	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
 )
 
 //go:embed all:dist
@@ -16,14 +16,7 @@ var spaFS embed.FS
 // ClientApp is the embedded client build, rooted at dist.
 type ClientApp struct {
 	RootFS    fs.FS
-	IndexFile IndexFile
-}
-
-// IndexFile is the preloaded index.html with a strong ETag derived from its
-// content.
-type IndexFile struct {
-	ETag       string
-	IndexBytes []byte
+	IndexFile staticfile.File
 }
 
 // Load returns the embedded client app. It fails if dist has no index.html.
@@ -38,14 +31,8 @@ func Load() (*ClientApp, error) {
 		return nil, fmt.Errorf("read index.html: %w", err)
 	}
 
-	hash := sha256.Sum256(indexBytes)
-	etag := `"` + hex.EncodeToString(hash[:16]) + `"`
-
 	return &ClientApp{
-		RootFS: rootFS,
-		IndexFile: IndexFile{
-			ETag:       etag,
-			IndexBytes: indexBytes,
-		},
+		RootFS:    rootFS,
+		IndexFile: staticfile.New("text/html; charset=utf-8", indexBytes),
 	}, nil
 }

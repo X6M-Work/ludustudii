@@ -1,19 +1,19 @@
 //go:build unit
 
-package docs_test
+package apispec_test
 
 import (
 	"fmt"
 	"testing"
 
-	"github.com/apotourlyan/ludustudii/docs"
+	"github.com/apotourlyan/ludustudii/apispec"
 	"github.com/getkin/kin-openapi/openapi3"
 )
 
 func TestLoad(t *testing.T) {
 	t.Parallel()
 
-	doc, err := docs.Load()
+	doc, err := apispec.Load()
 	if err != nil {
 		t.Fatalf("Load() error: %v", err)
 	}
@@ -29,7 +29,7 @@ func TestLoad(t *testing.T) {
 // reachable from request bodies deliberately tolerate unknown fields.
 func TestContractConventions(t *testing.T) {
 	t.Parallel()
-	doc, err := docs.Load()
+	doc, err := apispec.Load()
 	if err != nil {
 		t.Fatal(err)
 	}

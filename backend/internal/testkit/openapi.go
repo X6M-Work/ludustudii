@@ -11,7 +11,7 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/apotourlyan/ludustudii/docs"
+	"github.com/apotourlyan/ludustudii/apispec"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/openapi3filter"
 	"github.com/getkin/kin-openapi/routers"
@@ -24,7 +24,7 @@ type openAPISpec struct {
 }
 
 var loadOpenAPI = sync.OnceValues(func() (*openAPISpec, error) {
-	doc, err := docs.Load()
+	doc, err := apispec.Load()
 	if err != nil {
 		return nil, err
 	}
@@ -36,7 +36,7 @@ var loadOpenAPI = sync.OnceValues(func() (*openAPISpec, error) {
 })
 
 // ValidateResponse fails the test if resp and body do not conform to the
-// OpenAPI specification in backend/docs for req. Non-API paths outside the
+// OpenAPI specification in backend/apispec for req. Non-API paths outside the
 // spec (such as the SPA root) are ignored.
 func ValidateResponse(t testing.TB, req *http.Request, resp *http.Response, body []byte) {
 	t.Helper()

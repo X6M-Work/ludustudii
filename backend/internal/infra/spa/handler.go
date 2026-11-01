@@ -1,15 +1,14 @@
 package spa
 
 import (
-	"bytes"
 	"errors"
 	"io/fs"
 	"log/slog"
 	"net/http"
 	"path"
 	"strings"
-	"time"
 
+	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
 	"github.com/labstack/echo/v5"
 )
 
@@ -21,7 +20,7 @@ import (
 type Handler struct {
 	fileServer http.Handler
 	rootFS     fs.FS
-	indexFile  IndexFile
+	indexFile  staticfile.File
 }
 
 // NewHandler returns a Handler that serves clientApp.
@@ -49,7 +48,7 @@ func (h *Handler) serve(c *echo.Context) error {
 	reqPath := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
 
 	if reqPath == "" || reqPath == "index.html" {
-		serveIndexFile(w, r, h.indexFile)
+		h.indexFile.Serve(w, r)
 		return nil
 	}
 
@@ -61,7 +60,7 @@ func (h *Handler) serve(c *echo.Context) error {
 				return c.String(http.StatusNotFound, "404 page not found\n")
 			}
 
-			serveIndexFile(w, r, h.indexFile)
+			h.indexFile.Serve(w, r)
 			return nil
 		}
 
@@ -75,7 +74,7 @@ func (h *Handler) serve(c *echo.Context) error {
 	}
 
 	if stat.IsDir() {
-		serveIndexFile(w, r, h.indexFile)
+		h.indexFile.Serve(w, r)
 		return nil
 	}
 
@@ -87,10 +86,4 @@ func (h *Handler) serve(c *echo.Context) error {
 
 	h.fileServer.ServeHTTP(w, r)
 	return nil
-}
-
-func serveIndexFile(w http.ResponseWriter, r *http.Request, f IndexFile) {
-	w.Header().Set("Cache-Control", "no-cache")
-	w.Header().Set("ETag", f.ETag)
-	http.ServeContent(w, r, "index.html", time.Time{}, bytes.NewReader(f.IndexBytes))
 }

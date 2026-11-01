@@ -10,7 +10,7 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/apotourlyan/ludustudii/docs"
+	"github.com/apotourlyan/ludustudii/apispec"
 	"github.com/getkin/kin-openapi/openapi3"
 	"github.com/getkin/kin-openapi/routers"
 	"github.com/getkin/kin-openapi/routers/gorillamux"
@@ -523,7 +523,7 @@ func TestCheckResponse(t *testing.T) {
 // A local spec without HEAD exercises the unsupported-method fallback itself.
 func TestCheckUnmatchedRouteHEADMethodNotAllowed(t *testing.T) {
 	t.Parallel()
-	doc, err := docs.Load()
+	doc, err := apispec.Load()
 	if err != nil {
 		t.Fatal(err)
 	}

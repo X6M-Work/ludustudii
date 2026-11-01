@@ -33,6 +33,10 @@ backend/*.dylib
 # SPA asset copy target (if using Option A build step)
 backend/internal/infra/spa/dist/
 
+# Scalar API reference bundle copied from frontend/node_modules
+backend/internal/infra/apidocs/dist/assets/*
+!backend/internal/infra/apidocs/dist/assets/.gitkeep
+
 # Test artifacts
 *.test
 *.out

@@ -7,11 +7,19 @@ FRONTEND_DIR := frontend
 BACKEND_DIR := backend
 BUILD_DIR := backend/bin
 SPA_EMBED_DIR := backend/internal/infra/spa/dist
+SCALAR_SRC := $(FRONTEND_DIR)/node_modules/@scalar/api-reference/dist/browser/standalone.js
+SCALAR_EMBED := backend/internal/infra/apidocs/dist/assets/scalar.js.gz
+SPEC_SRC := $(shell find backend/apispec -name '*.yml')
+SPEC_BUNDLE := backend/internal/infra/apidocs/dist/openapi.json
 MAIN_REL_DIR := ./cmd/server/api
 MIGRATIONS_DIR := backend/migrations
+# API_DOCS=1 builds the binary with the API reference; any other value omits it.
+API_DOCS_TAGS := $(if $(filter 1,$(API_DOCS)),-tags=apidocs)
 LOG_FILE ?= $(BACKEND_DIR)/tmp/app.log
 
 .DEFAULT_GOAL := help
+# Deletes a target whose recipe fails, such as a partly written Scalar bundle.
+.DELETE_ON_ERROR:
 
 .PHONY: help
 ## help: Lists available targets
@@ -22,13 +30,32 @@ $(SPA_EMBED_DIR)/index.html:
 	@mkdir -p $(SPA_EMBED_DIR)
 	@printf '<!doctype html><title>ludustudii (placeholder)</title>\n' > $@
 
+# Gzips the Scalar bundle when frontend dependencies are installed. Without it
+# builds with the apidocs tag still compile, and the server starts without the
+# API reference. -n leaves the source name and mtime out of the header, so the
+# bytes and their ETag only change with the bundle itself.
+$(SCALAR_EMBED): $(wildcard $(SCALAR_SRC))
+	@if [ -f $(SCALAR_SRC) ]; then gzip -9nc $(SCALAR_SRC) > $@; fi
+
 dev test-unit test-integration: $(SPA_EMBED_DIR)/index.html
+dev test-unit: $(SCALAR_EMBED)
+
+.PHONY: spec-bundle
+
+## spec-bundle: Regenerates the bundled OpenAPI spec the API reference serves, if a spec file changed
+spec-bundle: $(SPEC_BUNDLE)
+
+# bundlespec writes the file only once the spec bundles, so a failed run leaves
+# it unchanged and .DELETE_ON_ERROR keeps it.
+$(SPEC_BUNDLE): $(SPEC_SRC)
+	cd $(BACKEND_DIR) && go generate ./internal/infra/apidocs
 
 .PHONY: dev
 
 ## dev: Runs Vite dev server and Go backend (with Air live-reload) concurrently
 ## ---- Backend output is also appended to LOG_FILE (default: backend/tmp/app.log)
 dev: export LOG_FORMAT := json
+dev: export APP_API_DOCS ?= true
 dev:
 	@echo "==> Starting local development servers..."
 	@mkdir -p $(dir $(LOG_FILE))
@@ -73,9 +100,11 @@ logs-stats:
 test: test-unit test-integration
 
 ## test-unit: Runs unit tests with the 'unit' build tag
+## ---- The apidocs package runs again with the 'apidocs' tag, which only it depends on
 test-unit:
 	@echo "==> Running unit tests..."
 	cd $(BACKEND_DIR) && go test -tags=unit ./... | grep --line-buffered -v '^?'
+	cd $(BACKEND_DIR) && go test -tags=unit,apidocs ./internal/infra/apidocs/
 
 ## test-integration: Runs integration tests with the 'integration' build tag
 test-integration:
@@ -96,12 +125,20 @@ build-frontend:
 	@echo "==> Frontend bundle built successfully."
 
 ## build-backend: Compiles static Go binary with embedded SPA
+## ---- API_DOCS=1 also embeds the API reference (for dev, test and staging builds)
+ifeq ($(API_DOCS),1)
+build-backend: $(SCALAR_EMBED)
+endif
 build-backend:
 	@! grep -qs 'ludustudii (placeholder)' $(SPA_EMBED_DIR)/index.html || \
 		{ echo "SPA not built: run 'make build-frontend' first"; exit 1; }
+ifeq ($(API_DOCS),1)
+	@[ -s $(SCALAR_EMBED) ] || \
+		{ echo "Scalar bundle missing: run 'make build-frontend' first"; exit 1; }
+endif
 	@echo "==> Building Go binary..."
 	mkdir -p $(BUILD_DIR)
-	cd $(BACKEND_DIR) && CGO_ENABLED=0 go build -ldflags="-w -s" -o ../$(BUILD_DIR)/$(BINARY_NAME) $(MAIN_REL_DIR)
+	cd $(BACKEND_DIR) && CGO_ENABLED=0 go build $(API_DOCS_TAGS) -ldflags="-w -s" -o ../$(BUILD_DIR)/$(BINARY_NAME) $(MAIN_REL_DIR)
 	@echo "==> Build complete: $(BUILD_DIR)/$(BINARY_NAME)"
 
 ## clean: Deletes build outputs and temporary embed files
@@ -110,6 +147,7 @@ clean:
 	rm -rf $(BUILD_DIR)
 	rm -rf $(BACKEND_DIR)/tmp
 	rm -rf $(SPA_EMBED_DIR)
+	rm -f $(SCALAR_EMBED)
 	@echo "==> Clean complete."
 
 .PHONY: migrate-create migrate-up migrate-down migrate-status

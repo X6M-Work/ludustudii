@@ -32,7 +32,7 @@ func newServer(t *testing.T) (*httptest.Server, *sql.DB) {
 		t.Fatal(err)
 	}
 	db := testkit.NewDB(t)
-	srv := httptest.NewServer(app.NewRouter(slog.New(slog.NewTextHandler(io.Discard, nil)), clientApp, db))
+	srv := httptest.NewServer(app.NewRouter(slog.New(slog.NewTextHandler(io.Discard, nil)), clientApp, nil, db))
 	t.Cleanup(srv.Close)
 	return srv, db
 }

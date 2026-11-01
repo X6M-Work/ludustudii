@@ -13,8 +13,10 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
 	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
+	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
 	"github.com/apotourlyan/ludustudii/internal/testkit"
 	"github.com/labstack/echo/v5"
 )
@@ -29,7 +31,7 @@ func newRouterServer(t *testing.T) *httptest.Server {
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(NewRouter(discardLogger(), clientApp, nil))
+	srv := httptest.NewServer(NewRouter(discardLogger(), clientApp, nil, nil))
 	t.Cleanup(srv.Close)
 	return srv
 }
@@ -74,7 +76,7 @@ func TestNewRouter(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		e := NewRouter(discardLogger(), clientApp, nil) // keep the stack trace out of test output
+		e := NewRouter(discardLogger(), clientApp, nil, nil) // keep the stack trace out of test output
 		e.GET("/api/panic", func(c *echo.Context) error { panic("boom") })
 		srv := httptest.NewServer(e)
 		t.Cleanup(srv.Close)
@@ -82,6 +84,62 @@ func TestNewRouter(t *testing.T) {
 		resp, body := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/api/panic"})
 		testkit.AssertStatus(t, resp, body, http.StatusInternalServerError)
 		testkit.AssertJSON(t, body, `{"code":"unexpected_error"}`)
+	})
+}
+
+func TestNewRouter_APIDocs(t *testing.T) {
+	t.Parallel()
+
+	clientApp, err := spa.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	docs := &apidocs.Docs{
+		Page:   staticfile.File{ContentType: "text/html; charset=utf-8", ETag: `"page"`, Bytes: []byte("<!doctype html><title>docs</title>")},
+		Spec:   staticfile.File{ContentType: "application/json", ETag: `"spec"`, Bytes: []byte(`{"openapi":"3.0.3"}`)},
+		Script: staticfile.File{ContentType: "text/javascript; charset=utf-8", ETag: `"script"`, Bytes: []byte("console.log(1)")},
+	}
+
+	t.Run("disabled: /docs is left to the SPA", func(t *testing.T) {
+		t.Parallel()
+		srv := httptest.NewServer(NewRouter(discardLogger(), clientApp, nil, nil))
+		t.Cleanup(srv.Close)
+
+		resp, body := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: apidocs.Path})
+		testkit.AssertStatus(t, resp, body, http.StatusOK)
+		if !bytes.Equal(body, clientApp.IndexFile.Bytes) {
+			t.Errorf("GET %s: want the SPA index.html, got %q", apidocs.Path, body)
+		}
+
+		for _, path := range []string{apidocs.Path + "/openapi.json", apidocs.Path + "/scalar.js"} {
+			resp, body := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: path})
+			testkit.AssertStatus(t, resp, body, http.StatusNotFound)
+		}
+	})
+
+	t.Run("enabled: /docs serves the reference", func(t *testing.T) {
+		t.Parallel()
+		srv := httptest.NewServer(NewRouter(discardLogger(), clientApp, apidocs.NewHandler(docs), nil))
+		t.Cleanup(srv.Close)
+
+		for path, want := range map[string]staticfile.File{
+			apidocs.Path:                   docs.Page,
+			apidocs.Path + "/openapi.json": docs.Spec,
+			apidocs.Path + "/scalar.js":    docs.Script,
+		} {
+			resp, body := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: path})
+			testkit.AssertStatus(t, resp, body, http.StatusOK)
+			if ct := resp.Header.Get(echo.HeaderContentType); ct != want.ContentType {
+				t.Errorf("GET %s Content-Type: got %q, want %q", path, ct, want.ContentType)
+			}
+			if !bytes.Equal(body, want.Bytes) {
+				t.Errorf("GET %s: got %q, want %q", path, body, want.Bytes)
+			}
+		}
+
+		resp, body := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/api/nope"})
+		testkit.AssertStatus(t, resp, body, http.StatusNotFound)
+		testkit.AssertJSON(t, body, `{"code":"not_found"}`)
 	})
 }
 
@@ -130,7 +188,7 @@ func TestNewRouter_RequestLogging(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			srv := httptest.NewServer(NewRouter(log, clientApp, nil))
+			srv := httptest.NewServer(NewRouter(log, clientApp, nil, nil))
 			t.Cleanup(srv.Close)
 
 			resp, body := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: tt.path})
@@ -194,7 +252,7 @@ func TestNewRouter_RequestLogging(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		srv := httptest.NewServer(NewRouter(log, clientApp, nil))
+		srv := httptest.NewServer(NewRouter(log, clientApp, nil, nil))
 		t.Cleanup(srv.Close)
 
 		resp, body := testkit.Do(t, srv, testkit.DoOpts{

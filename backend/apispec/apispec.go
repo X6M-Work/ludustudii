@@ -1,5 +1,5 @@
-// Package docs embeds and loads the OpenAPI specification for the HTTP API.
-package docs
+// Package apispec embeds and loads the OpenAPI specification for the HTTP API.
+package apispec
 
 import (
 	"embed"

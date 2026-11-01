@@ -13,6 +13,7 @@ import (
 	"os/signal"
 	"syscall"
 
+	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
 	"github.com/apotourlyan/ludustudii/internal/infra/env"
 	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 	"github.com/apotourlyan/ludustudii/internal/infra/rdb"
@@ -20,11 +21,11 @@ import (
 )
 
 // Run loads the environment, sets the default logger, loads the embedded
-// client app, connects to the database and serves HTTP until the server fails
-// or the process receives SIGINT or SIGTERM. On a signal it shuts the server
-// down gracefully within the configured shutdown timeout; a second signal
-// during shutdown terminates the process immediately. The database is closed
-// before Run returns.
+// client app and, when APP_API_DOCS is set, the API reference, connects to
+// the database and serves HTTP until the server fails or the process receives
+// SIGINT or SIGTERM. On a signal it shuts the server down gracefully within
+// the configured shutdown timeout; a second signal during shutdown terminates
+// the process immediately. The database is closed before Run returns.
 func Run() (err error) {
 	ev, err := env.Load()
 	if err != nil {
@@ -47,6 +48,24 @@ func Run() (err error) {
 		return fmt.Errorf("load client app: %w", err)
 	}
 
+	var apiDocs *apidocs.Handler
+	if ev.AppAPIDocs {
+		// The API keeps running without its reference when only the Scalar
+		// bundle is missing, as in a checkout without frontend dependencies.
+		// A binary built without the apidocs tag fails to start instead, since
+		// enabling the reference for it is a deployment mistake.
+		d, err := apidocs.Load()
+		switch {
+		case errors.Is(err, apidocs.ErrScriptNotEmbedded):
+			slog.Warn("API reference disabled", "error", err)
+		case err != nil:
+			return fmt.Errorf("load api docs: %w", err)
+		default:
+			apiDocs = apidocs.NewHandler(d)
+			slog.Info("API reference enabled", "path", apidocs.Path)
+		}
+	}
+
 	db, err := rdb.Connect(rdb.Options{
 		ConnectionString: ev.DBConnectionString,
 		MaxOpenConns:     ev.DBMaxOpenConns,
@@ -63,7 +82,7 @@ func Run() (err error) {
 		}
 	}()
 
-	router := NewRouter(log, ca, db)
+	router := NewRouter(log, ca, apiDocs, db)
 
 	server := &http.Server{
 		Addr:         net.JoinHostPort("", ev.AppPort),

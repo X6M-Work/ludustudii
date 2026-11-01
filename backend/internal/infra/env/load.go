@@ -25,6 +25,7 @@ const (
 	EnvAppWriteTimeout    = "APP_WRITE_TIMEOUT"
 	EnvAppIdleTimeout     = "APP_IDLE_TIMEOUT"
 	EnvAppShutdownTimeout = "APP_SHUTDOWN_TIMEOUT"
+	EnvAppAPIDocs         = "APP_API_DOCS"
 	EnvLogLevel           = "LOG_LEVEL"
 	EnvLogFormat          = "LOG_FORMAT"
 )
@@ -39,6 +40,7 @@ const (
 	DefaultAppWriteTimeout    = 10 * time.Second
 	DefaultAppIdleTimeout     = 90 * time.Second
 	DefaultAppShutdownTimeout = 15 * time.Second
+	DefaultAppAPIDocs         = false
 	DefaultLogLevel           = slog.LevelInfo
 	DefaultLogFormat          = logging.FormatJSON
 )
@@ -56,6 +58,7 @@ type Vars struct {
 	AppWriteTimeout    time.Duration
 	AppIdleTimeout     time.Duration
 	AppShutdownTimeout time.Duration
+	AppAPIDocs         bool
 	LogLevel           *slog.LevelVar
 	LogFormat          logging.Format
 }
@@ -63,10 +66,10 @@ type Vars struct {
 // Load reads the configuration from the environment. DB_CONNECTION and
 // APP_PORT are required, and DB_CONNECTION must be a postgres:// or
 // postgresql:// URL. The other variables are optional and fall back to the
-// Default constants. Durations use time.ParseDuration syntax, LOG_LEVEL uses
-// slog.Level names (such as "debug" or "warn") and LOG_FORMAT is "json" or
-// "text". Load reports every invalid or missing variable, joined into one
-// error.
+// Default constants. Durations use time.ParseDuration syntax, booleans use
+// strconv.ParseBool syntax (such as "true" or "0"), LOG_LEVEL uses slog.Level
+// names (such as "debug" or "warn") and LOG_FORMAT is "json" or "text". Load
+// reports every invalid or missing variable, joined into one error.
 func Load() (*Vars, error) {
 	var errs []error
 
@@ -112,6 +115,9 @@ func Load() (*Vars, error) {
 	appShutdownTimeout, err := getEnvDuration(EnvAppShutdownTimeout, DefaultAppShutdownTimeout)
 	errs = append(errs, err)
 
+	appAPIDocs, err := getEnvBool(EnvAppAPIDocs, DefaultAppAPIDocs)
+	errs = append(errs, err)
+
 	logLevel, err := getEnvLevel(EnvLogLevel, DefaultLogLevel)
 	errs = append(errs, err)
 
@@ -133,6 +139,7 @@ func Load() (*Vars, error) {
 		AppWriteTimeout:    appWriteTimeout,
 		AppIdleTimeout:     appIdleTimeout,
 		AppShutdownTimeout: appShutdownTimeout,
+		AppAPIDocs:         appAPIDocs,
 		LogLevel:           logLevel,
 		LogFormat:          logFormat,
 	}, nil
@@ -161,6 +168,7 @@ func (v *Vars) LogAttrs() []slog.Attr {
 		slog.Duration(EnvAppWriteTimeout, v.AppWriteTimeout),
 		slog.Duration(EnvAppIdleTimeout, v.AppIdleTimeout),
 		slog.Duration(EnvAppShutdownTimeout, v.AppShutdownTimeout),
+		slog.Bool(EnvAppAPIDocs, v.AppAPIDocs),
 		slog.String(EnvLogLevel, v.LogLevel.Level().String()),
 		slog.String(EnvLogFormat, v.LogFormat.String()),
 	}
@@ -186,6 +194,18 @@ func getEnvDuration(key string, defaultValue time.Duration) (time.Duration, erro
 	value, err := time.ParseDuration(valueStr)
 	if err != nil {
 		return 0, fmt.Errorf("parse %s: %w", key, err)
+	}
+	return value, nil
+}
+
+func getEnvBool(key string, defaultValue bool) (bool, error) {
+	valueStr := os.Getenv(key)
+	if valueStr == "" {
+		return defaultValue, nil
+	}
+	value, err := strconv.ParseBool(valueStr)
+	if err != nil {
+		return false, fmt.Errorf("parse %s: %w", key, err)
 	}
 	return value, nil
 }

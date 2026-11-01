@@ -14,9 +14,9 @@
       ],
       "settings": {
         "gopls": {
-          "buildFlags": ["-tags=unit,integration"]
+          "buildFlags": ["-tags=unit,integration,apidocs"]
         },
-        "go.testTags": "unit,integration"
+        "go.testTags": "unit,integration,apidocs"
       }
     }
   },

@@ -26,6 +26,12 @@ export default defineConfig({
         target: 'http://localhost:8080',
         changeOrigin: true,
       },
+      // Only /docs and paths below it, not client routes such as /docsets.
+      // The pattern is matched against the URL including its query string.
+      '^/docs([/?#]|$)': {
+        target: 'http://localhost:8080',
+        changeOrigin: true,
+      },
     },
   },
   build: {

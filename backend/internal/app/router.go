@@ -5,6 +5,7 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
 	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards"
@@ -18,9 +19,10 @@ const MaxBodyBytes = 1 << 20
 
 // NewRouter builds the production handler: middleware (panic recovery,
 // request IDs, request logging and the body limit), API routes, API
-// fallbacks, and the SPA. Each request's context carries its request ID, so
-// loggers built by logging.New include it as "request_id".
-func NewRouter(log *slog.Logger, clientApp *spa.ClientApp, db *sql.DB) *echo.Echo {
+// fallbacks, the API reference when apiDocs is not nil, and the SPA. Each
+// request's context carries its request ID, so loggers built by logging.New
+// include it as "request_id".
+func NewRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Handler, db *sql.DB) *echo.Echo {
 	e := echo.NewWithConfig(echo.Config{
 		Router:           echo.NewRouter(echo.RouterConfig{AutoHandleHEAD: true}),
 		Binder:           jsonBinder{},
@@ -45,6 +47,10 @@ func NewRouter(log *slog.Logger, clientApp *spa.ClientApp, db *sql.DB) *echo.Ech
 		e.RouteNotFound(p, func(c *echo.Context) error {
 			return echo.ErrNotFound
 		})
+	}
+
+	if apiDocs != nil {
+		apiDocs.RegisterRoutes(e)
 	}
 
 	spa.NewHandler(clientApp).RegisterRoutes(e)

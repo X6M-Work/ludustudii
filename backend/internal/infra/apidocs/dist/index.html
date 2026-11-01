@@ -1,0 +1,21 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Ludustudii API</title>
+  </head>
+  <body>
+    <div id="app"></div>
+    <script src="docs/scalar.js"></script>
+    <script>
+      // Fonts and the AI agent load from Scalar's servers; keep the page self-hosted.
+      Scalar.createApiReference('#app', {
+        url: 'docs/openapi.json',
+        withDefaultFonts: false,
+        agent: { disabled: true },
+        showDeveloperTools: 'never',
+      })
+    </script>
+  </body>
+</html>

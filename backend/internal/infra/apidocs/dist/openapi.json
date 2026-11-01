@@ -1,0 +1,752 @@
+{
+  "components": {
+    "headers": {
+      "RequestId": {
+        "description": "Incoming X-Request-Id value, or a generated request ID when none was supplied.",
+        "required": true,
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "parameters": {
+      "CardId": {
+        "description": "Hyphenated UUIDv7 with the RFC 9562 variant. Hexadecimal letters are case-insensitive.",
+        "in": "path",
+        "name": "id",
+        "required": true,
+        "schema": {
+          "example": "019a0000-0000-7000-8000-000000000001",
+          "format": "uuid",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        }
+      },
+      "Cursor": {
+        "description": "Hyphenated UUIDv7 from a previous page's next_cursor. Hexadecimal letters are case-insensitive. Omit or send an empty value for the first page.",
+        "in": "query",
+        "name": "cursor",
+        "schema": {
+          "example": "019a0000-0000-7000-8000-000000000001",
+          "format": "uuid",
+          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        }
+      },
+      "Limit": {
+        "description": "Page size in canonical decimal form, without leading zeros, a plus sign, or whitespace. Omitted or empty values use 20.",
+        "in": "query",
+        "name": "limit",
+        "schema": {
+          "default": 20,
+          "maximum": 100,
+          "minimum": 1,
+          "type": "integer"
+        }
+      },
+      "RequestId": {
+        "description": "Optional client-supplied request ID, echoed back in the X-Request-Id response header and included in server logs. A new ID is generated when omitted.",
+        "in": "header",
+        "name": "X-Request-Id",
+        "schema": {
+          "type": "string"
+        }
+      }
+    },
+    "requestBodies": {
+      "LearningCardInput": {
+        "content": {
+          "application/json": {
+            "example": {
+              "description": "A specification for describing HTTP APIs.",
+              "title": "OpenAPI"
+            },
+            "schema": {
+              "$ref": "#/components/schemas/LearningCardInput"
+            }
+          }
+        },
+        "description": "JSON card content. Each field is NFC normalized and trimmed, then must be\n1 to its maximum length in code points (see LearningCardInput). Omitted or\nnull fields are treated as empty and fail validation. Unknown JSON\nproperties are ignored.\n",
+        "required": true
+      }
+    },
+    "responses": {
+      "HeadInvalidInput": {
+        "description": "Invalid query parameters or card ID. No response body.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "HeadNotFound": {
+        "description": "No card exists with this ID. No response body.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "HeadPayloadTooLarge": {
+        "description": "Request body exceeds the 1 MiB limit. No response body.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "HeadSuccess": {
+        "description": "The corresponding GET succeeded. No response body.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "HeadUnexpectedError": {
+        "description": "An unexpected server or storage error occurred. No response body.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "InvalidCardId": {
+        "content": {
+          "application/json": {
+            "example": {
+              "code": "param_error"
+            },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "description": "Path ID is not a hyphenated UUIDv7 with the required variant.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "InvalidCreateInput": {
+        "content": {
+          "application/json": {
+            "examples": {
+              "binding": {
+                "value": {
+                  "code": "bind_error"
+                }
+              },
+              "validation": {
+                "value": {
+                  "code": "validation_error",
+                  "errors": [
+                    {
+                      "code": "required",
+                      "field": "title"
+                    },
+                    {
+                      "code": "max_length",
+                      "field": "description"
+                    }
+                  ]
+                }
+              }
+            },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "description": "Malformed JSON or incompatible JSON types return bind_error. Empty\nbodies and invalid field values return validation_error.\n",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "InvalidQuery": {
+        "content": {
+          "application/json": {
+            "example": {
+              "code": "validation_error",
+              "errors": [
+                {
+                  "code": "out_of_range",
+                  "field": "limit"
+                }
+              ]
+            },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "description": "Invalid query parameters (validation_error), or query binding failure (bind_error).",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "InvalidReplaceInput": {
+        "content": {
+          "application/json": {
+            "examples": {
+              "binding": {
+                "value": {
+                  "code": "bind_error"
+                }
+              },
+              "invalidId": {
+                "value": {
+                  "code": "param_error"
+                }
+              },
+              "validation": {
+                "value": {
+                  "code": "validation_error",
+                  "errors": [
+                    {
+                      "code": "required",
+                      "field": "title"
+                    },
+                    {
+                      "code": "max_length",
+                      "field": "description"
+                    }
+                  ]
+                }
+              }
+            },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "description": "An invalid path ID returns param_error before body binding. Malformed\nJSON or incompatible JSON types return bind_error. Empty bodies and\ninvalid field values return validation_error.\n",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "NotFound": {
+        "content": {
+          "application/json": {
+            "example": {
+              "code": "not_found"
+            },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "description": "No card exists with this ID.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "PayloadTooLarge": {
+        "content": {
+          "application/json": {
+            "example": {
+              "code": "payload_too_large"
+            },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "description": "Request body exceeds the 1 MiB limit.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "UnexpectedError": {
+        "content": {
+          "application/json": {
+            "example": {
+              "code": "unexpected_error"
+            },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "description": "An unexpected server or storage error occurred. Internal details are not returned.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "UnsupportedMediaType": {
+        "content": {
+          "application/json": {
+            "example": {
+              "code": "unsupported_media_type"
+            },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "description": "A nonempty request body was sent without Content-Type application/json.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      }
+    },
+    "schemas": {
+      "CardId": {
+        "description": "Canonical lowercase, hyphenated UUIDv7 with the RFC 9562 variant.",
+        "example": "019a0000-0000-7000-8000-000000000001",
+        "format": "uuid",
+        "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+        "type": "string"
+      },
+      "CreatedLearningCard": {
+        "additionalProperties": false,
+        "properties": {
+          "id": {
+            "$ref": "#/components/schemas/CardId"
+          }
+        },
+        "required": [
+          "id"
+        ],
+        "type": "object"
+      },
+      "ErrorResponse": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "enum": [
+              "bind_error",
+              "validation_error",
+              "param_error",
+              "not_found",
+              "method_not_allowed",
+              "payload_too_large",
+              "unsupported_media_type",
+              "unexpected_error",
+              "request_error"
+            ],
+            "type": "string"
+          },
+          "errors": {
+            "description": "Per-field failures, included only for validation_error responses.",
+            "items": {
+              "$ref": "#/components/schemas/FieldError"
+            },
+            "minItems": 1,
+            "type": "array"
+          }
+        },
+        "required": [
+          "code"
+        ],
+        "type": "object"
+      },
+      "FieldError": {
+        "additionalProperties": false,
+        "properties": {
+          "code": {
+            "description": "Card fields (title, description) report required or max_length.\nQuery parameters report invalid_integer or out_of_range (limit) and\ninvalid_uuid7 (cursor). untrimmed and not_normalized are reserved:\ncard fields are trimmed and NFC-normalized before validation, so\nthese codes are not currently returned.\n",
+            "enum": [
+              "invalid_uuid7",
+              "required",
+              "max_length",
+              "untrimmed",
+              "not_normalized",
+              "invalid_integer",
+              "out_of_range"
+            ],
+            "type": "string"
+          },
+          "field": {
+            "example": "title",
+            "type": "string"
+          }
+        },
+        "required": [
+          "field",
+          "code"
+        ],
+        "type": "object"
+      },
+      "LearningCard": {
+        "additionalProperties": false,
+        "properties": {
+          "description": {
+            "$ref": "#/components/schemas/LearningCardInput/properties/description"
+          },
+          "id": {
+            "$ref": "#/components/schemas/CardId"
+          },
+          "title": {
+            "$ref": "#/components/schemas/LearningCardInput/properties/title"
+          }
+        },
+        "required": [
+          "id",
+          "title",
+          "description"
+        ],
+        "type": "object"
+      },
+      "LearningCardInput": {
+        "description": "Length constraints apply to the canonical form of each field: NFC\nnormalized, with leading and trailing white space removed, counted in\nUnicode code points. Clients should validate that form. The server also\naccepts untrimmed or non-NFC input and canonicalizes it before validation\nand storage, so stored and returned values always satisfy the constraints\nas written.\n",
+        "properties": {
+          "description": {
+            "description": "Card description. Length is counted in code points of the canonical form.",
+            "example": "A specification for describing HTTP APIs.",
+            "maxLength": 2000,
+            "minLength": 1,
+            "type": "string"
+          },
+          "title": {
+            "description": "Card title. Length is counted in code points of the canonical form.",
+            "example": "OpenAPI",
+            "maxLength": 200,
+            "minLength": 1,
+            "type": "string"
+          }
+        },
+        "required": [
+          "title",
+          "description"
+        ],
+        "type": "object"
+      },
+      "LearningCardPage": {
+        "additionalProperties": false,
+        "properties": {
+          "items": {
+            "items": {
+              "$ref": "#/components/schemas/LearningCard"
+            },
+            "maxItems": 100,
+            "type": "array"
+          },
+          "next_cursor": {
+            "description": "Last returned card's ID when more cards follow; null on the final page.",
+            "format": "uuid",
+            "nullable": true,
+            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
+            "type": "string"
+          }
+        },
+        "required": [
+          "items",
+          "next_cursor"
+        ],
+        "type": "object"
+      }
+    }
+  },
+  "info": {
+    "description": "Backend API for managing learning cards. No authentication is required.\n\nRequests with JSON bodies must use Content-Type: application/json\n(media-type parameters are accepted); other or missing Content-Types on a\nnonempty body return 415 with code unsupported_media_type. Titles and descriptions are normalized\nto Unicode NFC and trimmed before validation and storage. Length limits\ncount Unicode code points after this sanitization.\n\nRequest bodies are limited to 1,048,576 bytes (1 MiB). Oversized bodies\nreturn 413 with code payload_too_large, whether the size is declared in\nContent-Length or only discovered while reading a chunked body.\n\nEvery response includes X-Request-Id, reusing the incoming header when\nprovided or generating an ID otherwise. /api and unknown /api/* paths return 404\nwith code not_found. Unsupported methods on the collection return 405\nwith code method_not_allowed and Allow: GET, HEAD, POST; unsupported methods\non an individual card return 405 with Allow: GET, HEAD, PUT, DELETE.\nDeeper paths below a card return 404.\n",
+    "license": {
+      "name": "MIT",
+      "url": "https://opensource.org/licenses/MIT"
+    },
+    "title": "Ludustudii API",
+    "version": "1.0.0"
+  },
+  "openapi": "3.0.3",
+  "paths": {
+    "/api/lcards": {
+      "get": {
+        "description": "Returns cards ordered by descending UUIDv7 ID (newest first), using\nkeyset pagination. Pass next_cursor from the preceding response to\nretrieve cards with smaller IDs. The cursor need not identify an\nexisting card. An empty limit or cursor is treated as omitted.\n",
+        "operationId": "listLearningCards",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "example": {
+                  "items": [
+                    {
+                      "description": "A specification for describing HTTP APIs.",
+                      "id": "019a0000-0000-7000-8000-000000000001",
+                      "title": "OpenAPI"
+                    }
+                  ],
+                  "next_cursor": null
+                },
+                "schema": {
+                  "$ref": "#/components/schemas/LearningCardPage"
+                }
+              }
+            },
+            "description": "A page of cards; items is an empty array when no cards match.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidQuery"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "500": {
+            "$ref": "#/components/responses/UnexpectedError"
+          }
+        },
+        "summary": "List learning cards",
+        "tags": [
+          "Learning cards"
+        ]
+      },
+      "head": {
+        "description": "Executes the list operation with the same query validation, without a response body.",
+        "operationId": "headLearningCards",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/Limit"
+          },
+          {
+            "$ref": "#/components/parameters/Cursor"
+          }
+        ],
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HeadSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/HeadInvalidInput"
+          },
+          "413": {
+            "$ref": "#/components/responses/HeadPayloadTooLarge"
+          },
+          "500": {
+            "$ref": "#/components/responses/HeadUnexpectedError"
+          }
+        },
+        "summary": "Get collection response headers",
+        "tags": [
+          "Learning cards"
+        ]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/RequestId"
+        }
+      ],
+      "post": {
+        "operationId": "createLearningCard",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/LearningCardInput"
+        },
+        "responses": {
+          "201": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CreatedLearningCard"
+                }
+              }
+            },
+            "description": "Card created. The body contains its ID and Location contains its relative URL.",
+            "headers": {
+              "Location": {
+                "description": "Relative URL of the newly created card.",
+                "required": true,
+                "schema": {
+                  "example": "/api/lcards/019a0000-0000-7000-8000-000000000001",
+                  "type": "string"
+                }
+              },
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidCreateInput"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/UnexpectedError"
+          }
+        },
+        "summary": "Create a learning card",
+        "tags": [
+          "Learning cards"
+        ]
+      }
+    },
+    "/api/lcards/{id}": {
+      "delete": {
+        "operationId": "deleteLearningCard",
+        "responses": {
+          "204": {
+            "description": "Card deleted successfully. No response body.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidCardId"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "500": {
+            "$ref": "#/components/responses/UnexpectedError"
+          }
+        },
+        "summary": "Delete a learning card",
+        "tags": [
+          "Learning cards"
+        ]
+      },
+      "get": {
+        "operationId": "getLearningCard",
+        "responses": {
+          "200": {
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/LearningCard"
+                }
+              }
+            },
+            "description": "The requested card.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidCardId"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "500": {
+            "$ref": "#/components/responses/UnexpectedError"
+          }
+        },
+        "summary": "Get a learning card",
+        "tags": [
+          "Learning cards"
+        ]
+      },
+      "head": {
+        "description": "Executes the get operation with the same ID validation, without a response body.",
+        "operationId": "headLearningCard",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HeadSuccess"
+          },
+          "400": {
+            "$ref": "#/components/responses/HeadInvalidInput"
+          },
+          "404": {
+            "$ref": "#/components/responses/HeadNotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/HeadPayloadTooLarge"
+          },
+          "500": {
+            "$ref": "#/components/responses/HeadUnexpectedError"
+          }
+        },
+        "summary": "Get card response headers",
+        "tags": [
+          "Learning cards"
+        ]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/CardId"
+        },
+        {
+          "$ref": "#/components/parameters/RequestId"
+        }
+      ],
+      "put": {
+        "description": "Both fields must be supplied. This operation does not create a missing card.",
+        "operationId": "replaceLearningCard",
+        "requestBody": {
+          "$ref": "#/components/requestBodies/LearningCardInput"
+        },
+        "responses": {
+          "204": {
+            "description": "Card updated successfully. No response body.",
+            "headers": {
+              "X-Request-Id": {
+                "$ref": "#/components/headers/RequestId"
+              }
+            }
+          },
+          "400": {
+            "$ref": "#/components/responses/InvalidReplaceInput"
+          },
+          "404": {
+            "$ref": "#/components/responses/NotFound"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "415": {
+            "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "500": {
+            "$ref": "#/components/responses/UnexpectedError"
+          }
+        },
+        "summary": "Replace a learning card's title and description",
+        "tags": [
+          "Learning cards"
+        ]
+      }
+    }
+  },
+  "servers": [
+    {
+      "description": "Current backend origin",
+      "url": "/"
+    }
+  ],
+  "tags": [
+    {
+      "description": "Create, read, replace, and delete learning cards.",
+      "name": "Learning cards"
+    }
+  ]
+}

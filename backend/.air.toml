@@ -2,10 +2,11 @@ root = "."
 tmp_dir = "tmp"
 
 [build]
-  cmd = "go build -o ./tmp/main ./cmd/server/api"
+  # A spec that does not bundle leaves the served one as is and does not stop the build.
+  cmd = "make -s -C .. spec-bundle; go build -tags=apidocs -o ./tmp/main ./cmd/server/api"
   bin = "./tmp/main"
-  include_ext = ["go", "html", "tmpl"]
-  exclude_dir = ["tmp", "vendor", "bin", "internal/infra/spa/dist"]
+  include_ext = ["go", "html", "tmpl", "yml"]
+  exclude_dir = ["tmp", "vendor", "bin", "internal/infra/spa/dist", "internal/infra/apidocs/dist/assets"]
   delay = 1000
 
 [log]
