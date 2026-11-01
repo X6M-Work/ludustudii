@@ -65,7 +65,8 @@ type Vars struct {
 
 // Load reads the configuration from the environment. DB_CONNECTION and
 // APP_PORT are required, and DB_CONNECTION must be a postgres:// or
-// postgresql:// URL. The other variables are optional and fall back to the
+// postgresql:// URL. APP_PORT must be a decimal port from 1 to 65535.
+// The other variables are optional and fall back to the
 // Default constants. Durations use time.ParseDuration syntax, booleans use
 // strconv.ParseBool syntax (such as "true" or "0"), LOG_LEVEL uses slog.Level
 // names (such as "debug" or "warn") and LOG_FORMAT is "json" or "text". Load
@@ -98,10 +99,8 @@ func Load() (*Vars, error) {
 	dbConnMaxIdleTime, err := getEnvDuration(EnvDBConnMaxIdleTime, DefaultDBConnMaxIdleTime)
 	errs = append(errs, err)
 
-	appPort := os.Getenv(EnvAppPort)
-	if appPort == "" {
-		errs = append(errs, fmt.Errorf("get env %s: not set", EnvAppPort))
-	}
+	appPort, err := getEnvPort(EnvAppPort)
+	errs = append(errs, err)
 
 	appReadTimeout, err := getEnvDuration(EnvAppReadTimeout, DefaultAppReadTimeout)
 	errs = append(errs, err)
@@ -174,6 +173,17 @@ func (v *Vars) LogAttrs() []slog.Attr {
 		slog.String(EnvLogLevel, v.LogLevel.Level().String()),
 		slog.String(EnvLogFormat, v.LogFormat.String()),
 	}
+}
+
+func getEnvPort(key string) (string, error) {
+	valueStr := os.Getenv(key)
+	if valueStr == "" {
+		return "", fmt.Errorf("get env %s: not set", key)
+	}
+	if port, err := strconv.ParseUint(valueStr, 10, 16); err != nil || port == 0 {
+		return "", fmt.Errorf("parse env %s: must be a decimal port between 1 and 65535", key)
+	}
+	return valueStr, nil
 }
 
 func getEnvInt(key string, defaultValue int) (int, error) {

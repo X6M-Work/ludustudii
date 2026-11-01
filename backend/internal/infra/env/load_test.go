@@ -21,6 +21,46 @@ func setRequired(t *testing.T) {
 	t.Setenv(EnvLogFormat, "")
 }
 
+func TestLoad_AppPort(t *testing.T) {
+	for _, port := range []string{"1", "8080", "65535"} {
+		t.Run(port, func(t *testing.T) {
+			setRequired(t)
+			t.Setenv(EnvAppPort, port)
+
+			v, err := Load()
+			if err != nil {
+				t.Fatalf("unexpected error: %v", err)
+			}
+			if v.AppPort != port {
+				t.Errorf("port: got %q, want %q", v.AppPort, port)
+			}
+		})
+	}
+}
+
+func TestLoad_AppPortErrors(t *testing.T) {
+	for _, port := range []string{"", "abc", "http", "0", "-1", "65536", "999999999999999999999999", " 8080", "8080 ", "+8080", "80.5", "0x1f90"} {
+		t.Run(port, func(t *testing.T) {
+			setRequired(t)
+			t.Setenv(EnvAppPort, port)
+			t.Setenv(EnvAppAPIDocs, "invalid")
+
+			v, err := Load()
+			if err == nil {
+				t.Fatalf("expected error, got vars %+v", v)
+			}
+			if v != nil {
+				t.Error("expected nil vars for invalid configuration")
+			}
+			for _, name := range []string{EnvAppPort, EnvAppAPIDocs} {
+				if !strings.Contains(err.Error(), name) {
+					t.Errorf("error %q does not mention %s", err, name)
+				}
+			}
+		})
+	}
+}
+
 func TestLoad_APIDocs(t *testing.T) {
 	tests := []struct {
 		val  string

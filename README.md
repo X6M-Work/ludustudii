@@ -113,7 +113,7 @@ required ones.
 | Variable | Default | Description |
 | --- | --- | --- |
 | `DB_CONNECTION` | **required** | PostgreSQL URL (`postgres://` or `postgresql://`) |
-| `APP_PORT` | **required** | HTTP port |
+| `APP_PORT` | **required** | Decimal HTTP port, 1–65535 |
 | `DB_MAX_OPEN_CONNS` | `10` | Connection pool size |
 | `DB_MAX_IDLE_CONNS` | `5` | Idle connections kept in the pool |
 | `DB_CONN_MAX_LIFETIME` | `30m` | Maximum connection lifetime |
