@@ -1,0 +1,66 @@
+# AGENTS.md
+
+Use `README.md` for the stack, layout, API conventions, configuration and Make
+targets. Before changing an area, read its relevant section. This file adds the
+repository-specific guidance that helps you make changes consistently.
+
+Run Make commands from the repository root. Unless prefixed with `backend/`,
+backend source paths and `PKG` values below are relative to `backend/`.
+
+## Definition of done
+
+- Make sure `make check` passes before finishing. It needs `DB_TEST_CONNECTION` (set in the
+  devcontainer). Its `generate-check` step compares tracked backend files with
+  the index, so existing unstaged changes will also make it fail; staged changes
+  are fine. Preserve unrelated user changes and don't stage them just to pass
+  this check. If they prevent verification, run the other checks and report
+  the limitation.
+- While iterating, use focused tests, for example:
+  `make test-unit PKG=./internal/services/lcards/... RUN='TestCreate'`.
+  Use the same `PKG` and `RUN` options with `test-integration`.
+- Keep the OpenAPI spec, code and tests together in the same change.
+
+## Adding an endpoint
+
+Follow the structure in `internal/services/lcards`, using `lcards/create` as
+the reference slice.
+
+1. Spec first: add or extend a file in `backend/apispec/paths/`, reusing
+   `components/` for schemas, parameters and responses. Run `make spec-bundle`.
+2. Schema changes: `make migrate-create NAME=<verb_noun>`. Write both `Up` and
+   `Down`. Mirror input limits as `CHECK` constraints.
+3. Shared rules, limits and constants go in `<svc>/domain/`.
+4. One subpackage per endpoint with `handler.go` and `store.go`. The handler
+   binds, sanitizes, validates, then calls the store through a small interface.
+5. Register the route in `<svc>/routes.go`. A new service registers in
+   `internal/app/router.go`.
+6. Test each layer using the existing patterns:
+   - `handler_test.go` (`//go:build unit`): isolate binding, validation and store
+     behavior using the existing function fields and interfaces.
+   - `store_test.go` (`//go:build integration`): real SQL against a `testkit`
+     database. No store mocks or store unit tests.
+   - `api_test.go` in the service package (`//go:build integration`): drive the
+     router through `testkit.Do`, which validates every response against the spec.
+   - A package with integration tests needs `TestMain` calling `testkit.Run`.
+   - When changing validation or normalization rules, extend the domain unit
+     tests and sanitizer/validator fuzz contracts in `<svc>/contract/`.
+
+## Rules not enforced by tooling
+
+- Prefer the standard library. Ask before adding a Go dependency.
+- Write SQL by hand, without an ORM or query builder.
+- Errors reach clients only through the shared error shape in `README.md`
+  (Backend → API, error response format and codes). Add any new error code to
+  that table and to the spec.
+- Regenerate `internal/infra/apidocs/dist/openapi.json` with `make spec-bundle`
+  rather than editing it by hand.
+- Add a new migration when the schema changes; leave applied migrations intact.
+- Keep the shared lint rules in `backend/.golangci.yml` intact. Follow
+  `README.md` (Linting → Exclusion policy) for one-off exceptions.
+
+## Checks handled by tooling
+
+Package boundaries (depguard), env access only in `internal/infra/env`, `slog`
+only for logging, formatting, tidy modules and a fresh spec bundle are all
+checked by `make check`. Resolve findings in the code while preserving these
+checks.
