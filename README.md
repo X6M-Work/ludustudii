@@ -32,7 +32,7 @@ backend/
 └── internal/
     ├── app/               # wiring: config, logger, DB, router, error handler, graceful shutdown
     ├── infra/             # env, logging, rdb (Postgres), spa, apidocs
-    ├── kit/               # dependency-free helpers: erresp, validator, sanitizer, staticfile
+    ├── kit/               # helpers independent of app and infra: erresp, validator, sanitizer, staticfile
     ├── services/
     │   └── lcards/        # learning cards: one subpackage per endpoint
     │       ├── domain/    # shared rules, limits and constants
@@ -52,8 +52,9 @@ small interface. Package boundaries are enforced by `depguard`:
 - `services` must not import `infra` or `app`.
 - `testkit` may only be imported from test files.
 
-Environment variables are read only in `internal/infra/env`, and all logging
-goes through `log/slog` (`fmt.Print*` and `log.*` are forbidden by the linter).
+Production environment variables are read only in `internal/infra/env`; the
+`testkit` harness reads `DB_TEST_CONNECTION` directly. Application logging goes
+through `log/slog` (`fmt.Print*` and `log.*` are forbidden by the linter).
 
 ### API
 
@@ -101,7 +102,7 @@ is the source of truth; the notes below summarize it.
   | `unexpected_error` | 500 | Server-side failure; details are only logged |
 
   Field error codes: `required`, `max_length`, `untrimmed`, `not_normalized`,
-  `invalid_integer`, `out_of_range`.
+  `invalid_integer`, `out_of_range`, `invalid_uuid7` (invalid pagination cursor).
 
 ### Configuration
 
@@ -151,7 +152,11 @@ make dev          # Go backend with Air live reload + Vite dev server
 | URL | What |
 | --- | --- |
 | http://localhost:5173 | Client app via Vite (proxies `/api` and `/docs` to the backend) |
-| http://localhost:8080 | Backend directly: `/api/...`, `/docs`, and the embedded client build |
+| http://localhost:8080 | Backend directly: `/api/...`, `/docs`, and embedded client assets |
+
+On a fresh checkout, `make dev` embeds a placeholder page in the backend; use
+port 5173 for the client app. To serve a real embedded client build on port
+8080, run `make build-frontend` and restart `make dev`.
 
 Run `make` or `make help` to list every target.
 
