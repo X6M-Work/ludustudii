@@ -73,8 +73,13 @@ func NewDB(t *testing.T) *sql.DB {
 }
 
 // AssertPgCode fails the test unless err wraps a *pgconn.PgError with the given
-// SQLSTATE code, and returns the underlying *pgconn.PgError.
-func AssertPgCode(t *testing.T, err error, code string) *pgconn.PgError {
+// SQLSTATE code.
+func AssertPgCode(t *testing.T, err error, code string) {
+	t.Helper()
+	_ = assertPgCode(t, err, code)
+}
+
+func assertPgCode(t *testing.T, err error, code string) *pgconn.PgError {
 	t.Helper()
 	pgErr, ok := errors.AsType[*pgconn.PgError](err)
 	if !ok {
@@ -90,7 +95,7 @@ func AssertPgCode(t *testing.T, err error, code string) *pgconn.PgError {
 // (23514) for the named constraint.
 func AssertPgConstraint(t *testing.T, err error, constraint string) {
 	t.Helper()
-	pgErr := AssertPgCode(t, err, PgCodeCheckViolation)
+	pgErr := assertPgCode(t, err, PgCodeCheckViolation)
 	if pgErr.ConstraintName != constraint {
 		t.Errorf("pg constraint: got %q, want %q", pgErr.ConstraintName, constraint)
 	}

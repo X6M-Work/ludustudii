@@ -131,8 +131,7 @@ func TestStore_Update_RejectsNonUUID(t *testing.T) {
 		Title:       "Title",
 		Description: "Description",
 	})
-	// AssertPgCode already fails the test on a mismatch; no metadata is needed.
-	_ = testkit.AssertPgCode(t, err, testkit.PgCodeInvalidTextRepresentation)
+	testkit.AssertPgCode(t, err, testkit.PgCodeInvalidTextRepresentation)
 }
 
 func TestStore_Update_CheckConstraints(t *testing.T) {

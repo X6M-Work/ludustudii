@@ -77,8 +77,7 @@ func TestStore_Get_RejectsNonUUID(t *testing.T) {
 	s := NewStore(db)
 
 	_, err := s.Get(t.Context(), "not-a-uuid")
-	// AssertPgCode already fails the test on a mismatch; no metadata is needed.
-	_ = testkit.AssertPgCode(t, err, testkit.PgCodeInvalidTextRepresentation)
+	testkit.AssertPgCode(t, err, testkit.PgCodeInvalidTextRepresentation)
 }
 
 func TestStore_Get_CanceledContext(t *testing.T) {

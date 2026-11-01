@@ -22,7 +22,7 @@ Current lint output is zero issues with the configured build tags.
 
 | Linter / formatter | Baseline | Resolution |
 | --- | ---: | --- |
-| errcheck | 7 | Check HTTP/database close errors; explicitly discard optional assertion metadata; standard exclusions allow idiomatic deferred rows.Close calls. |
+| errcheck | 7 | Check HTTP/database close errors; make AssertPgCode a void assertion with a private error-returning helper; standard exclusions allow idiomatic deferred rows.Close calls. |
 | govet | 0 | No findings. |
 | ineffassign | 0 | No findings. |
 | staticcheck | 3 | Replace three identical-field struct literals with conversions. |
@@ -92,7 +92,8 @@ The intentionally excluded linters requested by the user remain disabled.
   kit/services files are covered. Production imports of testkit are forbidden.
 
 Source-specific exceptions use explained inline directives; shared policies stay in the
-YAML exclusions. No exported parameter/result types changed.
+YAML exclusions. AssertPgCode now returns nothing; AssertPgConstraint uses a private
+helper for the underlying PostgreSQL error, as requested.
 Stores, in-package tests, and intentional package-level domain values retain their design.
 `rdb.Connect` did not produce a contextcheck finding; its API was left as-is.
 No further decisions are required.
