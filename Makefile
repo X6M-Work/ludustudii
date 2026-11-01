@@ -198,7 +198,7 @@ psql:
 git-diff:
 	git diff HEAD | base64 | tr -d '\n' | awk '{print "\033]52;c;" $$0 "\007"}'
 
-.PHONY: lint lint-fix lint-fmt lint-verify
+.PHONY: lint lint-fix fmt fmt-check lint-verify
 
 ## lint: Lints the backend and tagged tests with API docs enabled
 lint: $(SPA_EMBED_DIR)/index.html $(SCALAR_EMBED)
@@ -208,9 +208,13 @@ lint: $(SPA_EMBED_DIR)/index.html $(SCALAR_EMBED)
 lint-fix: $(SPA_EMBED_DIR)/index.html $(SCALAR_EMBED)
 	cd $(BACKEND_DIR) && golangci-lint run --fix
 
-## lint-fmt: Formats the backend with gofumpt and goimports
-lint-fmt:
+## fmt: Formats the backend with gofumpt and goimports
+fmt:
 	cd $(BACKEND_DIR) && golangci-lint fmt
+
+## fmt-check: Fails if any file needs formatting
+fmt-check:
+	cd $(BACKEND_DIR) && golangci-lint fmt --diff
 
 ## lint-verify: Validates the backend golangci-lint configuration
 lint-verify:

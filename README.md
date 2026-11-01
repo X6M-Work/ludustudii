@@ -288,7 +288,8 @@ standalone golangci-lint binary; lint tooling is kept out of `go.mod`.
 | --- | --- |
 | `make lint` | Check the backend and tagged tests. |
 | `make lint-fix` | Apply available automatic lint fixes. |
-| `make lint-fmt` | Format Go source with gofumpt and goimports. |
+| `make fmt` | Format Go source with gofumpt and goimports. |
+| `make fmt-check` | Fail if any Go file needs formatting. |
 | `make lint-verify` | Validate `backend/.golangci.yml`. |
 | `make vuln` | Check backend packages for known vulnerabilities with govulncheck. |
 
