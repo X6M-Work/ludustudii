@@ -193,10 +193,22 @@ Tests are split by build tag:
 
 | Command | Tag | Scope |
 | --- | --- | --- |
-| `make test-unit` | `unit` | Handlers, validation, kit, spec, fuzz contracts. No database. |
+| `make test-unit` | `unit` | Handlers, validation, kit, spec, fuzz contracts, with `-race`. No database. |
 | `make test-integration` | `integration` | Stores and API tests against real PostgreSQL, with `-race` |
 | `make test` | both | Everything |
 | `make coverage` | `unit,integration,apidocs` | All backend tests with `-race`; writes `backend/coverage/coverage.out` and `backend/coverage/coverage.html`. Requires `DB_TEST_CONNECTION`. |
+
+Both test targets accept `PKG` (default `./...`, relative to `backend`) and
+`RUN` (a Go test name regex, default all tests). They use `-race`, `-count=1` and
+`-shuffle=on` to detect races and dependencies on test order.
+
+```sh
+make test-integration PKG=./internal/services/lcards/... RUN=TestCreate
+make test-unit PKG=./internal/services/lcards/create RUN='Test.*'
+```
+
+The extra unit-test run with the `apidocs` tag runs only when `PKG` includes
+that package, and uses the same `RUN` filter.
 
 To view the coverage report from the devcontainer, run this from the repository
 root:

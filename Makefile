@@ -17,6 +17,9 @@ MIGRATIONS_DIR := migrations
 # API_DOCS=1 builds the binary with the API reference; any other value omits it.
 API_DOCS_TAGS := $(if $(filter 1,$(API_DOCS)),-tags=apidocs)
 LOG_FILE ?= $(BACKEND_DIR)/tmp/app.log
+PKG ?= ./...
+RUN ?=
+RUN_FLAG = $(if $(RUN),-run '$(RUN)')
 
 .DEFAULT_GOAL := help
 # Deletes a target whose recipe fails, such as a partly written Scalar bundle.
@@ -101,16 +104,21 @@ logs-stats:
 test: test-unit test-integration
 
 ## test-unit: Runs unit tests with the 'unit' build tag
-## ---- The apidocs package runs again with the 'apidocs' tag, which only it depends on
+## ---- PKG selects packages; RUN selects test names (defaults: all packages and tests)
+## ---- If selected, the apidocs package runs again with the 'apidocs' tag
 test-unit:
 	@echo "==> Running unit tests..."
-	cd $(BACKEND_DIR) && go test -tags=unit ./... | grep --line-buffered -v '^?'
-	cd $(BACKEND_DIR) && go test -tags=unit,apidocs ./internal/infra/apidocs/
+	cd $(BACKEND_DIR) && go test -tags=unit -race -count=1 -shuffle=on $(RUN_FLAG) $(PKG) 2>&1 | { grep --line-buffered -v '^?' || [ $$? -eq 1 ]; }
+	@cd $(BACKEND_DIR) && packages=$$(go list -f '{{.Dir}}' $(PKG)) && \
+		if printf '%s\n' "$$packages" | grep -Fxq "$$PWD/internal/infra/apidocs"; then \
+			go test -tags=unit,apidocs -race -count=1 -shuffle=on $(RUN_FLAG) ./internal/infra/apidocs/; \
+		fi
 
 ## test-integration: Runs integration tests with the 'integration' build tag
+## ---- PKG selects packages; RUN selects test names (defaults: all packages and tests)
 test-integration:
 	@echo "==> Running integration tests..."
-	cd $(BACKEND_DIR) && go test -tags=integration -race -count=1 ./... | grep --line-buffered -v '^?'
+	cd $(BACKEND_DIR) && go test -tags=integration -race -count=1 -shuffle=on $(RUN_FLAG) $(PKG) 2>&1 | { grep --line-buffered -v '^?' || [ $$? -eq 1 ]; }
 
 ## coverage: Runs all backend tests and writes coverage profile and HTML report to backend/coverage/ (requires DB_TEST_CONNECTION)
 coverage: $(SPA_EMBED_DIR)/index.html $(SCALAR_EMBED)
