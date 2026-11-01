@@ -12,7 +12,7 @@ backend source paths and `PKG` values below are relative to `backend/`.
 - Make sure `make check` passes before finishing. It needs `DB_TEST_CONNECTION` (set in the
   devcontainer).
 - While iterating, use focused tests, for example:
-  `make test-unit PKG=./internal/services/lcards/... RUN='TestCreate'`.
+  `make test-unit PKG=./internal/services/lcards/... RUN='TestHandler_Handle'`.
   Use the same `PKG` and `RUN` options with `test-integration`.
 - Keep the OpenAPI spec, code and tests together in the same change.
 
