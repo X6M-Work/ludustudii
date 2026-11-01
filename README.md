@@ -286,12 +286,21 @@ standalone golangci-lint binary; lint tooling is kept out of `go.mod`.
 
 | Command | Purpose |
 | --- | --- |
+| `make check` | Run all required gates in order; agents and CI use this. Requires `DB_TEST_CONNECTION`. |
 | `make lint` | Check the backend and tagged tests. |
 | `make lint-fix` | Apply available automatic lint fixes. |
 | `make fmt` | Format Go source with gofumpt and goimports. |
 | `make fmt-check` | Fail if any Go file needs formatting. |
+| `make tidy-check` | Fail if `backend/go.mod` or `backend/go.sum` needs tidying. |
+| `make generate-check` | Regenerate backend files and fail if tracked backend files differ from the index. |
 | `make lint-verify` | Validate `backend/.golangci.yml`. |
 | `make vuln` | Check backend packages for known vulnerabilities with govulncheck. |
+
+`make check` runs `fmt-check`, `lint`, `tidy-check`, `generate-check`,
+`test-unit` and `test-integration` sequentially, stopping at the first failure.
+
+`make generate-check` includes the committed OpenAPI bundle. It leaves regenerated
+files on disk for review; run it with no existing unstaged backend changes.
 
 Lint uses the `unit,integration,apidocs` build tags so tests are included.
 The alternate `script_none.go` build is intentionally omitted from linting.

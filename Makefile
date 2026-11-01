@@ -198,6 +198,18 @@ psql:
 git-diff:
 	git diff HEAD | base64 | tr -d '\n' | awk '{print "\033]52;c;" $$0 "\007"}'
 
+.PHONY: check
+
+## check: Runs every gate a change must pass (fast to slow). Agents and CI run this.
+# Separate recursive calls preserve order and stop on failure, including with -j.
+check:
+	$(MAKE) fmt-check
+	$(MAKE) lint
+	$(MAKE) tidy-check
+	$(MAKE) generate-check
+	$(MAKE) test-unit
+	$(MAKE) test-integration
+
 .PHONY: lint lint-fix fmt fmt-check lint-verify
 
 ## lint: Lints the backend and tagged tests with API docs enabled
@@ -225,3 +237,14 @@ lint-verify:
 ## vuln: Checks backend packages for known vulnerabilities
 vuln: $(SPA_EMBED_DIR)/index.html
 	go -C $(BACKEND_DIR) tool govulncheck ./...
+
+.PHONY: tidy-check generate-check
+
+## tidy-check: Fails if go.mod/go.sum are not tidy
+tidy-check:
+	go -C $(BACKEND_DIR) mod tidy -diff
+
+## generate-check: Fails if committed generated code is out of date
+generate-check: $(SPA_EMBED_DIR)/index.html
+	go -C $(BACKEND_DIR) generate ./...
+	git diff --exit-code -- $(BACKEND_DIR)
