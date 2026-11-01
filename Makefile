@@ -12,7 +12,8 @@ SCALAR_EMBED := backend/internal/infra/apidocs/dist/assets/scalar.js.gz
 SPEC_SRC := $(shell find backend/apispec -name '*.yml')
 SPEC_BUNDLE := backend/internal/infra/apidocs/dist/openapi.json
 MAIN_REL_DIR := ./cmd/server/api
-MIGRATIONS_DIR := backend/migrations
+# go -C runs migration commands from the backend module.
+MIGRATIONS_DIR := migrations
 # API_DOCS=1 builds the binary with the API reference; any other value omits it.
 API_DOCS_TAGS := $(if $(filter 1,$(API_DOCS)),-tags=apidocs)
 LOG_FILE ?= $(BACKEND_DIR)/tmp/app.log
@@ -60,7 +61,7 @@ dev:
 	@echo "==> Starting local development servers..."
 	@mkdir -p $(dir $(LOG_FILE))
 	@trap 'kill 0' INT TERM EXIT; \
-		(cd $(BACKEND_DIR) && air) 2>&1 | (trap '' INT TERM; exec tee -a $(LOG_FILE)) & \
+		(go -C $(BACKEND_DIR) tool air) 2>&1 | (trap '' INT TERM; exec tee -a $(LOG_FILE)) & \
 		(cd $(FRONTEND_DIR) && npm run dev) & \
 		wait
 
@@ -156,21 +157,21 @@ clean:
 ## ---- Usage: make migrate-create NAME=migration_name
 migrate-create:
 	@if [ -z "$(NAME)" ]; then echo "Error: NAME is required (e.g., make migrate-create NAME=add_users)"; exit 1; fi
-	@goose -dir $(MIGRATIONS_DIR) create $(NAME) sql
+	@go -C $(BACKEND_DIR) tool goose -dir $(MIGRATIONS_DIR) create $(NAME) sql
 
 ## migrate-up: Applies all pending database migrations
 migrate-up:
-	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" up
-	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" version
+	@go -C $(BACKEND_DIR) tool goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" up
+	@go -C $(BACKEND_DIR) tool goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" version
 
 ## migrate-down: Rolls back the most recently applied database migration (down by one)
 migrate-down:
-	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" down
-	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" version
+	@go -C $(BACKEND_DIR) tool goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" down
+	@go -C $(BACKEND_DIR) tool goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" version
 
 ## migrate-status: Shows the status of all database migrations
 migrate-status:
-	@goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" status
+	@go -C $(BACKEND_DIR) tool goose -dir $(MIGRATIONS_DIR) postgres "$(DB_CONNECTION)" status
 
 .PHONY: psql
 

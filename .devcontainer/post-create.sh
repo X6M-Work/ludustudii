@@ -2,12 +2,15 @@
 set -e
 
 echo "Installing Go tools..."
-go install github.com/air-verse/air@latest
-go install github.com/go-delve/delve/cmd/dlv@latest
-go install golang.org/x/tools/cmd/stringer@latest
-go install github.com/pressly/goose/v3/cmd/goose@latest
+# Install the versions tracked by backend/go.mod for editor and PATH access.
+go -C backend install \
+  github.com/air-verse/air \
+  github.com/go-delve/delve/cmd/dlv \
+  golang.org/x/tools/cmd/stringer \
+  github.com/pressly/goose/v3/cmd/goose
 # Pin the standalone binary; keep lint tooling out of the backend module.
-curl -sSfL https://raw.githubusercontent.com/golangci/golangci-lint/v2.15.0/install.sh | sh -s -- -b "$(go env GOPATH)/bin" v2.15.0
+GOLANGCI_VERSION=v2.15.0
+curl -sSfL "https://raw.githubusercontent.com/golangci/golangci-lint/${GOLANGCI_VERSION}/install.sh" | sh -s -- -b "$(go env GOPATH)/bin" "$GOLANGCI_VERSION"
 golangci-lint version
 echo "Go tools installed successfully!"
 

@@ -160,6 +160,17 @@ port 5173 for the client app. To serve a real embedded client build on port
 
 Run `make` or `make help` to list every target.
 
+Air, Delve, goose and stringer are tracked as tools in `backend/go.mod`, with
+checksums in `backend/go.sum`. The devcontainer installs those pinned versions
+for editor and PATH access; Make targets use `go -C backend tool` to select the
+module's versions. From `backend`, run tools directly with `go tool air`,
+`go tool dlv`, `go tool goose` or `go tool stringer`.
+
+To update a tool, run `go -C backend get -tool <package>@<version>` and commit
+both module files. Keep the goose CLI and library on the same version.
+The standalone linter is pinned separately by `GOLANGCI_VERSION` in
+`.devcontainer/post-create.sh`.
+
 ### Database migrations
 
 Migrations live in `backend/migrations` as goose SQL files and are embedded in
