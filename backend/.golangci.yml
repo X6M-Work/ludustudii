@@ -9,6 +9,20 @@ linters:
   # ineffassign: Finds assignments whose values are never used.
   # staticcheck: Detects bugs and suggests code simplifications.
   # unused: Finds unused declarations.
+  # Deliberately off (omitted from standard + enable):
+  # wrapcheck: Stores may return raw DB errors; handlers own logging and context.
+  # testpackage: In-package handler tests replace function-field seams.
+  # gochecknoglobals: Package-level domain values are intentional.
+  # exhaustruct: Partial struct literals and zero-value defaults are intentional.
+  # varnamelen: Short idiomatic names are fine in a clear scope.
+  # wsl: Blank-line layout follows readability and the formatters.
+  # nlreturn: Returns do not need mandatory preceding blank lines.
+  # ireturn: Interface returns are allowed for useful abstractions.
+  # mnd: Name literals for domain meaning, not merely because they are numbers.
+  # lll: Wrap lines for readability rather than a fixed column limit.
+  # funlen: Keep cohesive functions and table-driven tests together.
+  # gocognit: Review control flow for clarity rather than a numeric threshold.
+  # paralleltest: Choose parallelism per test; tparallel checks consistency.
   default: standard
   enable:
     # Errors and control flow.
