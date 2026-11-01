@@ -184,3 +184,19 @@ psql:
 ## git-diff: Copies the git diff to the system clipboard in a terminal-friendly format
 git-diff:
 	git diff HEAD | base64 | tr -d '\n' | awk '{print "\033]52;c;" $$0 "\007"}'
+
+.PHONY: lint lint-fix fmt
+
+## lint: Lints the backend, tests, and both API docs build variants
+lint: $(SPA_EMBED_DIR)/index.html $(SCALAR_EMBED)
+	cd $(BACKEND_DIR) && golangci-lint run
+	cd $(BACKEND_DIR) && golangci-lint run --build-tags=unit
+
+## lint-fix: Applies backend lint fixes for both API docs build variants
+lint-fix: $(SPA_EMBED_DIR)/index.html $(SCALAR_EMBED)
+	cd $(BACKEND_DIR) && golangci-lint run --fix
+	cd $(BACKEND_DIR) && golangci-lint run --build-tags=unit --fix
+
+## fmt: Formats the backend with gofumpt and goimports
+fmt:
+	cd $(BACKEND_DIR) && golangci-lint fmt
