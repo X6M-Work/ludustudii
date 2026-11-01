@@ -86,7 +86,8 @@ func TestStore_Delete_RejectsNonUUID(t *testing.T) {
 	s := NewStore(db)
 
 	err := s.Delete(t.Context(), "not-a-uuid")
-	testkit.AssertPgCode(t, err, testkit.PgCodeInvalidTextRepresentation)
+	// AssertPgCode already fails the test on a mismatch; no metadata is needed.
+	_ = testkit.AssertPgCode(t, err, testkit.PgCodeInvalidTextRepresentation)
 }
 
 func TestStore_Delete_CanceledContext(t *testing.T) {

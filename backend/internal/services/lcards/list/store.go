@@ -53,7 +53,8 @@ func (s *Store) List(ctx context.Context, p listParams) (page, error) {
 	if err != nil {
 		return page{}, fmt.Errorf("query: %w", err)
 	}
-	defer rows.Close()
+	// Rows.Err reports iteration errors; this also releases rows on early returns.
+	defer func() { _ = rows.Close() }()
 
 	var data []row
 	for rows.Next() {

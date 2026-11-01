@@ -56,7 +56,11 @@ func databaseExists(t *testing.T, name string) bool {
 		t.Fatal(err)
 	}
 	db := stdlib.OpenDB(*cfg)
-	defer db.Close()
+	defer func() {
+		if err := db.Close(); err != nil {
+			t.Errorf("close database: %v", err)
+		}
+	}()
 
 	var exists bool
 	err = db.QueryRowContext(t.Context(),

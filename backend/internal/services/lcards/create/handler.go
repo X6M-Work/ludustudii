@@ -93,10 +93,7 @@ func sanitize(req *request) {
 }
 
 func toParams(req request) createParams {
-	return createParams{
-		Title:       req.Title,
-		Description: req.Description,
-	}
+	return createParams(req)
 }
 
 func toResp(id string) response {

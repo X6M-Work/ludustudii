@@ -501,7 +501,7 @@ func TestCheckResponse(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			req := httptest.NewRequest(tt.method, "http://example.com"+tt.path, nil)
+			req := httptest.NewRequestWithContext(t.Context(), tt.method, "http://example.com"+tt.path, nil)
 			resp := &http.Response{
 				StatusCode: tt.status,
 				Header:     tt.headers,
@@ -532,7 +532,7 @@ func TestCheckUnmatchedRouteHEADMethodNotAllowed(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	req := httptest.NewRequest(http.MethodHead, "http://example.com/api/lcards", nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodHead, "http://example.com/api/lcards", nil)
 	_, _, routeErr := router.FindRoute(req)
 	if !errors.Is(routeErr, routers.ErrMethodNotAllowed) {
 		t.Fatalf("FindRoute() = %v, want ErrMethodNotAllowed", routeErr)

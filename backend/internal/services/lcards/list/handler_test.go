@@ -29,7 +29,7 @@ func (m *mockStore) List(ctx context.Context, p listParams) (page, error) {
 func testContext(t *testing.T, target string) (*echo.Context, *httptest.ResponseRecorder) {
 	t.Helper()
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, target, nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, target, nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	return c, rec

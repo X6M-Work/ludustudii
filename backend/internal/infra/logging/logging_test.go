@@ -4,7 +4,6 @@ package logging
 
 import (
 	"bytes"
-	"context"
 	"encoding/json"
 	"log/slog"
 	"strings"
@@ -51,7 +50,7 @@ func TestWithAttrs(t *testing.T) {
 		t.Parallel()
 		log, buf := newJSONLogger(t, nil)
 
-		ctx := WithAttrs(context.Background(), slog.String("request_id", "abc"))
+		ctx := WithAttrs(t.Context(), slog.String("request_id", "abc"))
 		log.InfoContext(ctx, "msg", "k", "v")
 
 		rec := oneRecord(t, buf)
@@ -67,7 +66,7 @@ func TestWithAttrs(t *testing.T) {
 		t.Parallel()
 		log, buf := newJSONLogger(t, nil)
 
-		log.InfoContext(context.Background(), "msg")
+		log.InfoContext(t.Context(), "msg")
 
 		rec := oneRecord(t, buf)
 		if _, ok := rec["request_id"]; ok {
@@ -79,7 +78,7 @@ func TestWithAttrs(t *testing.T) {
 		t.Parallel()
 		log, buf := newJSONLogger(t, nil)
 
-		ctx := WithAttrs(context.Background(), slog.String("a", "1"))
+		ctx := WithAttrs(t.Context(), slog.String("a", "1"))
 		ctx = WithAttrs(ctx, slog.String("b", "2"))
 		log.InfoContext(ctx, "msg")
 
@@ -95,7 +94,7 @@ func TestWithAttrs(t *testing.T) {
 
 		// Three appends leave the parent's slice with len 3 and cap 4, so an
 		// unclipped append would write both siblings into the same slot.
-		parent := WithAttrs(context.Background(), slog.String("parent", "p"))
+		parent := WithAttrs(t.Context(), slog.String("parent", "p"))
 		parent = WithAttrs(parent, slog.String("parent2", "p2"))
 		parent = WithAttrs(parent, slog.String("parent3", "p3"))
 
@@ -134,7 +133,7 @@ func TestHandler_WithAttrsWithGroup(t *testing.T) {
 		t.Parallel()
 		log, buf := newJSONLogger(t, nil)
 
-		ctx := WithAttrs(context.Background(), slog.String("request_id", "abc"))
+		ctx := WithAttrs(t.Context(), slog.String("request_id", "abc"))
 		log.With("component", "x").InfoContext(ctx, "msg")
 
 		rec := oneRecord(t, buf)
@@ -150,7 +149,7 @@ func TestHandler_WithAttrsWithGroup(t *testing.T) {
 		t.Parallel()
 		log, buf := newJSONLogger(t, nil)
 
-		ctx := WithAttrs(context.Background(), slog.String("request_id", "abc"))
+		ctx := WithAttrs(t.Context(), slog.String("request_id", "abc"))
 		log.WithGroup("g").InfoContext(ctx, "msg", "k", "v")
 
 		rec := oneRecord(t, buf)
@@ -201,7 +200,7 @@ func TestNew(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			ctx := WithAttrs(context.Background(), slog.String("request_id", "abc"))
+			ctx := WithAttrs(t.Context(), slog.String("request_id", "abc"))
 			log.InfoContext(ctx, "hello")
 
 			out := buf.String()

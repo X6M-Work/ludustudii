@@ -26,7 +26,7 @@ func (m *mockStore) Get(ctx context.Context, id string) (row, error) {
 func testContext(t *testing.T, id string) (*echo.Context, *httptest.ResponseRecorder) {
 	t.Helper()
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodGet, "/api/lcards/"+id, nil)
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/lcards/"+id, nil)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetPathValues(echo.PathValues{{Name: "id", Value: id}})

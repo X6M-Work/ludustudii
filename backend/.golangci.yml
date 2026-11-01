@@ -95,6 +95,34 @@ linters:
       - path: 'internal/(infra/env|testkit)/'
         linters: [forbidigo]
         text: '^use of `os\.(Getenv|LookupEnv)`'
+      # Do consumes and closes the response before returning metadata and bytes.
+      - path: '_test\.go$'
+        source: '\btestkit\.Do\('
+        linters: [bodyclose]
+      - path: 'internal/testkit/openapi_test\.go$'
+        source: ':= Do\('
+        linters: [bodyclose]
+      # Walk every error-tree branch; errors.As would skip or duplicate siblings.
+      - path: 'internal/kit/erresp/error\.go$'
+        text: '(type assertion on error|type switch on error)'
+        linters: [errorlint]
+      # This constructor test checks exact error identity, not unwrap matching.
+      - path: 'internal/kit/validator/errors_test\.go$'
+        source: 'got\.Err != err'
+        linters: [errorlint]
+      # The reflective walker only descends into containers; scalar kinds are leaves.
+      - path: 'apispec/bundle_test\.go$'
+        source: 'switch v\.Kind\(\)'
+        linters: [exhaustive]
+      # The local CLI intentionally accepts its output path and writes a public spec.
+      - path: 'cmd/tools/bundlespec/main\.go$'
+        text: 'G(306|703):'
+        linters: [gosec]
+      # This is an environment variable name, not a hardcoded credential.
+      - path: 'internal/infra/env/load\.go$'
+        source: 'EnvAppWriteTimeout\s*= "APP_WRITE_TIMEOUT"'
+        text: 'G101:'
+        linters: [gosec]
 formatters:
   enable: [gofumpt, goimports]
   exclusions:

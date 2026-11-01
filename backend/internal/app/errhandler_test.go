@@ -85,7 +85,7 @@ func TestHTTPErrorHandler(t *testing.T) {
 			e := echo.NewWithConfig(echo.Config{
 				Logger: slog.New(slog.NewTextHandler(&logs, nil)),
 			})
-			req := httptest.NewRequest(tt.method, "/api/test", nil)
+			req := httptest.NewRequestWithContext(t.Context(), tt.method, "/api/test", nil)
 			rec := httptest.NewRecorder()
 			c := e.NewContext(req, rec)
 
@@ -111,7 +111,7 @@ func TestHTTPErrorHandler(t *testing.T) {
 		t.Parallel()
 
 		e := echo.New()
-		req := httptest.NewRequest(http.MethodGet, "/api/test", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/test", nil)
 		rec := httptest.NewRecorder()
 		c := e.NewContext(req, rec)
 

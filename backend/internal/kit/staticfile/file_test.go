@@ -33,7 +33,7 @@ func TestFile_Serve(t *testing.T) {
 	t.Run("GET", func(t *testing.T) {
 		t.Parallel()
 		rec := httptest.NewRecorder()
-		f.Serve(rec, httptest.NewRequest(http.MethodGet, "/", nil))
+		f.Serve(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil))
 
 		if rec.Code != http.StatusOK {
 			t.Fatalf("status: got %d, want 200", rec.Code)
@@ -54,7 +54,7 @@ func TestFile_Serve(t *testing.T) {
 
 	t.Run("If-None-Match", func(t *testing.T) {
 		t.Parallel()
-		req := httptest.NewRequest(http.MethodGet, "/", nil)
+		req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 		req.Header.Set("If-None-Match", f.ETag)
 		rec := httptest.NewRecorder()
 		f.Serve(rec, req)
@@ -118,7 +118,7 @@ func TestFile_ServeGzip(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 			req.Header.Set("Accept-Encoding", tt.acceptEncoding)
 			rec := httptest.NewRecorder()
 			f.Serve(rec, req)
@@ -141,7 +141,7 @@ func TestFile_ServeGzip(t *testing.T) {
 			if (etag == f.ETag) != (tt.wantEncoding == "gzip") {
 				t.Errorf("ETag %s: want the gzip ETag %s only for the gzip body", etag, f.ETag)
 			}
-			req = httptest.NewRequest(http.MethodGet, "/", nil)
+			req = httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 			req.Header.Set("Accept-Encoding", tt.acceptEncoding)
 			req.Header.Set("If-None-Match", etag)
 			rec = httptest.NewRecorder()
@@ -174,7 +174,7 @@ func TestFile_ServeGzipRange(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			t.Parallel()
-			req := httptest.NewRequest(http.MethodGet, "/", nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/", nil)
 			req.Header.Set("Accept-Encoding", tt.acceptEncoding)
 			req.Header.Set("Range", "bytes=0-3")
 			rec := httptest.NewRecorder()

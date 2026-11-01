@@ -64,7 +64,7 @@ func NewTemplate(ctx context.Context, migrate func(context.Context, *sql.DB) err
 	tmplConfig.Database = name
 	db := stdlib.OpenDB(*tmplConfig)
 	if err := errors.Join(migrate(ctx, db), db.Close()); err != nil {
-		return nil, errors.Join(fmt.Errorf("migrate template: %w", err), template.Close())
+		return nil, errors.Join(fmt.Errorf("migrate template: %w", err), template.close(ctx))
 	}
 	return template, nil
 }
@@ -96,7 +96,7 @@ func (t *Template) Clone(ctx context.Context) (*sql.DB, func() error, error) {
 	// Create a cleanup function that closes the connection and drops the clone database.
 	cleanup := func() error {
 		closeErr := db.Close()
-		ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+		ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), dbTimeout)
 		defer cancel()
 		_, dropErr := t.admin.ExecContext(ctx, dropSQL(name))
 		if dropErr != nil {
@@ -111,7 +111,12 @@ func (t *Template) Clone(ctx context.Context) (*sql.DB, func() error, error) {
 // It uses an independent 10-second timeout for dropping the database.
 // It must not run concurrently with Clone or copy cleanup.
 func (t *Template) Close() error {
-	ctx, cancel := context.WithTimeout(context.Background(), dbTimeout)
+	return t.close(context.Background())
+}
+
+// close retains context values but lets cleanup finish after caller cancellation.
+func (t *Template) close(ctx context.Context) error {
+	ctx, cancel := context.WithTimeout(context.WithoutCancel(ctx), dbTimeout)
 	defer cancel()
 	_, err := t.admin.ExecContext(ctx, dropSQL(t.name))
 	if err != nil {

@@ -132,11 +132,7 @@ func toParams(req request) listParams {
 func toResp(data page) response {
 	items := make([]item, 0, len(data.Rows))
 	for _, d := range data.Rows {
-		items = append(items, item{
-			ID:          d.ID,
-			Title:       d.Title,
-			Description: d.Description,
-		})
+		items = append(items, item(d))
 	}
 
 	var next *string

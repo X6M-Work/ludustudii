@@ -28,7 +28,7 @@ func (m *mockStore) Update(ctx context.Context, p updateParams) error {
 func testContext(t *testing.T, id string, body []byte) (*echo.Context, *httptest.ResponseRecorder) {
 	t.Helper()
 	e := echo.New()
-	req := httptest.NewRequest(http.MethodPut, "/api/lcards/"+id, bytes.NewReader(body))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/lcards/"+id, bytes.NewReader(body))
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)

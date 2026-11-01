@@ -37,7 +37,7 @@ func TestHandler(t *testing.T) {
 	} {
 		t.Run("GET "+path, func(t *testing.T) {
 			t.Parallel()
-			req := httptest.NewRequest(http.MethodGet, path, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil)
 			req.Header.Set("Accept-Encoding", "gzip")
 			rec := httptest.NewRecorder()
 			e.ServeHTTP(rec, req)
@@ -63,7 +63,7 @@ func TestHandler(t *testing.T) {
 		t.Run("HEAD "+path, func(t *testing.T) {
 			t.Parallel()
 			rec := httptest.NewRecorder()
-			e.ServeHTTP(rec, httptest.NewRequest(http.MethodHead, path, nil))
+			e.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodHead, path, nil))
 
 			if rec.Code != http.StatusOK {
 				t.Fatalf("status: got %d, want 200", rec.Code)
@@ -75,7 +75,7 @@ func TestHandler(t *testing.T) {
 
 		t.Run("GET "+path+" If-None-Match", func(t *testing.T) {
 			t.Parallel()
-			req := httptest.NewRequest(http.MethodGet, path, nil)
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil)
 			req.Header.Set("Accept-Encoding", "gzip")
 			req.Header.Set("If-None-Match", want.ETag)
 			rec := httptest.NewRecorder()
@@ -99,7 +99,7 @@ func TestHandler_TrailingSlashRedirects(t *testing.T) {
 		t.Run(target, func(t *testing.T) {
 			t.Parallel()
 			rec := httptest.NewRecorder()
-			e.ServeHTTP(rec, httptest.NewRequest(http.MethodGet, target, nil))
+			e.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, target, nil))
 
 			if rec.Code != http.StatusFound {
 				t.Fatalf("status: got %d, want 302", rec.Code)
@@ -119,7 +119,7 @@ func TestHandler_MethodNotAllowed(t *testing.T) {
 		t.Run(path, func(t *testing.T) {
 			t.Parallel()
 			rec := httptest.NewRecorder()
-			e.ServeHTTP(rec, httptest.NewRequest(http.MethodPost, path, nil))
+			e.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodPost, path, nil))
 
 			if rec.Code != http.StatusMethodNotAllowed {
 				t.Fatalf("status: got %d, want 405", rec.Code)

@@ -78,7 +78,7 @@ func TestJSONBinder(t *testing.T) {
 			t.Parallel()
 
 			e := echo.NewWithConfig(echo.Config{Binder: jsonBinder{}})
-			req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(tt.body))
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", strings.NewReader(tt.body))
 			if tt.contentType != "" {
 				req.Header.Set(echo.HeaderContentType, tt.contentType)
 			}
@@ -112,7 +112,7 @@ func TestJSONBinder(t *testing.T) {
 func TestJSONBinder_ChunkedWithoutContentType(t *testing.T) {
 	t.Parallel()
 	e := echo.NewWithConfig(echo.Config{Binder: jsonBinder{}})
-	req := httptest.NewRequest(http.MethodPost, "/", strings.NewReader(`{"title":"Hello"}`))
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", strings.NewReader(`{"title":"Hello"}`))
 	req.ContentLength = -1 // unknown length, as with Transfer-Encoding: chunked
 	c := e.NewContext(req, httptest.NewRecorder())
 

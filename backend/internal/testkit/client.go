@@ -60,7 +60,11 @@ func Do(t testing.TB, s *httptest.Server, o DoOpts) (*http.Response, []byte) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	defer resp.Body.Close()
+	defer func() {
+		if err := resp.Body.Close(); err != nil {
+			t.Errorf("close response: %v", err)
+		}
+	}()
 	content, err := io.ReadAll(resp.Body)
 	if err != nil {
 		t.Fatal(err)

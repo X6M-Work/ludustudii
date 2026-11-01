@@ -64,9 +64,5 @@ func validateParamID(id string) error {
 }
 
 func toResp(data row) response {
-	return response{
-		ID:          data.ID,
-		Title:       data.Title,
-		Description: data.Description,
-	}
+	return response(data)
 }
