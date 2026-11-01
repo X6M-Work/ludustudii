@@ -42,15 +42,15 @@ func TestNewRouter(t *testing.T) {
 		t.Parallel()
 		srv := newRouterServer(t)
 
-		resp, body := testkit.Do(t, srv, testkit.DoOpts{
+		resp := testkit.Do(t, srv, testkit.DoOpts{
 			Method: http.MethodGet,
 			Path:   "/",
 		})
-		testkit.AssertStatus(t, resp, body, http.StatusOK)
+		testkit.AssertStatus(t, resp, http.StatusOK)
 		if ct := resp.Header.Get(echo.HeaderContentType); !strings.HasPrefix(ct, echo.MIMETextHTML) {
 			t.Errorf("Content-Type: got %q, want %s", ct, echo.MIMETextHTML)
 		}
-		if len(body) == 0 {
+		if len(resp.Body) == 0 {
 			t.Error("expected non-empty HTML body")
 		}
 	})
@@ -60,12 +60,12 @@ func TestNewRouter(t *testing.T) {
 			t.Parallel()
 			srv := newRouterServer(t)
 
-			resp, body := testkit.Do(t, srv, testkit.DoOpts{
+			resp := testkit.Do(t, srv, testkit.DoOpts{
 				Method: http.MethodGet,
 				Path:   path,
 			})
-			testkit.AssertStatus(t, resp, body, http.StatusNotFound)
-			testkit.AssertJSON(t, body, `{"code":"not_found"}`)
+			testkit.AssertStatus(t, resp, http.StatusNotFound)
+			testkit.AssertJSON(t, resp.Body, `{"code":"not_found"}`)
 		})
 	}
 
@@ -80,9 +80,9 @@ func TestNewRouter(t *testing.T) {
 		srv := httptest.NewServer(e)
 		t.Cleanup(srv.Close)
 
-		resp, body := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/api/panic"})
-		testkit.AssertStatus(t, resp, body, http.StatusInternalServerError)
-		testkit.AssertJSON(t, body, `{"code":"unexpected_error"}`)
+		resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/api/panic"})
+		testkit.AssertStatus(t, resp, http.StatusInternalServerError)
+		testkit.AssertJSON(t, resp.Body, `{"code":"unexpected_error"}`)
 	})
 }
 
@@ -104,15 +104,15 @@ func TestNewRouter_APIDocs(t *testing.T) {
 		srv := httptest.NewServer(NewRouter(discardLogger(), clientApp, nil, nil))
 		t.Cleanup(srv.Close)
 
-		resp, body := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: apidocs.Path})
-		testkit.AssertStatus(t, resp, body, http.StatusOK)
-		if !bytes.Equal(body, clientApp.IndexFile.Bytes) {
-			t.Errorf("GET %s: want the SPA index.html, got %q", apidocs.Path, body)
+		resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: apidocs.Path})
+		testkit.AssertStatus(t, resp, http.StatusOK)
+		if !bytes.Equal(resp.Body, clientApp.IndexFile.Bytes) {
+			t.Errorf("GET %s: want the SPA index.html, got %q", apidocs.Path, resp.Body)
 		}
 
 		for _, path := range []string{apidocs.Path + "/openapi.json", apidocs.Path + "/scalar.js"} {
-			resp, body := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: path})
-			testkit.AssertStatus(t, resp, body, http.StatusNotFound)
+			resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: path})
+			testkit.AssertStatus(t, resp, http.StatusNotFound)
 		}
 	})
 
@@ -126,19 +126,19 @@ func TestNewRouter_APIDocs(t *testing.T) {
 			apidocs.Path + "/openapi.json": docs.Spec,
 			apidocs.Path + "/scalar.js":    docs.Script,
 		} {
-			resp, body := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: path})
-			testkit.AssertStatus(t, resp, body, http.StatusOK)
+			resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: path})
+			testkit.AssertStatus(t, resp, http.StatusOK)
 			if ct := resp.Header.Get(echo.HeaderContentType); ct != want.ContentType {
 				t.Errorf("GET %s Content-Type: got %q, want %q", path, ct, want.ContentType)
 			}
-			if !bytes.Equal(body, want.Bytes) {
-				t.Errorf("GET %s: got %q, want %q", path, body, want.Bytes)
+			if !bytes.Equal(resp.Body, want.Bytes) {
+				t.Errorf("GET %s: got %q, want %q", path, resp.Body, want.Bytes)
 			}
 		}
 
-		resp, body := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/api/nope"})
-		testkit.AssertStatus(t, resp, body, http.StatusNotFound)
-		testkit.AssertJSON(t, body, `{"code":"not_found"}`)
+		resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/api/nope"})
+		testkit.AssertStatus(t, resp, http.StatusNotFound)
+		testkit.AssertJSON(t, resp.Body, `{"code":"not_found"}`)
 	})
 }
 
@@ -190,8 +190,8 @@ func TestNewRouter_RequestLogging(t *testing.T) {
 			srv := httptest.NewServer(NewRouter(log, clientApp, nil, nil))
 			t.Cleanup(srv.Close)
 
-			resp, body := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: tt.path})
-			testkit.AssertStatus(t, resp, body, tt.wantStatus)
+			resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: tt.path})
+			testkit.AssertStatus(t, resp, tt.wantStatus)
 
 			id := resp.Header.Get(echo.HeaderXRequestID)
 			if id == "" {
@@ -254,13 +254,13 @@ func TestNewRouter_RequestLogging(t *testing.T) {
 		srv := httptest.NewServer(NewRouter(log, clientApp, nil, nil))
 		t.Cleanup(srv.Close)
 
-		resp, body := testkit.Do(t, srv, testkit.DoOpts{
+		resp := testkit.Do(t, srv, testkit.DoOpts{
 			Method:  http.MethodGet,
 			Path:    "/api/nope",
 			Headers: http.Header{echo.HeaderXRequestID: {"client-supplied-id"}},
 		})
-		testkit.AssertStatus(t, resp, body, http.StatusNotFound)
-		testkit.AssertJSON(t, body, `{"code":"not_found"}`)
+		testkit.AssertStatus(t, resp, http.StatusNotFound)
+		testkit.AssertJSON(t, resp.Body, `{"code":"not_found"}`)
 		srv.Close() // waits for the handler to return, so the record is written
 
 		if got := resp.Header.Get(echo.HeaderXRequestID); got != "client-supplied-id" {

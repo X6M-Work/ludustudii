@@ -117,13 +117,6 @@ linters:
       - path: 'internal/(infra/env|testkit)/'
         linters: [forbidigo]
         text: '^use of `os\.(Getenv|LookupEnv)`'
-      # Do consumes and closes the response before returning metadata and bytes.
-      - path: '_test\.go$'
-        source: '\btestkit\.Do\('
-        linters: [bodyclose]
-      - path: 'internal/testkit/openapi_test\.go$'
-        source: ':= Do\('
-        linters: [bodyclose]
 formatters:
   enable:
     - gofumpt # Applies stricter Go source formatting.

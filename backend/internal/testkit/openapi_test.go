@@ -623,7 +623,7 @@ func TestDoDoesNotFollowRedirects(t *testing.T) {
 	t.Cleanup(srv.Close)
 
 	rec := &errorRecorder{TB: t}
-	resp, _ := Do(rec, srv, DoOpts{Method: http.MethodGet, Path: "/api/lcards"})
+	resp := Do(rec, srv, DoOpts{Method: http.MethodGet, Path: "/api/lcards"})
 	if resp.StatusCode != http.StatusMovedPermanently {
 		t.Fatalf("status = %d, want %d", resp.StatusCode, http.StatusMovedPermanently)
 	}
