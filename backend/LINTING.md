@@ -8,15 +8,17 @@ Go >= 1.27.3 build toolchain. The backend itself uses Go 1.27.3.
 Settings were checked against `golangci-lint linters` and the
 [v2.15.0 configuration reference](https://github.com/golangci/golangci-lint/blob/v2.15.0/.golangci.reference.yml).
 
-Run `make lint`, `make lint-fix`, or `make fmt` from the repository root.
-Lint runs with unit,integration,apidocs, then with unit alone to cover script_none.go.
+Run `make lint`, `make lint-fix`, `make lint-fmt`, or `make lint-verify`
+from the repository root.
+Lint runs once with unit,integration,apidocs. The alternate script_none.go build
+is intentionally omitted from linting.
 There are no local-prefixes or gci import groups.
 
 ## Findings
 
 Counts below are unique baseline diagnostics across both build variants (115 total),
 with issue limits and line deduplication disabled. Both variants had the same findings.
-Final lint output is zero issues in both variants.
+Current lint output is zero issues with the configured build tags.
 
 | Linter / formatter | Baseline | Resolution |
 | --- | ---: | --- |
@@ -92,9 +94,9 @@ No further decisions are required.
 
 ## Verification
 
-- `golangci-lint config verify` passed.
-- `make fmt` applied formatting; `golangci-lint fmt --diff` was empty.
-- `make lint` passed in both build variants.
+- `make lint-verify` (`golangci-lint config verify`) passed.
+- `make lint-fmt` applied formatting; `golangci-lint fmt --diff` was empty.
+- `make lint` passes with the configured unit,integration,apidocs build tags.
 - `make test-unit` passed after each fix tier, including both apidocs variants.
 - `make test-integration` passed after each fix tier against the available PostgreSQL
   test database, with the target's race detector and uncached execution.

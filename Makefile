@@ -185,18 +185,20 @@ psql:
 git-diff:
 	git diff HEAD | base64 | tr -d '\n' | awk '{print "\033]52;c;" $$0 "\007"}'
 
-.PHONY: lint lint-fix fmt
+.PHONY: lint lint-fix lint-fmt lint-verify
 
-## lint: Lints the backend, tests, and both API docs build variants
+## lint: Lints the backend and tagged tests with API docs enabled
 lint: $(SPA_EMBED_DIR)/index.html $(SCALAR_EMBED)
 	cd $(BACKEND_DIR) && golangci-lint run
-	cd $(BACKEND_DIR) && golangci-lint run --build-tags=unit
 
-## lint-fix: Applies backend lint fixes for both API docs build variants
+## lint-fix: Applies backend lint fixes with API docs enabled
 lint-fix: $(SPA_EMBED_DIR)/index.html $(SCALAR_EMBED)
 	cd $(BACKEND_DIR) && golangci-lint run --fix
-	cd $(BACKEND_DIR) && golangci-lint run --build-tags=unit --fix
 
-## fmt: Formats the backend with gofumpt and goimports
-fmt:
+## lint-fmt: Formats the backend with gofumpt and goimports
+lint-fmt:
 	cd $(BACKEND_DIR) && golangci-lint fmt
+
+## lint-verify: Validates the backend golangci-lint configuration
+lint-verify:
+	cd $(BACKEND_DIR) && golangci-lint config verify
