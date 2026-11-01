@@ -10,11 +10,7 @@ backend source paths and `PKG` values below are relative to `backend/`.
 ## Definition of done
 
 - Make sure `make check` passes before finishing. It needs `DB_TEST_CONNECTION` (set in the
-  devcontainer). Its `generate-check` step compares tracked backend files with
-  the index, so existing unstaged changes will also make it fail; staged changes
-  are fine. Preserve unrelated user changes and don't stage them just to pass
-  this check. If they prevent verification, run the other checks and report
-  the limitation.
+  devcontainer).
 - While iterating, use focused tests, for example:
   `make test-unit PKG=./internal/services/lcards/... RUN='TestCreate'`.
   Use the same `PKG` and `RUN` options with `test-integration`.

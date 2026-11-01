@@ -252,7 +252,8 @@ vuln: $(SPA_EMBED_DIR)/index.html
 tidy-check:
 	go -C $(BACKEND_DIR) mod tidy -diff
 
-## generate-check: Fails if committed generated code is out of date
+## generate-check: Fails if generation changes tracked backend files
 generate-check: $(SPA_EMBED_DIR)/index.html
-	go -C $(BACKEND_DIR) generate ./...
-	git diff --exit-code -- $(BACKEND_DIR)
+	@cd $(BACKEND_DIR) && snap() { git ls-files -z | xargs -0 sha256sum; }; \
+		before=$$(snap) && go generate ./... && [ "$$before" = "$$(snap)" ] || \
+		{ echo "generate-check: generated files are stale; commit the regenerated output"; exit 1; }
