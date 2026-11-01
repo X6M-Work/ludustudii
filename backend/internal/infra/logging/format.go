@@ -6,6 +6,7 @@ import "fmt"
 // is not a valid format.
 type Format int
 
+// Supported logger output encodings.
 const (
 	FormatJSON Format = iota + 1
 	FormatText

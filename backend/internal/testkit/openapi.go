@@ -38,10 +38,10 @@ var loadOpenAPI = sync.OnceValues(func() (*openAPISpec, error) {
 // ValidateResponse fails the test if resp and body do not conform to the
 // OpenAPI specification in backend/apispec for req. Non-API paths outside the
 // spec (such as the SPA root) are ignored.
-func ValidateResponse(t testing.TB, req *http.Request, resp *http.Response, body []byte) {
-	t.Helper()
+func ValidateResponse(tb testing.TB, req *http.Request, resp *http.Response, body []byte) {
+	tb.Helper()
 	if err := checkResponse(req, resp, body); err != nil {
-		t.Errorf("OpenAPI (%s %s -> %d): %v", req.Method, req.URL.Path, resp.StatusCode, err)
+		tb.Errorf("OpenAPI (%s %s -> %d): %v", req.Method, req.URL.Path, resp.StatusCode, err)
 	}
 }
 

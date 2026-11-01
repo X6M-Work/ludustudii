@@ -30,9 +30,9 @@ type DoOpts struct {
 // specification, and returns the response together with its fully read body.
 // The request itself is not validated, so tests can send invalid input.
 // It fails the test if the request cannot be sent or the body cannot be read.
-func Do(t testing.TB, s *httptest.Server, o DoOpts) (*http.Response, []byte) {
-	t.Helper()
-	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
+func Do(tb testing.TB, s *httptest.Server, o DoOpts) (*http.Response, []byte) {
+	tb.Helper()
+	ctx, cancel := context.WithTimeout(tb.Context(), 10*time.Second)
 	defer cancel()
 	var r io.Reader
 	if o.Body != "" {
@@ -44,7 +44,7 @@ func Do(t testing.TB, s *httptest.Server, o DoOpts) (*http.Response, []byte) {
 	}
 	req, err := http.NewRequestWithContext(ctx, o.Method, s.URL+o.Path, r)
 	if err != nil {
-		t.Fatal(err)
+		tb.Fatal(err)
 	}
 	if o.Headers != nil {
 		req.Header = o.Headers.Clone()
@@ -58,18 +58,18 @@ func Do(t testing.TB, s *httptest.Server, o DoOpts) (*http.Response, []byte) {
 	}
 	resp, err := client.Do(req)
 	if err != nil {
-		t.Fatal(err)
+		tb.Fatal(err)
 	}
 	defer func() {
 		if err := resp.Body.Close(); err != nil {
-			t.Errorf("close response: %v", err)
+			tb.Errorf("close response: %v", err)
 		}
 	}()
 	content, err := io.ReadAll(resp.Body)
 	if err != nil {
-		t.Fatal(err)
+		tb.Fatal(err)
 	}
-	ValidateResponse(t, req, resp, content)
+	ValidateResponse(tb, req, resp, content)
 	return resp, content
 }
 

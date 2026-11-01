@@ -145,7 +145,7 @@ func Load() (*Vars, error) {
 	}, nil
 }
 
-// LogAttrs returns the loaded values as log attrs keyed by variable name. The
+// LogAttrs returns the loaded values as log attrs keyed by lowercase, snake_case variable name. The
 // database password is redacted, whether it is in the URL's user info or in a
 // "password" query parameter.
 func (v *Vars) LogAttrs() []slog.Attr {
@@ -158,19 +158,19 @@ func (v *Vars) LogAttrs() []slog.Attr {
 		dbConnectionString = dbURL.Redacted()
 	}
 	return []slog.Attr{
-		slog.String(EnvDBConnectionString, dbConnectionString),
-		slog.Int(EnvDBMaxOpenConns, v.DBMaxOpenConns),
-		slog.Int(EnvDBMaxIdleConns, v.DBMaxIdleConns),
-		slog.Duration(EnvDBConnMaxLifetime, v.DBConnMaxLifetime),
-		slog.Duration(EnvDBConnMaxIdleTime, v.DBConnMaxIdleTime),
-		slog.String(EnvAppPort, v.AppPort),
-		slog.Duration(EnvAppReadTimeout, v.AppReadTimeout),
-		slog.Duration(EnvAppWriteTimeout, v.AppWriteTimeout),
-		slog.Duration(EnvAppIdleTimeout, v.AppIdleTimeout),
-		slog.Duration(EnvAppShutdownTimeout, v.AppShutdownTimeout),
-		slog.Bool(EnvAppAPIDocs, v.AppAPIDocs),
-		slog.String(EnvLogLevel, v.LogLevel.Level().String()),
-		slog.String(EnvLogFormat, v.LogFormat.String()),
+		slog.String("db_connection", dbConnectionString),
+		slog.Int("db_max_open_conns", v.DBMaxOpenConns),
+		slog.Int("db_max_idle_conns", v.DBMaxIdleConns),
+		slog.Duration("db_conn_max_lifetime", v.DBConnMaxLifetime),
+		slog.Duration("db_conn_max_idle_time", v.DBConnMaxIdleTime),
+		slog.String("app_port", v.AppPort),
+		slog.Duration("app_read_timeout", v.AppReadTimeout),
+		slog.Duration("app_write_timeout", v.AppWriteTimeout),
+		slog.Duration("app_idle_timeout", v.AppIdleTimeout),
+		slog.Duration("app_shutdown_timeout", v.AppShutdownTimeout),
+		slog.Bool("app_api_docs", v.AppAPIDocs),
+		slog.String("log_level", v.LogLevel.Level().String()),
+		slog.String("log_format", v.LogFormat.String()),
 	}
 }
 

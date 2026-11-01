@@ -219,7 +219,7 @@ func inlineRefs(t *testing.T, node any, components map[string]any, depth int) an
 	case map[string]any:
 		if ref, ok := n["$ref"].(string); ok {
 			var target any = components
-			for _, seg := range strings.Split(strings.TrimPrefix(ref, "#/components/"), "/") {
+			for seg := range strings.SplitSeq(strings.TrimPrefix(ref, "#/components/"), "/") {
 				m, _ := target.(map[string]any)
 				target = m[strings.NewReplacer("~1", "/", "~0", "~").Replace(seg)]
 			}

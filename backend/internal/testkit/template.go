@@ -15,8 +15,10 @@ import (
 	"github.com/jackc/pgx/v5/stdlib"
 )
 
-const dbConnectionStringKey = "DB_TEST_CONNECTION"
-const dbTimeout = 10 * time.Second
+const (
+	dbConnectionStringKey = "DB_TEST_CONNECTION"
+	dbTimeout             = 10 * time.Second
+)
 
 // Template owns a migrated database used to create isolated copies.
 // Clones are independent databases, but their cleanup functions use the template's
@@ -126,7 +128,7 @@ func (t *Template) close(ctx context.Context) error {
 }
 
 func createSQL(name string) string {
-	return fmt.Sprintf("CREATE DATABASE %s", pgx.Identifier{name}.Sanitize())
+	return "CREATE DATABASE " + pgx.Identifier{name}.Sanitize()
 }
 
 func cloneSQL(name, template string) string {

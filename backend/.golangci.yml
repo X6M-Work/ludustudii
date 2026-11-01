@@ -49,7 +49,7 @@ linters:
     depguard:
       rules:
         kit:
-          files: ["**/internal/kit/**/*.go", "!$test"]
+          files: ["**/internal/kit/*.go", "**/internal/kit/**/*.go", "!$test"]
           deny:
             - pkg: github.com/apotourlyan/ludustudii/internal/infra
               desc: kit must remain independent of infrastructure
@@ -58,7 +58,7 @@ linters:
             - pkg: github.com/apotourlyan/ludustudii/internal/app
               desc: kit must remain independent of application wiring
         services:
-          files: ["**/internal/services/**/*.go", "!$test"]
+          files: ["**/internal/services/*.go", "**/internal/services/**/*.go", "!$test"]
           deny:
             - pkg: github.com/apotourlyan/ludustudii/internal/app
               desc: services must remain independent of application wiring
