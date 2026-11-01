@@ -34,7 +34,7 @@ Current lint output is zero issues with the configured build tags.
 | noctx | 21 | Use httptest.NewRequestWithContext(t.Context(), ...) in tests. |
 | usetesting | 7 | Use t.Context() in logging tests. |
 | contextcheck | 2 | Derive cleanup contexts with context.WithoutCancel; use a private context-taking close helper without changing the exported API. |
-| exhaustive | 1 | Explicitly enumerate non-traversable reflection kinds as leaves in the test walker. |
+| exhaustive | 1 | Allow default cases to satisfy exhaustiveness; the reflective walker ignores leaf kinds with default. |
 | nilerr | 0 | No findings. |
 | nilnil | 0 | No findings. |
 | gosec | 3 | Targeted inline #nosec directives cover intentional CLI artifact writing and an environment-name false positive. |
@@ -63,6 +63,9 @@ The trial linters **unparam** and **gocritic** both reported zero findings and r
 The intentionally excluded linters requested by the user remain disabled.
 
 ## Exclusions and deliberate behavior
+
+- `exhaustive.default-signifies-exhaustive: true` lets an explicit default case
+  cover remaining enum values, including leaf kinds in the reflective test walker.
 
 - Enable `std-error-handling` and `common-false-positives` presets for standard
   cleanup patterns and known false positives, including deferred `rows.Close()`.

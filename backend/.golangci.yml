@@ -54,6 +54,8 @@ linters:
     - unparam # Finds unused function parameters and always-identical results.
     - gocritic # Detects suspicious constructs and suggests style improvements.
   settings:
+    exhaustive:
+      default-signifies-exhaustive: true
     usetesting:
       context-background: true
       context-todo: true
