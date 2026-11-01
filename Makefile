@@ -123,9 +123,9 @@ test-integration:
 ## coverage: Runs all backend tests and writes coverage profile and HTML report to backend/coverage/ (requires DB_TEST_CONNECTION)
 coverage: $(SPA_EMBED_DIR)/index.html $(SCALAR_EMBED)
 	@mkdir -p $(BACKEND_DIR)/coverage
-	go -C $(BACKEND_DIR) test -tags=unit,integration,apidocs -race -count=1 -coverprofile=coverage/coverage.out ./...
+	go -C $(BACKEND_DIR) test -tags=unit,integration,apidocs -race -count=1 -coverpkg=./... -coverprofile=coverage/coverage.out ./...
 	go -C $(BACKEND_DIR) tool cover -html=coverage/coverage.out -o coverage/coverage.html
-	# Serve from the repository root: python3 -m http.server 8000 --directory backend/coverage
+	@echo "Serve from the repository root: python3 -m http.server 8000 --directory backend/coverage"
 
 .PHONY: build build-frontend build-backend clean
 
