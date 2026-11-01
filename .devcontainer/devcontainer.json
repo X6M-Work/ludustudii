@@ -16,6 +16,9 @@
         "gopls": {
           "buildFlags": ["-tags=unit,integration,apidocs"]
         },
+        "go.lintTool": "golangci-lint-v2",
+        "go.lintFlags": ["--fast-only"],
+        "go.lintOnSave": "package",
         "go.testTags": "unit,integration,apidocs"
       }
     }
