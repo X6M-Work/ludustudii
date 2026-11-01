@@ -1,0 +1,108 @@
+# golangci-lint v2.15.0; settings checked against its .golangci.reference.yml.
+version: "2"
+run:
+  build-tags: [unit, integration, apidocs]
+linters:
+  default: standard
+  enable:
+    - errorlint
+    - rowserrcheck
+    - sqlclosecheck
+    - bodyclose
+    - noctx
+    - usetesting
+    - contextcheck
+    - exhaustive
+    - nilerr
+    - nilnil
+    - gosec
+    - revive
+    - godot
+    - sloglint
+    - depguard
+    - forbidigo
+    - thelper
+    - tparallel
+    - nolintlint
+    - usestdlibvars
+    - copyloopvar
+    - intrange
+    - unconvert
+    - misspell
+    - errname
+    - perfsprint
+    - modernize
+    - unparam
+    - gocritic
+  settings:
+    usetesting:
+      context-background: true
+      context-todo: true
+    revive:
+      rules:
+        - name: exported
+        - name: package-comments
+    sloglint:
+      no-mixed-args: true
+      key-naming-case: snake
+      context: scope
+    depguard:
+      rules:
+        kit:
+          files: ["**/internal/kit/**/*.go", "!$test"]
+          deny:
+            - pkg: github.com/apotourlyan/ludustudii/internal/infra
+              desc: kit must remain independent of infrastructure
+            - pkg: github.com/apotourlyan/ludustudii/internal/services
+              desc: kit must remain independent of services
+            - pkg: github.com/apotourlyan/ludustudii/internal/app
+              desc: kit must remain independent of application wiring
+        services:
+          files: ["**/internal/services/**/*.go", "!$test"]
+          deny:
+            - pkg: github.com/apotourlyan/ludustudii/internal/app
+              desc: services must remain independent of application wiring
+            - pkg: github.com/apotourlyan/ludustudii/internal/infra
+              desc: services must remain independent of infrastructure
+        testkit:
+          files: ["!$test"]
+          deny:
+            - pkg: github.com/apotourlyan/ludustudii/internal/testkit
+              desc: testkit is only for test files
+    forbidigo:
+      analyze-types: true
+      forbid:
+        - pattern: '^fmt\.Print.*$'
+          msg: use the structured logger
+        - pattern: '^log\..*$'
+          pkg: '^log$'
+          msg: use log/slog
+        - pattern: '^os\.(Getenv|LookupEnv)$'
+          msg: read environment through internal/infra/env
+    nolintlint:
+      require-explanation: true
+      require-specific: true
+  exclusions:
+    generated: lax
+    paths:
+      - internal/infra/apidocs/dist
+      - internal/infra/spa/dist
+    rules:
+      # Security fixtures intentionally include unsafe inputs.
+      - path: '_test\.go$'
+        linters: [gosec]
+      # Environment access belongs to the configuration boundary and test harness.
+      - path: 'internal/(infra/env|testkit)/'
+        linters: [forbidigo]
+        text: '^use of `os\.(Getenv|LookupEnv)`'
+formatters:
+  enable: [gofumpt, goimports]
+  exclusions:
+    generated: lax
+    paths:
+      - internal/infra/apidocs/dist
+      - internal/infra/spa/dist
+issues:
+  max-issues-per-linter: 0
+  max-same-issues: 0
+  uniq-by-line: false
