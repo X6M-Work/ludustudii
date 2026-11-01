@@ -158,7 +158,12 @@ clean:
 	rm -f $(SCALAR_EMBED)
 	@echo "==> Clean complete."
 
-.PHONY: migrate-create migrate-up migrate-down migrate-status
+.PHONY: require-db migrate-create migrate-up migrate-down migrate-status
+
+require-db:
+	@[ -n "$(DB_CONNECTION)" ] || { echo "Error: DB_CONNECTION is not set"; exit 1; }
+
+migrate-up migrate-down migrate-status psql: require-db
 
 ## migrate-create: Creates a new database migration file with the given NAME
 ## ---- Usage: make migrate-create NAME=migration_name
