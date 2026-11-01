@@ -22,7 +22,7 @@ Current lint output is zero issues with the configured build tags.
 
 | Linter / formatter | Baseline | Resolution |
 | --- | ---: | --- |
-| errcheck | 7 | Check HTTP/database close errors; explicitly discard optional assertion metadata and deferred row cleanup errors (iteration errors are checked via Rows.Err). |
+| errcheck | 7 | Check HTTP/database close errors; explicitly discard optional assertion metadata; standard exclusions allow idiomatic deferred rows.Close calls. |
 | govet | 0 | No findings. |
 | ineffassign | 0 | No findings. |
 | staticcheck | 3 | Replace three identical-field struct literals with conversions. |
@@ -63,6 +63,9 @@ The trial linters **unparam** and **gocritic** both reported zero findings and r
 The intentionally excluded linters requested by the user remain disabled.
 
 ## Exclusions and deliberate behavior
+
+- Enable `std-error-handling` and `common-false-positives` presets for standard
+  cleanup patterns and known false positives, including deferred `rows.Close()`.
 
 - Both linter and formatter paths exclude `internal/infra/apidocs/dist` and
   `internal/infra/spa/dist`: bundled assets, not maintained Go source.

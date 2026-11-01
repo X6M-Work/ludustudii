@@ -148,7 +148,7 @@ func queryOutput(t *testing.T, db *sql.DB, kind, query string) []string {
 	if err != nil {
 		t.Fatalf("query %q: %v", kind, err)
 	}
-	defer func() { _ = rows.Close() }()
+	defer rows.Close()
 	var out []string
 	for rows.Next() {
 		var s string
