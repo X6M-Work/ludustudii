@@ -196,6 +196,17 @@ Tests are split by build tag:
 | `make test-unit` | `unit` | Handlers, validation, kit, spec, fuzz contracts. No database. |
 | `make test-integration` | `integration` | Stores and API tests against real PostgreSQL, with `-race` |
 | `make test` | both | Everything |
+| `make coverage` | `unit,integration,apidocs` | All backend tests with `-race`; writes `backend/coverage/coverage.out` and `backend/coverage/coverage.html`. Requires `DB_TEST_CONNECTION`. |
+
+To view the coverage report from the devcontainer, run this from the repository
+root:
+
+```sh
+python3 -m http.server 8000 --directory backend/coverage
+```
+
+Forward port 8000 in VS Code's **Ports** tab, then open the forwarded URL with
+`/coverage.html`. Stop the server with Ctrl+C when finished.
 
 The testing strategy is deliberate:
 

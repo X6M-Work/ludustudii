@@ -95,7 +95,7 @@ logs-slow:
 logs-stats:
 	@jq -nrR '[inputs | fromjson? | select(.msg == "request") | {status, method, route}] | group_by(.) | map({count: length} + .[0]) | sort_by(-.count) | .[] | "\(.count)\t\(.status)\t\(.method)\t\(.route)"' $(LOG_FILE)
 
-.PHONY: test test-unit test-integration
+.PHONY: test test-unit test-integration coverage
 
 ## test: Runs both unit and integration tests
 test: test-unit test-integration
@@ -111,6 +111,13 @@ test-unit:
 test-integration:
 	@echo "==> Running integration tests..."
 	cd $(BACKEND_DIR) && go test -tags=integration -race -count=1 ./... | grep --line-buffered -v '^?'
+
+## coverage: Runs all backend tests and writes coverage profile and HTML report to backend/coverage/ (requires DB_TEST_CONNECTION)
+coverage: $(SPA_EMBED_DIR)/index.html $(SCALAR_EMBED)
+	@mkdir -p $(BACKEND_DIR)/coverage
+	go -C $(BACKEND_DIR) test -tags=unit,integration,apidocs -race -count=1 -coverprofile=coverage/coverage.out ./...
+	go -C $(BACKEND_DIR) tool cover -html=coverage/coverage.out -o coverage/coverage.html
+	# Serve from the repository root: python3 -m http.server 8000 --directory backend/coverage
 
 .PHONY: build build-frontend build-backend clean
 
