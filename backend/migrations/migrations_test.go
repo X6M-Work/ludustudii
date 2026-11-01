@@ -148,7 +148,6 @@ func queryOutput(t *testing.T, db *sql.DB, kind, query string) []string {
 	if err != nil {
 		t.Fatalf("query %q: %v", kind, err)
 	}
-	// Rows.Err reports iteration errors; this also releases rows on early returns.
 	defer func() { _ = rows.Close() }()
 	var out []string
 	for rows.Next() {

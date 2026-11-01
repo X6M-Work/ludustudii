@@ -178,17 +178,17 @@ func TestVars_LogAttrs(t *testing.T) {
 	for _, a := range v.LogAttrs() {
 		got[a.Key] = a.Value.String()
 	}
-	if got["db_connection"] == "" || strings.Contains(got["db_connection"], "secret") {
-		t.Errorf("%s not redacted: %q", EnvDBConnectionString, got["db_connection"])
+	if got[EnvDBConnectionString] == "" || strings.Contains(got[EnvDBConnectionString], "secret") {
+		t.Errorf("%s not redacted: %q", EnvDBConnectionString, got[EnvDBConnectionString])
 	}
-	if got["log_level"] != "WARN" {
-		t.Errorf("%s: got %q, want %q", EnvLogLevel, got["log_level"], "WARN")
+	if got[EnvLogLevel] != "WARN" {
+		t.Errorf("%s: got %q, want %q", EnvLogLevel, got[EnvLogLevel], "WARN")
 	}
-	if got["log_format"] != "text" {
-		t.Errorf("%s: got %q, want %q", EnvLogFormat, got["log_format"], "text")
+	if got[EnvLogFormat] != "text" {
+		t.Errorf("%s: got %q, want %q", EnvLogFormat, got[EnvLogFormat], "text")
 	}
-	if got["app_api_docs"] != "true" {
-		t.Errorf("%s: got %q, want %q", EnvAppAPIDocs, got["app_api_docs"], "true")
+	if got[EnvAppAPIDocs] != "true" {
+		t.Errorf("%s: got %q, want %q", EnvAppAPIDocs, got[EnvAppAPIDocs], "true")
 	}
 }
 
@@ -203,7 +203,7 @@ func TestVars_LogAttrs_QueryPassword(t *testing.T) {
 
 	found := false
 	for _, a := range v.LogAttrs() {
-		if a.Key != "db_connection" {
+		if a.Key != EnvDBConnectionString {
 			continue
 		}
 		found = true
@@ -216,6 +216,6 @@ func TestVars_LogAttrs_QueryPassword(t *testing.T) {
 		}
 	}
 	if !found {
-		t.Fatal("missing db_connection log attribute")
+		t.Fatal("missing DB_CONNECTION log attribute")
 	}
 }

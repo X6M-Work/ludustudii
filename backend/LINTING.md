@@ -40,7 +40,7 @@ Current lint output is zero issues with the configured build tags.
 | gosec | 3 | Targeted inline #nosec directives cover intentional CLI artifact writing and an environment-name false positive. |
 | revive | 1 | Document the exported logging format constant block. |
 | godot | 0 | No findings. |
-| sloglint | 15 | Use snake_case log keys and slog.DiscardHandler; update log-key/redaction tests. |
+| sloglint | 15 | Use slog.DiscardHandler; preserve environment variable names as log keys with an explained local exception. |
 | depguard | 0 | No findings. |
 | forbidigo | 0 | No findings. |
 | thelper | 2 | Name testing.TB parameters tb; parameter and result types are unchanged. |
@@ -74,6 +74,8 @@ The intentionally excluded linters requested by the user remain disabled.
   prohibitions remain active there.
 - bodyclose: only test sources calling `testkit.Do`, plus the bare `Do` call in
   `internal/testkit/openapi_test.go`; Do reads and closes the body before returning.
+- Inline `nolint:sloglint` on `env.Vars.LogAttrs`: keep
+  original environment variable names as log keys. Other logging uses snake_case.
 - Inline `nolint:errorlint`: only assertion/switch diagnostics in `internal/kit/erresp/error.go`;
   this code walks every branch itself, whereas errors.As would skip or duplicate
   siblings. Also the `got.Err != err` constructor test in
