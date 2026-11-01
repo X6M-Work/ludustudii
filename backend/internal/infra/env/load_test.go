@@ -22,17 +22,25 @@ func setRequired(t *testing.T) {
 }
 
 func TestLoad_AppPort(t *testing.T) {
-	for _, port := range []string{"1", "8080", "65535"} {
-		t.Run(port, func(t *testing.T) {
+	for _, tt := range []struct {
+		port string
+		want string
+	}{
+		{port: "1", want: "1"},
+		{port: "8080", want: "8080"},
+		{port: "65535", want: "65535"},
+		{port: "08080", want: "8080"},
+	} {
+		t.Run(tt.port, func(t *testing.T) {
 			setRequired(t)
-			t.Setenv(EnvAppPort, port)
+			t.Setenv(EnvAppPort, tt.port)
 
 			v, err := Load()
 			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
-			if v.AppPort != port {
-				t.Errorf("port: got %q, want %q", v.AppPort, port)
+			if v.AppPort != tt.want {
+				t.Errorf("port: got %q, want %q", v.AppPort, tt.want)
 			}
 		})
 	}

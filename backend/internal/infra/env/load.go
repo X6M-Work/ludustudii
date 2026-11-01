@@ -66,8 +66,8 @@ type Vars struct {
 // Load reads the configuration from the environment. DB_CONNECTION and
 // APP_PORT are required, and DB_CONNECTION must be a postgres:// or
 // postgresql:// URL. APP_PORT must be a decimal port from 1 to 65535.
-// The other variables are optional and fall back to the
-// Default constants. Durations use time.ParseDuration syntax, booleans use
+// The other variables are optional and fall back to the Default constants.
+// Durations use time.ParseDuration syntax, booleans use
 // strconv.ParseBool syntax (such as "true" or "0"), LOG_LEVEL uses slog.Level
 // names (such as "debug" or "warn") and LOG_FORMAT is "json" or "text". Load
 // reports every invalid or missing variable, joined into one error.
@@ -180,10 +180,11 @@ func getEnvPort(key string) (string, error) {
 	if valueStr == "" {
 		return "", fmt.Errorf("get env %s: not set", key)
 	}
-	if port, err := strconv.ParseUint(valueStr, 10, 16); err != nil || port == 0 {
+	port, err := strconv.ParseUint(valueStr, 10, 16)
+	if err != nil || port == 0 {
 		return "", fmt.Errorf("parse env %s: must be a decimal port between 1 and 65535", key)
 	}
-	return valueStr, nil
+	return strconv.FormatUint(port, 10), nil
 }
 
 func getEnvInt(key string, defaultValue int) (int, error) {
@@ -193,7 +194,7 @@ func getEnvInt(key string, defaultValue int) (int, error) {
 	}
 	value, err := strconv.Atoi(valueStr)
 	if err != nil {
-		return 0, fmt.Errorf("parse %s: %w", key, err)
+		return 0, fmt.Errorf("parse env %s: %w", key, err)
 	}
 	return value, nil
 }
@@ -205,7 +206,7 @@ func getEnvDuration(key string, defaultValue time.Duration) (time.Duration, erro
 	}
 	value, err := time.ParseDuration(valueStr)
 	if err != nil {
-		return 0, fmt.Errorf("parse %s: %w", key, err)
+		return 0, fmt.Errorf("parse env %s: %w", key, err)
 	}
 	return value, nil
 }
@@ -217,7 +218,7 @@ func getEnvBool(key string, defaultValue bool) (bool, error) {
 	}
 	value, err := strconv.ParseBool(valueStr)
 	if err != nil {
-		return false, fmt.Errorf("parse %s: %w", key, err)
+		return false, fmt.Errorf("parse env %s: %w", key, err)
 	}
 	return value, nil
 }
@@ -230,7 +231,7 @@ func getEnvLevel(key string, defaultValue slog.Level) (*slog.LevelVar, error) {
 		return &value, nil
 	}
 	if err := value.UnmarshalText([]byte(valueStr)); err != nil {
-		return nil, fmt.Errorf("parse %s: %w", key, err)
+		return nil, fmt.Errorf("parse env %s: %w", key, err)
 	}
 	return &value, nil
 }
@@ -242,7 +243,7 @@ func getEnvFormat(key string, defaultValue logging.Format) (logging.Format, erro
 	}
 	var value logging.Format
 	if err := value.UnmarshalText([]byte(valueStr)); err != nil {
-		return 0, fmt.Errorf("parse %s: %w", key, err)
+		return 0, fmt.Errorf("parse env %s: %w", key, err)
 	}
 	return value, nil
 }
