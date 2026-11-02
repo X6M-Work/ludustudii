@@ -114,7 +114,15 @@ func Param() ErrorResponse {
 }
 
 // PreconditionRequired returns the response for a missing or invalid If-Match.
-func PreconditionRequired() ErrorResponse { return New(CodePreconditionRequired) }
+func PreconditionRequired() ErrorResponse {
+	return ErrorResponse{
+		Code: CodePreconditionRequired,
+	}
+}
 
 // PreconditionFailed returns the response for a stale resource version.
-func PreconditionFailed() ErrorResponse { return New(CodePreconditionFailed) }
+func PreconditionFailed() ErrorResponse {
+	return ErrorResponse{
+		Code: CodePreconditionFailed,
+	}
+}
