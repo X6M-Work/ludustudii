@@ -7,6 +7,8 @@ import (
 
 // Machine-readable error codes sent in ErrorResponse.Code.
 const (
+	CodePreconditionRequired = "precondition_required"
+	CodePreconditionFailed   = "precondition_failed"
 	CodeBinding              = "bind_error"
 	CodeMethodNotAllowed     = "method_not_allowed"
 	CodeNotFound             = "not_found"
@@ -110,3 +112,9 @@ func Param() ErrorResponse {
 		Code: CodeParam,
 	}
 }
+
+// PreconditionRequired returns the response for a missing or invalid If-Match.
+func PreconditionRequired() ErrorResponse { return New(CodePreconditionRequired) }
+
+// PreconditionFailed returns the response for a stale resource version.
+func PreconditionFailed() ErrorResponse { return New(CodePreconditionFailed) }
