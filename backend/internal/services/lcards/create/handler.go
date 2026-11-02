@@ -24,7 +24,7 @@ type response struct {
 }
 
 type creator interface {
-	Create(ctx context.Context, p createParams) (string, int64, error)
+	Create(ctx context.Context, p createParams) (row, error)
 }
 
 // Handler serves the POST /api/lcards endpoint.
@@ -67,15 +67,15 @@ func (h *Handler) Handle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, erresp.Validation(err))
 	}
 
-	id, version, err := h.store.Create(ctx, toParams(req))
+	data, err := h.store.Create(ctx, toParams(req))
 	if err != nil {
 		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
 		return c.JSON(http.StatusInternalServerError, erresp.Unexpected())
 	}
 
-	c.Response().Header().Set("ETag", etag.Format(version))
-	c.Response().Header().Set(echo.HeaderLocation, domain.CardsPath+"/"+id)
-	return c.JSON(http.StatusCreated, toResp(id))
+	c.Response().Header().Set("ETag", etag.Format(data.Version))
+	c.Response().Header().Set(echo.HeaderLocation, domain.CardsPath+"/"+data.ID)
+	return c.JSON(http.StatusCreated, toResp(data))
 }
 
 func bind(c *echo.Context, i any) error {
@@ -98,6 +98,6 @@ func toParams(req request) createParams {
 	return createParams(req)
 }
 
-func toResp(id string) response {
-	return response{ID: id}
+func toResp(data row) response {
+	return response{ID: data.ID}
 }

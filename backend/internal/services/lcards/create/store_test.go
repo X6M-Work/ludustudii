@@ -30,23 +30,20 @@ func TestStore_Create(t *testing.T) {
 		Description: "Caf\u00E9 Description",
 	}
 
-	id, version, err := s.Create(t.Context(), want)
+	data, err := s.Create(t.Context(), want)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
-	if version != 1 {
-		t.Errorf("version: got %d, want 1", version)
+	if data.Version != 1 {
+		t.Errorf("version: got %d, want 1", data.Version)
 	}
-	if err := validator.UUID7("id", id); err != nil {
-		t.Errorf("id %q: %v", id, err)
+	if err := validator.UUID7("id", data.ID); err != nil {
+		t.Errorf("id %q: %v", data.ID, err)
 	}
 
-	if version != 1 {
-		t.Errorf("version: got %d, want 1", version)
-	}
 	var got createParams
 	err = db.QueryRowContext(t.Context(),
-		`SELECT title, description FROM learning_cards WHERE id = $1`, id,
+		`SELECT title, description FROM learning_cards WHERE id = $1`, data.ID,
 	).Scan(&got.Title, &got.Description)
 	if err != nil {
 		t.Fatalf("query created row: %v", err)
@@ -67,17 +64,17 @@ func TestStore_Create_MaxLengths(t *testing.T) {
 		Description: strings.Repeat("\u00E9", domain.DescriptionMaxLength),
 	}
 
-	id, version, err := s.Create(t.Context(), want)
+	data, err := s.Create(t.Context(), want)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
-	if version != 1 {
-		t.Errorf("version: got %d, want 1", version)
+	if data.Version != 1 {
+		t.Errorf("version: got %d, want 1", data.Version)
 	}
 	var got createParams
 	err = db.QueryRowContext(t.Context(),
-		`SELECT title, description FROM learning_cards WHERE id = $1`, id,
+		`SELECT title, description FROM learning_cards WHERE id = $1`, data.ID,
 	).Scan(&got.Title, &got.Description)
 	if err != nil {
 		t.Fatalf("query created row: %v", err)
@@ -138,7 +135,7 @@ func TestStore_Create_CheckConstraints(t *testing.T) {
 			db := testkit.NewDB(t)
 			s := NewStore(db)
 
-			_, _, err := s.Create(t.Context(), tt.params)
+			_, err := s.Create(t.Context(), tt.params)
 			testkit.AssertPgConstraint(t, err, tt.wantConstraint)
 		})
 	}
@@ -153,7 +150,7 @@ func TestStore_Create_CanceledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
-	_, _, err := s.Create(ctx, createParams{Title: "Title", Description: "Description"})
+	_, err := s.Create(ctx, createParams{Title: "Title", Description: "Description"})
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("err: got %v, want %v", err, context.Canceled)
 	}

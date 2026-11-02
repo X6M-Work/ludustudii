@@ -10,6 +10,11 @@ type createParams struct {
 	Description string
 }
 
+type row struct {
+	ID      string
+	Version int64
+}
+
 // Store inserts learning cards into the database.
 type Store struct {
 	db *sql.DB
@@ -21,12 +26,11 @@ func NewStore(db *sql.DB) *Store {
 }
 
 // Create inserts a card and returns its database-generated ID and version.
-func (s *Store) Create(ctx context.Context, p createParams) (string, int64, error) {
+func (s *Store) Create(ctx context.Context, p createParams) (row, error) {
 	query := `INSERT INTO learning_cards (title, description) VALUES ($1, $2) RETURNING id, version`
-	var id string
-	var version int64
+	var data row
 	err := s.db.
 		QueryRowContext(ctx, query, p.Title, p.Description).
-		Scan(&id, &version)
-	return id, version, err
+		Scan(&data.ID, &data.Version)
+	return data, err
 }

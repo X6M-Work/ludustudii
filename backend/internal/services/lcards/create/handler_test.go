@@ -17,10 +17,10 @@ import (
 )
 
 type mockStore struct {
-	createFn func(ctx context.Context, p createParams) (string, int64, error)
+	createFn func(ctx context.Context, p createParams) (row, error)
 }
 
-func (m *mockStore) Create(ctx context.Context, p createParams) (string, int64, error) {
+func (m *mockStore) Create(ctx context.Context, p createParams) (row, error) {
 	return m.createFn(ctx, p)
 }
 
@@ -38,9 +38,9 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 	t.Helper()
 
 	m := &mockStore{
-		createFn: func(ctx context.Context, p createParams) (string, int64, error) {
+		createFn: func(ctx context.Context, p createParams) (row, error) {
 			t.Fatal("unexpected call to createFn")
-			return "", 1, errors.New("")
+			return row{}, errors.New("")
 		},
 	}
 	if store != nil {
@@ -94,8 +94,8 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "create error",
 			store: func(m *mockStore) {
-				m.createFn = func(_ context.Context, _ createParams) (string, int64, error) {
-					return "", 1, errors.New("")
+				m.createFn = func(_ context.Context, _ createParams) (row, error) {
+					return row{}, errors.New("")
 				}
 			},
 			wantCode:    http.StatusInternalServerError,
@@ -104,8 +104,8 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "success",
 			store: func(m *mockStore) {
-				m.createFn = func(_ context.Context, p createParams) (string, int64, error) {
-					return "01a1730e-199d-7f9f-b59d-3bcd6f84066c", 1, nil
+				m.createFn = func(_ context.Context, p createParams) (row, error) {
+					return row{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", Version: 1}, nil
 				}
 			},
 			wantCode:     http.StatusCreated,
@@ -216,9 +216,9 @@ func TestHandler_Wiring(t *testing.T) {
 
 	var gotParams createParams
 	m := &mockStore{
-		createFn: func(_ context.Context, p createParams) (string, int64, error) {
+		createFn: func(_ context.Context, p createParams) (row, error) {
 			gotParams = p
-			return "01a1730e-199d-7f9f-b59d-3bcd6f84066c", 1, nil
+			return row{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", Version: 1}, nil
 		},
 	}
 	h := NewHandler(m)
@@ -318,7 +318,7 @@ func TestToResp(t *testing.T) {
 	t.Parallel()
 
 	const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
-	got := toResp(id)
+	got := toResp(row{ID: id, Version: 1})
 	want := response{ID: id}
 	if got != want {
 		t.Errorf("resp: got %+v, want %+v", got, want)
