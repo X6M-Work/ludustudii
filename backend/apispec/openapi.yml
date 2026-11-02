@@ -38,6 +38,8 @@ paths:
     $ref: './paths/lcard_by_id.yml'
 components:
   parameters:
+    IfMatch:
+      $ref: './components/parameters.yml#/IfMatch'
     CardId:
       $ref: './components/parameters.yml#/CardId'
     RequestId:
@@ -47,6 +49,8 @@ components:
     Cursor:
       $ref: './components/parameters.yml#/Cursor'
   headers:
+    ETag:
+      $ref: './components/headers.yml#/ETag'
     RequestId:
       $ref: './components/headers.yml#/RequestId'
   requestBodies:
@@ -68,6 +72,12 @@ components:
     FieldError:
       $ref: './components/schemas/errors.yml#/FieldError'
   responses:
+    PreconditionFailed:
+      $ref: './components/responses/errors.yml#/PreconditionFailed'
+    PreconditionRequired:
+      $ref: './components/responses/errors.yml#/PreconditionRequired'
+    HeadCardSuccess:
+      $ref: './components/responses/head.yml#/HeadCardSuccess'
     InvalidQuery:
       $ref: './components/responses/errors.yml#/InvalidQuery'
     InvalidCreateInput:

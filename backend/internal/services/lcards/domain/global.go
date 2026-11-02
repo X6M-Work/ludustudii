@@ -25,7 +25,8 @@ const (
 )
 
 // Domain errors for learning cards. Stores return ErrNotFound when no card
-// has the requested ID.
+// has the requested ID and ErrVersionConflict when its version is stale.
 var (
-	ErrNotFound = errors.New("not found")
+	ErrVersionConflict = errors.New("version conflict")
+	ErrNotFound        = errors.New("not found")
 )

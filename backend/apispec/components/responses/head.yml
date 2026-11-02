@@ -23,3 +23,10 @@ HeadUnexpectedError:
   headers:
     X-Request-Id:
       $ref: '../headers.yml#/RequestId'
+HeadCardSuccess:
+  description: The corresponding GET succeeded. No response body.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+    ETag:
+      $ref: '../headers.yml#/ETag'

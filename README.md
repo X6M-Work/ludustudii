@@ -76,6 +76,15 @@ is the source of truth; the notes below summarize it.
   validation. Title is 1–200 and description 1–2000 code points; the database
   enforces the same limits with `CHECK` constraints.
 - **IDs** are hyphenated UUIDv7, accepted in any letter case.
+- **Concurrency**: cards returned by GET and list include an integer `version`.
+  GET/HEAD of a card, POST (201), and PUT (204) return a strong `ETag`, such as
+  `"3"`, derived from that version. PUT and DELETE require `If-Match` with
+  exactly one strong quoted positive integer. Missing or malformed values
+  (including wildcards, lists and weak tags) return `428 precondition_required`.
+  Stale versions return `412 precondition_failed`; unknown cards return 404
+  before version mismatch. Requests check path ID, If-Match, binding,
+  sanitization, validation, then storage. Each successful update increments
+  the version atomically; clients must reload after a conflict.
 - **Pagination**: `limit` (1–100, default 20) and `cursor` (the previous
   page's `next_cursor`). `next_cursor` is `null` on the last page.
 - **Request IDs**: every response carries `X-Request-Id`. A client-supplied
@@ -96,6 +105,8 @@ is the source of truth; the notes below summarize it.
   | `bind_error` | 400 | Body or query could not be decoded |
   | `validation_error` | 400 | One or more fields failed validation |
   | `param_error` | 400 | Invalid path parameter (e.g. card ID) |
+  | `precondition_required` | 428 | Missing or malformed If-Match |
+  | `precondition_failed` | 412 | Stale resource version |
   | `not_found` | 404 | Unknown card or unknown `/api` path |
   | `method_not_allowed` | 405 | Unsupported method, with an `Allow` header |
   | `payload_too_large` | 413 | Body over 1 MiB |

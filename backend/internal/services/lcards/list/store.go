@@ -25,6 +25,7 @@ type row struct {
 	ID          string
 	Title       string
 	Description string
+	Version     int64
 }
 
 type page struct {
@@ -42,10 +43,10 @@ func (s *Store) List(ctx context.Context, p listParams) (page, error) {
 	}
 
 	// Fetch one extra row to learn whether another page exists.
-	query := `SELECT id, title, description FROM learning_cards ORDER BY id DESC LIMIT $1`
+	query := `SELECT id, title, description, version FROM learning_cards ORDER BY id DESC LIMIT $1`
 	args := []any{p.Limit + 1}
 	if p.Cursor != "" {
-		query = `SELECT id, title, description FROM learning_cards WHERE id < $1 ORDER BY id DESC LIMIT $2`
+		query = `SELECT id, title, description, version FROM learning_cards WHERE id < $1 ORDER BY id DESC LIMIT $2`
 		args = []any{p.Cursor, p.Limit + 1}
 	}
 
@@ -58,7 +59,7 @@ func (s *Store) List(ctx context.Context, p listParams) (page, error) {
 	var data []row
 	for rows.Next() {
 		var card row
-		if err := rows.Scan(&card.ID, &card.Title, &card.Description); err != nil {
+		if err := rows.Scan(&card.ID, &card.Title, &card.Description, &card.Version); err != nil {
 			return page{}, fmt.Errorf("scan: %w", err)
 		}
 		data = append(data, card)

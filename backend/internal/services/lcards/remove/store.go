@@ -18,10 +18,11 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
-// Delete deletes the card with the given ID, or returns domain.ErrNotFound.
-func (s *Store) Delete(ctx context.Context, id string) error {
-	query := `DELETE FROM learning_cards WHERE id = $1`
-	res, err := s.db.ExecContext(ctx, query, id)
+// Delete removes the card only when expectedVersion matches. It returns
+// domain.ErrNotFound for an unknown ID or domain.ErrVersionConflict for a stale version.
+func (s *Store) Delete(ctx context.Context, id string, expectedVersion int64) error {
+	query := `DELETE FROM learning_cards WHERE id = $1 AND version = $2`
+	res, err := s.db.ExecContext(ctx, query, id, expectedVersion)
 	if err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}
@@ -31,7 +32,14 @@ func (s *Store) Delete(ctx context.Context, id string) error {
 		return fmt.Errorf("check rows affected: %w", err)
 	}
 	if rows == 0 {
-		return domain.ErrNotFound
+		var exists bool
+		if err := s.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM learning_cards WHERE id = $1)`, id).Scan(&exists); err != nil {
+			return fmt.Errorf("check card exists: %w", err)
+		}
+		if !exists {
+			return domain.ErrNotFound
+		}
+		return domain.ErrVersionConflict
 	}
 
 	return nil

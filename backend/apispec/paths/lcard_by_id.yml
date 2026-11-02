@@ -9,6 +9,8 @@ get:
     '200':
       description: The requested card.
       headers:
+        ETag:
+          $ref: '../components/headers.yml#/ETag'
         X-Request-Id:
           $ref: '../components/headers.yml#/RequestId'
       content:
@@ -30,7 +32,7 @@ head:
   description: Executes the get operation with the same ID validation, without a response body.
   responses:
     '200':
-      $ref: '../components/responses/head.yml#/HeadSuccess'
+      $ref: '../components/responses/head.yml#/HeadCardSuccess'
     '400':
       $ref: '../components/responses/head.yml#/HeadInvalidInput'
     '404':
@@ -40,6 +42,8 @@ head:
     '500':
       $ref: '../components/responses/head.yml#/HeadUnexpectedError'
 put:
+  parameters:
+    - $ref: '../components/parameters.yml#/IfMatch'
   tags: [Learning cards]
   operationId: replaceLearningCard
   summary: Replace a learning card's title and description
@@ -50,6 +54,8 @@ put:
     '204':
       description: Card updated successfully. No response body.
       headers:
+        ETag:
+          $ref: '../components/headers.yml#/ETag'
         X-Request-Id:
           $ref: '../components/headers.yml#/RequestId'
     '400':
@@ -60,9 +66,15 @@ put:
       $ref: '../components/responses/errors.yml#/PayloadTooLarge'
     '415':
       $ref: '../components/responses/errors.yml#/UnsupportedMediaType'
+    '412':
+      $ref: '../components/responses/errors.yml#/PreconditionFailed'
+    '428':
+      $ref: '../components/responses/errors.yml#/PreconditionRequired'
     '500':
       $ref: '../components/responses/errors.yml#/UnexpectedError'
 delete:
+  parameters:
+    - $ref: '../components/parameters.yml#/IfMatch'
   tags: [Learning cards]
   operationId: deleteLearningCard
   summary: Delete a learning card
@@ -78,5 +90,9 @@ delete:
       $ref: '../components/responses/errors.yml#/NotFound'
     '413':
       $ref: '../components/responses/errors.yml#/PayloadTooLarge'
+    '412':
+      $ref: '../components/responses/errors.yml#/PreconditionFailed'
+    '428':
+      $ref: '../components/responses/errors.yml#/PreconditionRequired'
     '500':
       $ref: '../components/responses/errors.yml#/UnexpectedError'

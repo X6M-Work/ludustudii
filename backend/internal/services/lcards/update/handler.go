@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
+	"github.com/apotourlyan/ludustudii/internal/kit/etag"
 	"github.com/apotourlyan/ludustudii/internal/kit/sanitizer"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
@@ -21,7 +22,7 @@ type request struct {
 }
 
 type updater interface {
-	Update(ctx context.Context, p updateParams) error
+	Update(ctx context.Context, p updateParams, expectedVersion int64) (int64, error)
 }
 
 // Handler serves the PUT /api/lcards/:id endpoint.
@@ -30,6 +31,7 @@ type Handler struct {
 	bind            func(c *echo.Context, i any) error
 	validate        func(req request) error
 	validateParamID func(id string) error
+	parseIfMatch    func(string) (int64, error)
 }
 
 // NewHandler returns a Handler that uses s for storage.
@@ -38,6 +40,7 @@ func NewHandler(s updater) *Handler {
 		store:           s,
 		bind:            bind,
 		validate:        validate,
+		parseIfMatch:    etag.ParseIfMatch,
 		validateParamID: validateParamID,
 	}
 }
@@ -45,8 +48,10 @@ func NewHandler(s updater) *Handler {
 // Handle sanitizes and validates the JSON title and description, replaces
 // them on the card whose ID is the :id path parameter and responds 204.
 // Invalid input or an ID that is not a UUIDv7 (case-insensitive) gets 400,
-// and an unknown ID gets 404. An oversized body (413) or an unsupported
-// Content-Type (415) is returned for the router's error handler to report.
+// an unknown ID gets 404, missing or invalid If-Match gets 428, and a stale
+// version gets 412. Success includes the new version as an ETag. An oversized
+// body (413) or an unsupported Content-Type (415) is returned for the router's
+// error handler to report.
 func (h *Handler) Handle(c *echo.Context) error {
 	ctx := c.Request().Context()
 
@@ -54,6 +59,11 @@ func (h *Handler) Handle(c *echo.Context) error {
 	if err := h.validateParamID(id); err != nil {
 		slog.DebugContext(ctx, domain.TextInvalidID, "error", err)
 		return c.JSON(http.StatusBadRequest, erresp.Param())
+	}
+
+	version, err := h.parseIfMatch(strings.Join(c.Request().Header.Values("If-Match"), ","))
+	if err != nil {
+		return c.JSON(http.StatusPreconditionRequired, erresp.PreconditionRequired())
 	}
 
 	var req request
@@ -73,15 +83,20 @@ func (h *Handler) Handle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, erresp.Validation(err))
 	}
 
-	if err := h.store.Update(ctx, toParams(req, id)); err != nil {
+	newVersion, err := h.store.Update(ctx, toParams(req, id), version)
+	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			slog.DebugContext(ctx, domain.TextNotFound, "error", err)
 			return c.JSON(http.StatusNotFound, erresp.NotFound())
+		}
+		if errors.Is(err, domain.ErrVersionConflict) {
+			return c.JSON(http.StatusPreconditionFailed, erresp.PreconditionFailed())
 		}
 		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
 		return c.JSON(http.StatusInternalServerError, erresp.Unexpected())
 	}
 
+	c.Response().Header().Set("ETag", etag.Format(newVersion))
 	return c.NoContent(http.StatusNoContent)
 }
 

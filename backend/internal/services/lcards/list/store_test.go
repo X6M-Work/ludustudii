@@ -29,9 +29,9 @@ func insertCard(t *testing.T, db *sql.DB, id, title, description string) {
 }
 
 var (
-	cardA = row{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066a", Title: "Title A", Description: "Description A"}
-	cardB = row{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066b", Title: "Title B", Description: "Description B"}
-	cardC = row{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", Title: "Title C", Description: "Description C"}
+	cardA = row{Version: 1, ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066a", Title: "Title A", Description: "Description A"}
+	cardB = row{Version: 1, ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066b", Title: "Title B", Description: "Description B"}
+	cardC = row{Version: 1, ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", Title: "Title C", Description: "Description C"}
 )
 
 // seedABC inserts the cards out of order to verify ORDER BY id DESC.

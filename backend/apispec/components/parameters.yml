@@ -32,3 +32,11 @@ Cursor:
     format: uuid
     pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
     example: 019a0000-0000-7000-8000-000000000001
+IfMatch:
+  name: If-Match
+  in: header
+  required: true
+  description: Exactly one strong quoted positive int64 version. Missing or malformed values return 428; a stale version returns 412. Unknown cards return 404 before version mismatch.
+  schema:
+    type: string
+  example: '"1"'

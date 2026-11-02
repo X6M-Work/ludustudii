@@ -25,6 +25,7 @@ get:
           example:
             items:
               - id: 019a0000-0000-7000-8000-000000000001
+                version: 1
                 title: OpenAPI
                 description: A specification for describing HTTP APIs.
             next_cursor: null
@@ -63,6 +64,8 @@ post:
       headers:
         X-Request-Id:
           $ref: '../components/headers.yml#/RequestId'
+        ETag:
+          $ref: '../components/headers.yml#/ETag'
         Location:
           description: Relative URL of the newly created card.
           required: true

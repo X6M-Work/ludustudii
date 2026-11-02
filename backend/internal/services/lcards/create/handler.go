@@ -8,6 +8,7 @@ import (
 	"net/http"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
+	"github.com/apotourlyan/ludustudii/internal/kit/etag"
 	"github.com/apotourlyan/ludustudii/internal/kit/sanitizer"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 	"github.com/labstack/echo/v5"
@@ -23,7 +24,7 @@ type response struct {
 }
 
 type creator interface {
-	Create(ctx context.Context, p createParams) (string, error)
+	Create(ctx context.Context, p createParams) (string, int64, error)
 }
 
 // Handler serves the POST /api/lcards endpoint.
@@ -66,12 +67,13 @@ func (h *Handler) Handle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, erresp.Validation(err))
 	}
 
-	id, err := h.store.Create(ctx, toParams(req))
+	id, version, err := h.store.Create(ctx, toParams(req))
 	if err != nil {
 		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
 		return c.JSON(http.StatusInternalServerError, erresp.Unexpected())
 	}
 
+	c.Response().Header().Set("ETag", etag.Format(version))
 	c.Response().Header().Set(echo.HeaderLocation, domain.CardsPath+"/"+id)
 	return c.JSON(http.StatusCreated, toResp(id))
 }

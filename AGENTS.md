@@ -43,6 +43,10 @@ the reference slice.
 
 ## Rules not enforced by tooling
 
+- Every UPDATE/DELETE on a user-editable table requires `If-Match` and checks
+  the expected `version` in its SQL predicate. UPDATE also bumps `version` in
+  the same statement; DELETE removes the matching row. Follow `lcards/update`
+  as the reference pattern.
 - Prefer the standard library. Ask before adding a Go dependency.
 - Write SQL by hand, without an ORM or query builder.
 - Errors reach clients only through the shared error shape in `README.md`

@@ -9,6 +9,8 @@ ErrorResponse:
         - bind_error
         - validation_error
         - param_error
+        - precondition_required
+        - precondition_failed
         - not_found
         - method_not_allowed
         - payload_too_large

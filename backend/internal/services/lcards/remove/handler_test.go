@@ -16,17 +16,18 @@ import (
 )
 
 type mockStore struct {
-	deleteFn func(ctx context.Context, id string) error
+	deleteFn func(ctx context.Context, id string, _ int64) error
 }
 
-func (m *mockStore) Delete(ctx context.Context, id string) error {
-	return m.deleteFn(ctx, id)
+func (m *mockStore) Delete(ctx context.Context, id string, expectedVersion int64) error {
+	return m.deleteFn(ctx, id, expectedVersion)
 }
 
 func testContext(t *testing.T, id string) (*echo.Context, *httptest.ResponseRecorder) {
 	t.Helper()
 	e := echo.New()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/lcards/"+id, nil)
+	req.Header.Set("If-Match", `"1"`)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
 	c.SetPathValues(echo.PathValues{{Name: "id", Value: id}})
@@ -37,7 +38,7 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 	t.Helper()
 
 	m := &mockStore{
-		deleteFn: func(ctx context.Context, id string) error {
+		deleteFn: func(ctx context.Context, id string, _ int64) error {
 			t.Fatal("unexpected call to deleteFn")
 			return errors.New("")
 		},
@@ -48,6 +49,7 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 
 	h := &Handler{
 		store:           m,
+		parseIfMatch:    func(string) (int64, error) { return 1, nil },
 		validateParamID: func(id string) error { return nil },
 	}
 	if setup != nil {
@@ -78,9 +80,23 @@ func TestHandler_Handle(t *testing.T) {
 			wantErrCode: erresp.CodeParam,
 		},
 		{
+			name:        "parser error",
+			setup:       func(h *Handler) { h.parseIfMatch = func(string) (int64, error) { return 0, errors.New("invalid") } },
+			wantCode:    http.StatusPreconditionRequired,
+			wantErrCode: erresp.CodePreconditionRequired,
+		},
+		{
+			name: "version conflict",
+			store: func(m *mockStore) {
+				m.deleteFn = func(_ context.Context, _ string, _ int64) error { return domain.ErrVersionConflict }
+			},
+			wantCode:    http.StatusPreconditionFailed,
+			wantErrCode: erresp.CodePreconditionFailed,
+		},
+		{
 			name: "not found error",
 			store: func(m *mockStore) {
-				m.deleteFn = func(_ context.Context, _ string) error {
+				m.deleteFn = func(_ context.Context, _ string, _ int64) error {
 					return domain.ErrNotFound
 				}
 			},
@@ -90,7 +106,7 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "delete error",
 			store: func(m *mockStore) {
-				m.deleteFn = func(_ context.Context, _ string) error {
+				m.deleteFn = func(_ context.Context, _ string, _ int64) error {
 					return errors.New("")
 				}
 			},
@@ -100,7 +116,7 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "success",
 			store: func(m *mockStore) {
-				m.deleteFn = func(_ context.Context, _ string) error {
+				m.deleteFn = func(_ context.Context, _ string, _ int64) error {
 					return nil
 				}
 			},
@@ -151,12 +167,16 @@ func TestHandler_Wiring(t *testing.T) {
 
 	var gotID string
 	m := &mockStore{
-		deleteFn: func(_ context.Context, id string) error {
+		deleteFn: func(_ context.Context, id string, expectedVersion int64) error {
+			if expectedVersion != 7 {
+				t.Errorf("expected version: got %d, want 7", expectedVersion)
+			}
 			gotID = id
 			return nil
 		},
 	}
 	h := NewHandler(m)
+	c.Request().Header.Set("If-Match", `"7"`)
 
 	if err := h.Handle(c); err != nil {
 		t.Fatalf("unexpected error: %v", err)

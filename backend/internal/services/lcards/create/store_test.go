@@ -30,14 +30,20 @@ func TestStore_Create(t *testing.T) {
 		Description: "Caf\u00E9 Description",
 	}
 
-	id, err := s.Create(t.Context(), want)
+	id, version, err := s.Create(t.Context(), want)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
+	}
+	if version != 1 {
+		t.Errorf("version: got %d, want 1", version)
 	}
 	if err := validator.UUID7("id", id); err != nil {
 		t.Errorf("id %q: %v", id, err)
 	}
 
+	if version != 1 {
+		t.Errorf("version: got %d, want 1", version)
+	}
 	var got createParams
 	err = db.QueryRowContext(t.Context(),
 		`SELECT title, description FROM learning_cards WHERE id = $1`, id,
@@ -61,11 +67,14 @@ func TestStore_Create_MaxLengths(t *testing.T) {
 		Description: strings.Repeat("\u00E9", domain.DescriptionMaxLength),
 	}
 
-	id, err := s.Create(t.Context(), want)
+	id, version, err := s.Create(t.Context(), want)
 	if err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
+	if version != 1 {
+		t.Errorf("version: got %d, want 1", version)
+	}
 	var got createParams
 	err = db.QueryRowContext(t.Context(),
 		`SELECT title, description FROM learning_cards WHERE id = $1`, id,
@@ -129,7 +138,7 @@ func TestStore_Create_CheckConstraints(t *testing.T) {
 			db := testkit.NewDB(t)
 			s := NewStore(db)
 
-			_, err := s.Create(t.Context(), tt.params)
+			_, _, err := s.Create(t.Context(), tt.params)
 			testkit.AssertPgConstraint(t, err, tt.wantConstraint)
 		})
 	}
@@ -144,7 +153,7 @@ func TestStore_Create_CanceledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
-	_, err := s.Create(ctx, createParams{Title: "Title", Description: "Description"})
+	_, _, err := s.Create(ctx, createParams{Title: "Title", Description: "Description"})
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("err: got %v, want %v", err, context.Canceled)
 	}

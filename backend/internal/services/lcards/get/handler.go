@@ -9,6 +9,7 @@ import (
 	"strings"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
+	"github.com/apotourlyan/ludustudii/internal/kit/etag"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 	"github.com/labstack/echo/v5"
@@ -18,6 +19,7 @@ type response struct {
 	ID          string `json:"id"`
 	Title       string `json:"title"`
 	Description string `json:"description"`
+	Version     int64  `json:"version"`
 }
 
 type getter interface {
@@ -56,6 +58,7 @@ func (h *Handler) Handle(c *echo.Context) error {
 		return c.JSON(http.StatusInternalServerError, erresp.Unexpected())
 	}
 
+	c.Response().Header().Set("ETag", etag.Format(data.Version))
 	return c.JSON(http.StatusOK, toResp(data))
 }
 

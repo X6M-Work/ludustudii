@@ -47,6 +47,7 @@ func TestStore_Get(t *testing.T) {
 	}
 
 	want := row{
+		Version:     1,
 		ID:          id2,
 		Title:       "Title 2",
 		Description: "Description 2",

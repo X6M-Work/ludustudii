@@ -3,6 +3,7 @@ package update
 import (
 	"context"
 	"database/sql"
+	"errors"
 	"fmt"
 
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
@@ -24,22 +25,25 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
-// Update sets the title and description of card p.ID, or returns
-// domain.ErrNotFound.
-func (s *Store) Update(ctx context.Context, p updateParams) error {
-	query := `UPDATE learning_cards SET title = $1, description = $2 WHERE id = $3`
-	res, err := s.db.ExecContext(ctx, query, p.Title, p.Description, p.ID)
-	if err != nil {
-		return fmt.Errorf("update: %w", err)
+// Update conditionally replaces card p.ID and increments its version atomically.
+// It returns the new version, ErrNotFound for an unknown ID, or
+// ErrVersionConflict when expectedVersion is stale.
+func (s *Store) Update(ctx context.Context, p updateParams, expectedVersion int64) (int64, error) {
+	query := `UPDATE learning_cards SET title = $1, description = $2, version = version + 1 WHERE id = $3 AND version = $4 RETURNING version`
+	var version int64
+	err := s.db.QueryRowContext(ctx, query, p.Title, p.Description, p.ID, expectedVersion).Scan(&version)
+	if err == nil {
+		return version, nil
 	}
-
-	rowsAffected, err := res.RowsAffected()
-	if err != nil {
-		return fmt.Errorf("check rows affected: %w", err)
+	if !errors.Is(err, sql.ErrNoRows) {
+		return 0, fmt.Errorf("update: %w", err)
 	}
-	if rowsAffected == 0 {
-		return domain.ErrNotFound
+	var exists bool
+	if err := s.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM learning_cards WHERE id = $1)`, p.ID).Scan(&exists); err != nil {
+		return 0, fmt.Errorf("check card exists: %w", err)
 	}
-
-	return nil
+	if !exists {
+		return 0, domain.ErrNotFound
+	}
+	return 0, domain.ErrVersionConflict
 }

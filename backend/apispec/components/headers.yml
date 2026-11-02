@@ -3,3 +3,10 @@ RequestId:
   required: true
   schema:
     type: string
+ETag:
+  description: Strong entity tag containing the card's decimal version.
+  required: true
+  schema:
+    type: string
+    pattern: '^"[1-9][0-9]*"$'
+    example: '"1"'

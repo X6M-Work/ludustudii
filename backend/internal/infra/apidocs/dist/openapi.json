@@ -1,6 +1,15 @@
 {
   "components": {
     "headers": {
+      "ETag": {
+        "description": "Strong entity tag containing the card's decimal version.",
+        "required": true,
+        "schema": {
+          "example": "\"1\"",
+          "pattern": "^\"[1-9][0-9]*\"$",
+          "type": "string"
+        }
+      },
       "RequestId": {
         "description": "Incoming X-Request-Id value, or a generated request ID when none was supplied.",
         "required": true,
@@ -30,6 +39,16 @@
           "example": "019a0000-0000-7000-8000-000000000001",
           "format": "uuid",
           "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
+          "type": "string"
+        }
+      },
+      "IfMatch": {
+        "description": "Exactly one strong quoted positive int64 version. Missing or malformed values return 428; a stale version returns 412. Unknown cards return 404 before version mismatch.",
+        "example": "\"1\"",
+        "in": "header",
+        "name": "If-Match",
+        "required": true,
+        "schema": {
           "type": "string"
         }
       },
@@ -71,6 +90,17 @@
       }
     },
     "responses": {
+      "HeadCardSuccess": {
+        "description": "The corresponding GET succeeded. No response body.",
+        "headers": {
+          "ETag": {
+            "$ref": "#/components/headers/ETag"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
       "HeadInvalidInput": {
         "description": "Invalid query parameters or card ID. No response body.",
         "headers": {
@@ -225,7 +255,7 @@
             }
           }
         },
-        "description": "An invalid path ID returns param_error before body binding. Malformed\nJSON or incompatible JSON types return bind_error. Empty bodies and\ninvalid field values return validation_error.\n",
+        "description": "An invalid path ID returns param_error before If-Match parsing and body binding. Malformed\nJSON or incompatible JSON types return bind_error. Empty bodies and\ninvalid field values return validation_error.\n",
         "headers": {
           "X-Request-Id": {
             "$ref": "#/components/headers/RequestId"
@@ -262,6 +292,42 @@
           }
         },
         "description": "Request body exceeds the 1 MiB limit.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "PreconditionFailed": {
+        "content": {
+          "application/json": {
+            "example": {
+              "code": "precondition_failed"
+            },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "description": "The card exists but its version does not match If-Match.",
+        "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "PreconditionRequired": {
+        "content": {
+          "application/json": {
+            "example": {
+              "code": "precondition_required"
+            },
+            "schema": {
+              "$ref": "#/components/schemas/ErrorResponse"
+            }
+          }
+        },
+        "description": "If-Match is missing or is not exactly one strong ETag containing a positive int64.",
         "headers": {
           "X-Request-Id": {
             "$ref": "#/components/headers/RequestId"
@@ -333,6 +399,8 @@
               "bind_error",
               "validation_error",
               "param_error",
+              "precondition_required",
+              "precondition_failed",
               "not_found",
               "method_not_allowed",
               "payload_too_large",
@@ -394,12 +462,18 @@
           },
           "title": {
             "$ref": "#/components/schemas/LearningCardInput/properties/title"
+          },
+          "version": {
+            "format": "int64",
+            "minimum": 1,
+            "type": "integer"
           }
         },
         "required": [
           "id",
           "title",
-          "description"
+          "description",
+          "version"
         ],
         "type": "object"
       },
@@ -485,7 +559,8 @@
                     {
                       "description": "A specification for describing HTTP APIs.",
                       "id": "019a0000-0000-7000-8000-000000000001",
-                      "title": "OpenAPI"
+                      "title": "OpenAPI",
+                      "version": 1
                     }
                   ],
                   "next_cursor": null
@@ -568,6 +643,9 @@
             },
             "description": "Card created. The body contains its ID and Location contains its relative URL.",
             "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
               "Location": {
                 "description": "Relative URL of the newly created card.",
                 "required": true,
@@ -603,6 +681,11 @@
     "/api/lcards/{id}": {
       "delete": {
         "operationId": "deleteLearningCard",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
         "responses": {
           "204": {
             "description": "Card deleted successfully. No response body.",
@@ -618,8 +701,14 @@
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
+          "412": {
+            "$ref": "#/components/responses/PreconditionFailed"
+          },
           "413": {
             "$ref": "#/components/responses/PayloadTooLarge"
+          },
+          "428": {
+            "$ref": "#/components/responses/PreconditionRequired"
           },
           "500": {
             "$ref": "#/components/responses/UnexpectedError"
@@ -643,6 +732,9 @@
             },
             "description": "The requested card.",
             "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
               "X-Request-Id": {
                 "$ref": "#/components/headers/RequestId"
               }
@@ -671,7 +763,7 @@
         "operationId": "headLearningCard",
         "responses": {
           "200": {
-            "$ref": "#/components/responses/HeadSuccess"
+            "$ref": "#/components/responses/HeadCardSuccess"
           },
           "400": {
             "$ref": "#/components/responses/HeadInvalidInput"
@@ -702,6 +794,11 @@
       "put": {
         "description": "Both fields must be supplied. This operation does not create a missing card.",
         "operationId": "replaceLearningCard",
+        "parameters": [
+          {
+            "$ref": "#/components/parameters/IfMatch"
+          }
+        ],
         "requestBody": {
           "$ref": "#/components/requestBodies/LearningCardInput"
         },
@@ -709,6 +806,9 @@
           "204": {
             "description": "Card updated successfully. No response body.",
             "headers": {
+              "ETag": {
+                "$ref": "#/components/headers/ETag"
+              },
               "X-Request-Id": {
                 "$ref": "#/components/headers/RequestId"
               }
@@ -720,11 +820,17 @@
           "404": {
             "$ref": "#/components/responses/NotFound"
           },
+          "412": {
+            "$ref": "#/components/responses/PreconditionFailed"
+          },
           "413": {
             "$ref": "#/components/responses/PayloadTooLarge"
           },
           "415": {
             "$ref": "#/components/responses/UnsupportedMediaType"
+          },
+          "428": {
+            "$ref": "#/components/responses/PreconditionRequired"
           },
           "500": {
             "$ref": "#/components/responses/UnexpectedError"

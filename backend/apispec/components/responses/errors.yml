@@ -37,7 +37,7 @@ InvalidCreateInput:
                 code: max_length
 InvalidReplaceInput:
   description: |
-    An invalid path ID returns param_error before body binding. Malformed
+    An invalid path ID returns param_error before If-Match parsing and body binding. Malformed
     JSON or incompatible JSON types return bind_error. Empty bodies and
     invalid field values return validation_error.
   headers:
@@ -117,3 +117,25 @@ UnexpectedError:
         $ref: '../schemas/errors.yml#/ErrorResponse'
       example:
         code: unexpected_error
+PreconditionRequired:
+  description: If-Match is missing or is not exactly one strong ETag containing a positive int64.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/errors.yml#/ErrorResponse'
+      example:
+        code: precondition_required
+PreconditionFailed:
+  description: The card exists but its version does not match If-Match.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/errors.yml#/ErrorResponse'
+      example:
+        code: precondition_failed

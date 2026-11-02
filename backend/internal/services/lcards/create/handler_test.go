@@ -17,10 +17,10 @@ import (
 )
 
 type mockStore struct {
-	createFn func(ctx context.Context, p createParams) (string, error)
+	createFn func(ctx context.Context, p createParams) (string, int64, error)
 }
 
-func (m *mockStore) Create(ctx context.Context, p createParams) (string, error) {
+func (m *mockStore) Create(ctx context.Context, p createParams) (string, int64, error) {
 	return m.createFn(ctx, p)
 }
 
@@ -38,9 +38,9 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 	t.Helper()
 
 	m := &mockStore{
-		createFn: func(ctx context.Context, p createParams) (string, error) {
+		createFn: func(ctx context.Context, p createParams) (string, int64, error) {
 			t.Fatal("unexpected call to createFn")
-			return "", errors.New("")
+			return "", 1, errors.New("")
 		},
 	}
 	if store != nil {
@@ -94,8 +94,8 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "create error",
 			store: func(m *mockStore) {
-				m.createFn = func(_ context.Context, _ createParams) (string, error) {
-					return "", errors.New("")
+				m.createFn = func(_ context.Context, _ createParams) (string, int64, error) {
+					return "", 1, errors.New("")
 				}
 			},
 			wantCode:    http.StatusInternalServerError,
@@ -104,8 +104,8 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "success",
 			store: func(m *mockStore) {
-				m.createFn = func(_ context.Context, p createParams) (string, error) {
-					return "01a1730e-199d-7f9f-b59d-3bcd6f84066c", nil
+				m.createFn = func(_ context.Context, p createParams) (string, int64, error) {
+					return "01a1730e-199d-7f9f-b59d-3bcd6f84066c", 1, nil
 				}
 			},
 			wantCode:     http.StatusCreated,
@@ -136,6 +136,9 @@ func TestHandler_Handle(t *testing.T) {
 				t.Fatalf("status: got %d, want %d", rec.Code, tt.wantCode)
 			}
 
+			if tt.wantCode == http.StatusCreated && rec.Header().Get("ETag") != `"1"` {
+				t.Errorf("ETag: got %q, want quoted 1", rec.Header().Get("ETag"))
+			}
 			// Check the Location header (set on success only)
 			if got := rec.Header().Get(echo.HeaderLocation); got != tt.wantLocation {
 				t.Errorf("location: got %q, want %q", got, tt.wantLocation)
@@ -213,9 +216,9 @@ func TestHandler_Wiring(t *testing.T) {
 
 	var gotParams createParams
 	m := &mockStore{
-		createFn: func(_ context.Context, p createParams) (string, error) {
+		createFn: func(_ context.Context, p createParams) (string, int64, error) {
 			gotParams = p
-			return "01a1730e-199d-7f9f-b59d-3bcd6f84066c", nil
+			return "01a1730e-199d-7f9f-b59d-3bcd6f84066c", 1, nil
 		},
 	}
 	h := NewHandler(m)

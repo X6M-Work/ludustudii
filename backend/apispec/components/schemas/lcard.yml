@@ -30,10 +30,14 @@ LearningCardInput:
 LearningCard:
   type: object
   additionalProperties: false
-  required: [id, title, description]
+  required: [id, title, description, version]
   properties:
     id:
       $ref: '#/CardId'
+    version:
+      type: integer
+      format: int64
+      minimum: 1
     title:
       $ref: '#/LearningCardInput/properties/title'
     description:

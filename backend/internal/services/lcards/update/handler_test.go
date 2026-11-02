@@ -18,17 +18,18 @@ import (
 )
 
 type mockStore struct {
-	updateFn func(ctx context.Context, p updateParams) error
+	updateFn func(ctx context.Context, p updateParams, _ int64) (int64, error)
 }
 
-func (m *mockStore) Update(ctx context.Context, p updateParams) error {
-	return m.updateFn(ctx, p)
+func (m *mockStore) Update(ctx context.Context, p updateParams, expectedVersion int64) (int64, error) {
+	return m.updateFn(ctx, p, expectedVersion)
 }
 
 func testContext(t *testing.T, id string, body []byte) (*echo.Context, *httptest.ResponseRecorder) {
 	t.Helper()
 	e := echo.New()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/lcards/"+id, bytes.NewReader(body))
+	req.Header.Set("If-Match", `"1"`)
 	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
 	rec := httptest.NewRecorder()
 	c := e.NewContext(req, rec)
@@ -40,9 +41,9 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 	t.Helper()
 
 	m := &mockStore{
-		updateFn: func(ctx context.Context, p updateParams) error {
+		updateFn: func(ctx context.Context, p updateParams, _ int64) (int64, error) {
 			t.Fatal("unexpected call to updateFn")
-			return errors.New("")
+			return 0, errors.New("")
 		},
 	}
 	if store != nil {
@@ -51,6 +52,7 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 
 	h := &Handler{
 		store:           m,
+		parseIfMatch:    func(string) (int64, error) { return 1, nil },
 		bind:            func(*echo.Context, any) error { return nil },
 		validate:        func(request) error { return nil },
 		validateParamID: func(id string) error { return nil },
@@ -103,10 +105,24 @@ func TestHandler_Handle(t *testing.T) {
 			wantErrCode: erresp.CodeValidation,
 		},
 		{
+			name:        "parser error",
+			setup:       func(h *Handler) { h.parseIfMatch = func(string) (int64, error) { return 0, errors.New("invalid") } },
+			wantCode:    http.StatusPreconditionRequired,
+			wantErrCode: erresp.CodePreconditionRequired,
+		},
+		{
+			name: "version conflict",
+			store: func(m *mockStore) {
+				m.updateFn = func(_ context.Context, _ updateParams, _ int64) (int64, error) { return 0, domain.ErrVersionConflict }
+			},
+			wantCode:    http.StatusPreconditionFailed,
+			wantErrCode: erresp.CodePreconditionFailed,
+		},
+		{
 			name: "not found error",
 			store: func(m *mockStore) {
-				m.updateFn = func(_ context.Context, _ updateParams) error {
-					return domain.ErrNotFound
+				m.updateFn = func(_ context.Context, _ updateParams, _ int64) (int64, error) {
+					return 0, domain.ErrNotFound
 				}
 			},
 			wantCode:    http.StatusNotFound,
@@ -115,8 +131,8 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "update error",
 			store: func(m *mockStore) {
-				m.updateFn = func(_ context.Context, _ updateParams) error {
-					return errors.New("")
+				m.updateFn = func(_ context.Context, _ updateParams, _ int64) (int64, error) {
+					return 0, errors.New("")
 				}
 			},
 			wantCode:    http.StatusInternalServerError,
@@ -125,8 +141,8 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "success",
 			store: func(m *mockStore) {
-				m.updateFn = func(_ context.Context, _ updateParams) error {
-					return nil
+				m.updateFn = func(_ context.Context, _ updateParams, _ int64) (int64, error) {
+					return 2, nil
 				}
 			},
 			wantCode: http.StatusNoContent,
@@ -156,6 +172,9 @@ func TestHandler_Handle(t *testing.T) {
 				t.Fatalf("status: got %d, want %d", rec.Code, tt.wantCode)
 			}
 
+			if tt.wantCode == http.StatusNoContent && rec.Header().Get("ETag") != `"2"` {
+				t.Errorf("ETag: got %q, want quoted 2", rec.Header().Get("ETag"))
+			}
 			// Check the error message if expected error message is provided
 			if tt.wantErrCode != "" {
 				var got erresp.ErrorResponse
@@ -218,12 +237,16 @@ func TestHandler_Wiring(t *testing.T) {
 
 	var gotParams updateParams
 	m := &mockStore{
-		updateFn: func(_ context.Context, p updateParams) error {
+		updateFn: func(_ context.Context, p updateParams, expectedVersion int64) (int64, error) {
+			if expectedVersion != 7 {
+				t.Errorf("expected version: got %d, want 7", expectedVersion)
+			}
 			gotParams = p
-			return nil
+			return 2, nil
 		},
 	}
 	h := NewHandler(m)
+	c.Request().Header.Set("If-Match", `"7"`)
 
 	if err := h.Handle(c); err != nil {
 		t.Fatalf("unexpected error: %v", err)

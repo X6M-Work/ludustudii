@@ -65,7 +65,7 @@ func TestStore_Update(t *testing.T) {
 		Title:       "New Title",
 		Description: "New Description",
 	}
-	if err := s.Update(t.Context(), want); err != nil {
+	if _, err := s.Update(t.Context(), want, 1); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -91,7 +91,7 @@ func TestStore_Update_MaxLengths(t *testing.T) {
 		Title:       strings.Repeat("\u00E9", domain.TitleMaxLength),
 		Description: strings.Repeat("\u00E9", domain.DescriptionMaxLength),
 	}
-	if err := s.Update(t.Context(), want); err != nil {
+	if _, err := s.Update(t.Context(), want, 1); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -108,11 +108,11 @@ func TestStore_Update_NotFound(t *testing.T) {
 	db := testkit.NewDB(t)
 	s := NewStore(db)
 
-	err := s.Update(t.Context(), updateParams{
+	_, err := s.Update(t.Context(), updateParams{
 		ID:          "01a1730e-199d-7f9f-b59d-3bcd6f84066c",
 		Title:       "Title",
 		Description: "Description",
-	})
+	}, 1)
 	if !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("err: got %v, want %v", err, domain.ErrNotFound)
 	}
@@ -126,11 +126,11 @@ func TestStore_Update_RejectsNonUUID(t *testing.T) {
 	db := testkit.NewDB(t)
 	s := NewStore(db)
 
-	err := s.Update(t.Context(), updateParams{
+	_, err := s.Update(t.Context(), updateParams{
 		ID:          "not-a-uuid",
 		Title:       "Title",
 		Description: "Description",
-	})
+	}, 1)
 	testkit.AssertPgCode(t, err, testkit.PgCodeInvalidTextRepresentation)
 }
 
@@ -196,7 +196,7 @@ func TestStore_Update_CheckConstraints(t *testing.T) {
 			}
 			insertCard(t, db, original.ID, original.Title, original.Description)
 
-			err := s.Update(t.Context(), tt.params)
+			_, err := s.Update(t.Context(), tt.params, 1)
 			testkit.AssertPgConstraint(t, err, tt.wantConstraint)
 
 			if got := getCard(t, db, id); got != original {
@@ -215,12 +215,42 @@ func TestStore_Update_CanceledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
-	err := s.Update(ctx, updateParams{
+	_, err := s.Update(ctx, updateParams{
 		ID:          "01a1730e-199d-7f9f-b59d-3bcd6f84066c",
 		Title:       "Title",
 		Description: "Description",
-	})
+	}, 1)
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("err: got %v, want %v", err, context.Canceled)
+	}
+}
+
+func TestStore_Update_Version(t *testing.T) {
+	t.Parallel()
+	db := testkit.NewDB(t)
+	s := NewStore(db)
+	const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
+	insertCard(t, db, id, "Original", "Original description")
+	p := updateParams{ID: id, Title: "Updated", Description: "Updated description"}
+	version, err := s.Update(t.Context(), p, 1)
+	if err != nil || version != 2 {
+		t.Fatalf("update: version %d, error %v", version, err)
+	}
+	stale := updateParams{ID: id, Title: "Stale", Description: "Stale description"}
+	if _, err := s.Update(t.Context(), stale, 1); !errors.Is(err, domain.ErrVersionConflict) {
+		t.Fatalf("stale update: %v", err)
+	}
+	if got := getCard(t, db, id); got != p {
+		t.Fatalf("stale update changed row: %+v", got)
+	}
+	var storedVersion int64
+	if err := db.QueryRowContext(t.Context(), `SELECT version FROM learning_cards WHERE id = $1`, id).Scan(&storedVersion); err != nil {
+		t.Fatal(err)
+	}
+	if storedVersion != 2 {
+		t.Fatalf("stored version: %d", storedVersion)
+	}
+	if _, err := s.Update(t.Context(), updateParams{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066d"}, 99); !errors.Is(err, domain.ErrNotFound) {
+		t.Fatalf("unknown card: %v", err)
 	}
 }
