@@ -10,12 +10,14 @@ export interface CreateLearningCardResponse {
 }
 
 export interface UpdateLearningCardRequest {
+  version: number
   id: string
   title: string
   description: string
 }
 
 export interface LearningCard {
+  version: number
   id: string
   title: string
   description: string
@@ -52,6 +54,7 @@ export function useCreateLearningCard() {
 
 export async function updateLearningCard({
   id,
+  version,
   title,
   description,
 }: UpdateLearningCardRequest): Promise<void> {
@@ -59,10 +62,14 @@ export async function updateLearningCard({
     method: 'PUT',
     headers: {
       'Content-Type': 'application/json',
+      'If-Match': `"${version}"`,
     },
     body: JSON.stringify({ title, description }),
   })
 
+  if (response.status === 412) {
+    throw new Error("This card has changed. Reload it before saving your edits.")
+  }
   if (!response.ok) {
     throw new Error(`Failed to update learning card: ${response.statusText}`)
   }
@@ -80,11 +87,18 @@ export function useUpdateLearningCard() {
 }
 
 // Expected delete endpoint contract: DELETE /api/lcards/:id returns no content.
-export async function deleteLearningCard(id: string): Promise<void> {
+export async function deleteLearningCard({
+  id,
+  version,
+}: Pick<LearningCard, 'id' | 'version'>): Promise<void> {
   const response = await fetch(`/api/lcards/${encodeURIComponent(id)}`, {
     method: 'DELETE',
+    headers: { 'If-Match': `"${version}"` },
   })
 
+  if (response.status === 412) {
+    throw new Error("This card has changed. Reload it before deleting.")
+  }
   if (!response.ok) {
     throw new Error(`Failed to delete learning card: ${response.statusText}`)
   }
@@ -95,7 +109,7 @@ export function useDeleteLearningCard() {
 
   return useMutation({
     mutationFn: deleteLearningCard,
-    onSuccess: (_data, id) => {
+    onSuccess: (_data, { id }) => {
       // Drop the deleted card's cache entry so it is not refetched into a 404.
       queryClient.removeQueries({ queryKey: ['lcards', id], exact: true })
       queryClient.invalidateQueries({ queryKey: ['lcards'] })

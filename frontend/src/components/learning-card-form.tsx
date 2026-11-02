@@ -1,3 +1,4 @@
+import { useState } from 'react'
 import { useNavigate } from '@tanstack/react-router'
 import { useForm } from '@tanstack/react-form'
 import {
@@ -66,6 +67,8 @@ interface LearningCardFormProps {
 }
 
 export function LearningCardForm({ card }: LearningCardFormProps) {
+  // Retain the version the form opened with across background query refetches.
+  const [editingVersion] = useState(card?.version)
   const navigate = useNavigate()
   const createLearningCard = useCreateLearningCard()
   const updateLearningCard = useUpdateLearningCard()
@@ -85,6 +88,7 @@ export function LearningCardForm({ card }: LearningCardFormProps) {
       if (card) {
         await updateLearningCard.mutateAsync({
           id: card.id,
+          version: editingVersion!,
           ...input,
         })
         await navigate({ to: '/learning-cards' })

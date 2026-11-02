@@ -104,7 +104,7 @@ function LearningCardContent({ card }: { card: LearningCard }) {
             >
               Update
             </Button>
-            <DeleteLearningCardButton cardId={card.id} />
+            <DeleteLearningCardButton card={card} />
           </div>
         }
       />
@@ -112,7 +112,7 @@ function LearningCardContent({ card }: { card: LearningCard }) {
   )
 }
 
-function DeleteLearningCardButton({ cardId }: { cardId: string }) {
+function DeleteLearningCardButton({ card }: { card: LearningCard }) {
   const [open, setOpen] = useState(false)
   const deleteCard = useDeleteLearningCard()
 
@@ -143,7 +143,7 @@ function DeleteLearningCardButton({ cardId }: { cardId: string }) {
             variant="destructive"
             disabled={deleteCard.isPending}
             onClick={() =>
-              deleteCard.mutate(cardId, {
+              deleteCard.mutate({ id: card.id, version: card.version }, {
                 onSuccess: () => setOpen(false),
               })
             }
