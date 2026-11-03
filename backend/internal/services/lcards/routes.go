@@ -19,22 +19,26 @@ import (
 //
 //	GET    /api/lcards       list cards, newest first (list)
 //	POST   /api/lcards       create a card (create)
-//	GET    /api/lcards/:id   get a card (get)
-//	PUT    /api/lcards/:id   replace a card's title and description (update)
-//	DELETE /api/lcards/:id   delete a card (remove)
+//	GET    /api/lcards/{id}  get a card (get)
+//	PUT    /api/lcards/{id}  replace a card's title and description (update)
+//	DELETE /api/lcards/{id}  delete a card (remove)
 //
 // Other methods on these paths get 405 with an Allow header, and deeper paths
 // get 404.
-func RegisterRoutes(mux *http.ServeMux, db *sql.DB, onError httpkit.ErrorHandler) {
+func RegisterRoutes(rt *httpkit.Router, db *sql.DB) {
 	l := list.NewHandler(list.NewStore(db))
 	g := get.NewHandler(get.NewStore(db))
 	c := create.NewHandler(create.NewStore(db))
 	u := update.NewHandler(update.NewStore(db))
 	d := remove.NewHandler(remove.NewStore(db))
 
-	mux.Handle("GET "+domain.CardsPath, httpkit.Adapt(l.Handle, onError))
-	mux.Handle("GET "+domain.CardsPath+"/{id}", httpkit.Adapt(g.Handle, onError))
-	mux.Handle("POST "+domain.CardsPath, httpkit.Adapt(c.Handle, onError))
-	mux.Handle("PUT "+domain.CardsPath+"/{id}", httpkit.Adapt(u.Handle, onError))
-	mux.Handle("DELETE "+domain.CardsPath+"/{id}", httpkit.Adapt(d.Handle, onError))
+	rt.Resource(domain.CardsPath, map[string]httpkit.HandlerFunc{
+		http.MethodGet:  l.Handle,
+		http.MethodPost: c.Handle,
+	})
+	rt.Resource(domain.CardsPath+"/{id}", map[string]httpkit.HandlerFunc{
+		http.MethodGet:    g.Handle,
+		http.MethodPut:    u.Handle,
+		http.MethodDelete: d.Handle,
+	})
 }

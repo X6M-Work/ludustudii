@@ -53,6 +53,42 @@ small interface. Package boundaries are enforced by `depguard`:
 - `services` must not import `infra` or `app`.
 - `testkit` may only be imported from test files.
 
+#### Routing
+
+All routes live on one `http.ServeMux`, wrapped once by the middleware chain
+in `internal/app/router.go`. The mux serves every request itself, so it sets
+`Request.Pattern` and wildcard path values (`r.PathValue("id")`).
+
+- **API endpoints** register through `httpkit.Router.Resource`, one call per
+  path, in each service's `routes.go`:
+
+  ```go
+  rt.Resource(domain.CardsPath+"/{id}", map[string]httpkit.HandlerFunc{
+  	http.MethodGet:    g.Handle,
+  	http.MethodPut:    u.Handle,
+  	http.MethodDelete: d.Handle,
+  })
+  ```
+
+  `Resource` registers `"METHOD path"` for each handler plus a method-less
+  pattern on the same path that returns the JSON `405` with an `Allow` header
+  (ordered GET, HEAD, POST, PUT, PATCH, DELETE). GET also serves HEAD. Services
+  never call `mux.Handle` or `Router.Handle` with a method pattern directly.
+- **Unknown `/api` paths** (`/api` and `/api/`) return the JSON `404`, never
+  the SPA.
+- **`/docs`** routes are `GET` patterns, registered only when the reference is
+  enabled; other methods fall through to the SPA.
+- **The SPA** is the method-less `/` catch-all and answers non-GET/HEAD
+  methods with a plain-text `405`. It cannot be `GET /`, which conflicts with
+  `/api/`.
+- Paths with `//`, `.` or `..` segments get the mux's `307` redirect to the
+  cleaned path.
+
+The request log's `route` is the matched mux pattern, for example
+`GET /api/lcards/{id}`, `/api/lcards/{id}` for a 405, `/api/` for an unknown
+API path, or `/` for the SPA. It is empty when middleware rejects a request
+before routing, such as a `413` for a declared body over the limit.
+
 Production environment variables are read only in `internal/infra/env`; the
 `testkit` harness reads `DB_TEST_CONNECTION` directly. Application logging goes
 through `log/slog` (`fmt.Print*` and `log.*` are forbidden by the linter).

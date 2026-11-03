@@ -4,7 +4,6 @@ import (
 	"net/http"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
-	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
 )
 
 // Path is where the reference page is served. The specification and the
@@ -24,43 +23,23 @@ func NewHandler(docs *Docs) *Handler {
 	return &Handler{docs: docs}
 }
 
-// RegisterRoutes registers the reference routes, including HEAD and plain-text
-// method errors. The trailing slash redirects only at the exact /docs/ path.
-func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
-	mux.HandleFunc(Path, serveFile(h.docs.Page))
-	mux.HandleFunc(Path+"/{$}", redirectToPath)
-	mux.HandleFunc(Path+"/openapi.json", serveFile(h.docs.Spec))
-	mux.HandleFunc(Path+"/scalar.js", serveFile(h.docs.Script))
-}
-
-func methodNotAllowed(w http.ResponseWriter, r *http.Request) bool {
-	if r.Method == http.MethodGet || r.Method == http.MethodHead {
-		return false
-	}
-	w.Header().Set("Allow", "GET, HEAD")
-	_ = httpkit.Text(w, http.StatusMethodNotAllowed, "method not allowed\n")
-	return true
+// RegisterRoutes registers the reference routes for GET and HEAD. Other
+// methods fall through to the router's catch-all route. The trailing slash
+// redirects only at the exact /docs/ path.
+func (h *Handler) RegisterRoutes(rt *httpkit.Router) {
+	rt.Handle("GET "+Path, http.HandlerFunc(h.docs.Page.Serve))
+	rt.Handle("GET "+Path+"/{$}", http.HandlerFunc(redirectToPath))
+	rt.Handle("GET "+Path+"/openapi.json", http.HandlerFunc(h.docs.Spec.Serve))
+	rt.Handle("GET "+Path+"/scalar.js", http.HandlerFunc(h.docs.Script.Serve))
 }
 
 // redirectToPath redirects Path+"/" to Path, keeping the query. The redirect
 // is temporary so browsers do not keep it once the reference is disabled.
 func redirectToPath(w http.ResponseWriter, r *http.Request) {
-	if methodNotAllowed(w, r) {
-		return
-	}
 	target := Path
 	if q := r.URL.RawQuery; q != "" {
 		target += "?" + q
 	}
 	w.Header().Set("Location", target)
 	w.WriteHeader(http.StatusFound)
-}
-
-func serveFile(f staticfile.File) http.HandlerFunc {
-	return func(w http.ResponseWriter, r *http.Request) {
-		if methodNotAllowed(w, r) {
-			return
-		}
-		f.Serve(w, r)
-	}
 }

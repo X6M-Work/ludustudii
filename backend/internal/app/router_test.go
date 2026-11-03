@@ -15,6 +15,7 @@ import (
 	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
 	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
 	"github.com/apotourlyan/ludustudii/internal/testkit"
 )
@@ -74,8 +75,12 @@ func TestNewRouter(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		e := NewRouter(discardLogger(), clientApp, nil, nil) // keep the stack trace out of test output
-		e.(*router).mux.HandleFunc("GET /api/panic", func(http.ResponseWriter, *http.Request) { panic("boom") })
+		// keep the stack trace out of test output
+		e := newRouter(discardLogger(), clientApp, nil, nil, func(rt *httpkit.Router) {
+			rt.Resource("/api/panic", map[string]httpkit.HandlerFunc{
+				http.MethodGet: func(http.ResponseWriter, *http.Request) error { panic("boom") },
+			})
+		})
 		srv := httptest.NewServer(e)
 		t.Cleanup(srv.Close)
 
@@ -170,8 +175,8 @@ func TestNewRouter_RequestLogging(t *testing.T) {
 		wantLevel  string
 		wantRoute  string
 	}{
-		{name: "200 logs INFO", path: "/", wantStatus: http.StatusOK, wantLevel: "INFO", wantRoute: "/*"},
-		{name: "404 logs WARN", path: "/api/nope", wantStatus: http.StatusNotFound, wantLevel: "WARN", wantRoute: "/api/*"},
+		{name: "200 logs INFO", path: "/", wantStatus: http.StatusOK, wantLevel: "INFO", wantRoute: "/"},
+		{name: "404 logs WARN", path: "/api/nope", wantStatus: http.StatusNotFound, wantLevel: "WARN", wantRoute: "/api/"},
 	}
 
 	for _, tt := range tests {

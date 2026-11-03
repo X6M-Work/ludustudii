@@ -32,9 +32,11 @@ func NewHandler(clientApp *ClientApp) *Handler {
 	}
 }
 
-// RegisterRoutes registers the client application's catch-all route.
-func (h *Handler) RegisterRoutes(mux *http.ServeMux, onError httpkit.ErrorHandler) {
-	mux.Handle("/", httpkit.Adapt(h.serve, onError))
+// RegisterRoutes registers the client application's catch-all route. The
+// pattern is method-less because "GET /" conflicts with "/api/"; serve checks
+// the method itself.
+func (h *Handler) RegisterRoutes(rt *httpkit.Router) {
+	rt.HandleFunc("/", h.serve)
 }
 
 func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {

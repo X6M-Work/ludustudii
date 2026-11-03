@@ -5,8 +5,6 @@ import (
 	"database/sql"
 	"log/slog"
 	"net/http"
-	"net/url"
-	"strings"
 
 	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
 	"github.com/apotourlyan/ludustudii/internal/infra/logging"
@@ -23,131 +21,43 @@ const MaxBodyBytes = 1 << 20
 // logging, body limits, API routes, optional reference routes and the SPA.
 // Each request's logging context includes its request_id attribute.
 func NewRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Handler, db *sql.DB) http.Handler {
-	onError := func(w http.ResponseWriter, r *http.Request, err error) { httpErrorHandler(log, w, r, err) }
-	mux := http.NewServeMux()
-	lcards.RegisterRoutes(mux, db, onError)
-	if apiDocs != nil {
-		apiDocs.RegisterRoutes(mux)
-	}
-	fallback := http.NewServeMux()
-	spa.NewHandler(clientApp).RegisterRoutes(fallback, onError)
-	rt := &router{mux: mux, fallback: fallback, onError: onError}
+	return newRouter(log, clientApp, apiDocs, db, nil)
+}
 
-	rt.wrap = httpkit.Chain(
+// newRouter is NewRouter with an optional extra registration step, which
+// tests use to add throwaway routes.
+func newRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Handler, db *sql.DB, extra func(*httpkit.Router)) http.Handler {
+	onError := func(w http.ResponseWriter, r *http.Request, err error) { httpErrorHandler(log, w, r, err) }
+	rt := httpkit.NewRouter(onError)
+
+	lcards.RegisterRoutes(rt, db)
+	// Unknown API paths get the JSON 404 rather than the SPA. Both patterns are
+	// needed, or the mux redirects /api to /api/.
+	notFound := func(http.ResponseWriter, *http.Request) error { return httpkit.ErrNotFound }
+	rt.HandleFunc("/api", notFound)
+	rt.HandleFunc("/api/", notFound)
+	if apiDocs != nil {
+		apiDocs.RegisterRoutes(rt)
+	}
+	spa.NewHandler(clientApp).RegisterRoutes(rt)
+	if extra != nil {
+		extra(rt)
+	}
+
+	handler := httpkit.Chain(
 		httpkit.Recover(onError),
 		httpkit.RequestID(func(ctx context.Context, id string) context.Context {
 			return logging.WithAttrs(ctx, slog.String("request_id", id))
 		}),
+		// RequestLogger reads the pattern the mux sets, so no middleware after it
+		// may replace the request.
 		httpkit.RequestLogger(log),
 		// Handle panics before the logger records the final response.
 		httpkit.Recover(onError),
 		httpkit.BodyLimit(MaxBodyBytes, onError),
-	)
+	)(rt)
 
-	return rt
-}
-
-type router struct {
-	mux      *http.ServeMux
-	fallback *http.ServeMux
-	onError  httpkit.ErrorHandler
-	wrap     httpkit.Middleware
-}
-
-func (rt *router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	handler := rt.resolve(r)
-	rt.wrap(handler).ServeHTTP(httpkit.NewResponseWriter(w, r), r)
-}
-
-func (rt *router) resolve(r *http.Request) http.Handler {
-	// Match the original spelling of escaped paths. In particular, an escaped
-	// static segment must not become an API route after unescaping.
-	routePath := r.URL.Path
-	if r.URL.RawPath != "" {
-		routePath = r.URL.RawPath
-	}
-	lookup := *r
-	lookupURL := *r.URL
-	lookupURL.Path = routePath
-	lookupURL.RawPath = ""
-	// Protect literal dot segments from the mux's automatic cleaning redirects.
-	segments := strings.Split(lookupURL.EscapedPath(), "/")
-	for i, segment := range segments {
-		switch segment {
-		case ".":
-			segments[i] = "%2e"
-		case "..":
-			segments[i] = "%2e%2e"
-		}
-	}
-	lookupURL.RawPath = strings.Join(segments, "/")
-	lookup.URL = &lookupURL
-	if !strings.Contains(routePath, "//") {
-		h, pattern := rt.mux.Handler(&lookup)
-		if pattern != "" {
-			r.Pattern = pattern
-			// Handler resolves a route without populating wildcard values. The API's
-			// single-segment id uses its original spelling, including percent escapes.
-			if strings.HasSuffix(pattern, "/{id}") {
-				r.SetPathValue("id", routePath[strings.LastIndexByte(routePath, '/')+1:])
-			}
-			return h
-		}
-		probe := &routeProbe{header: make(http.Header)}
-		h.ServeHTTP(probe, &lookup)
-		if probe.status == http.StatusMethodNotAllowed {
-			// Resolve a GET solely to retain the route label for method errors.
-			lookup.Method = http.MethodGet
-			_, r.Pattern = rt.mux.Handler(&lookup)
-			return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-				w.Header().Set("Allow", orderedAllow(probe.header.Get("Allow")))
-				rt.onError(w, r, httpkit.ErrMethodNotAllowed)
-			})
-		}
-	}
-	if routePath == "/api" || strings.HasPrefix(routePath, "/api/") {
-		r.Pattern = "/api/*"
-		if routePath == "/api" {
-			r.Pattern = "/api"
-		}
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			rt.onError(w, r, httpkit.ErrNotFound)
-		})
-	}
-	// Resolve the SPA registration at root, bypassing path-cleaning redirects.
-	lookup.URL = &url.URL{Path: "/"}
-	h, _ := rt.fallback.Handler(&lookup)
-	r.Pattern = "/*"
-	return h
-}
-
-// routeProbe captures the mux's synthetic response without sending its text body.
-type routeProbe struct {
-	header http.Header
-	status int
-}
-
-func (p *routeProbe) Header() http.Header         { return p.header }
-func (p *routeProbe) WriteHeader(status int)      { p.status = status }
-func (p *routeProbe) Write(b []byte) (int, error) { return len(b), nil }
-
-func orderedAllow(value string) string {
-	methods := strings.Split(value, ", ")
-	allowed := make(map[string]bool, len(methods))
-	for _, method := range methods {
-		allowed[method] = true
-	}
-	result := make([]string, 0, len(methods))
-	for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodPost, http.MethodPut, http.MethodDelete} {
-		if allowed[method] {
-			result = append(result, method)
-			delete(allowed, method)
-		}
-	}
-	for _, method := range methods {
-		if allowed[method] {
-			result = append(result, method)
-		}
-	}
-	return strings.Join(result, ", ")
+	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		handler.ServeHTTP(httpkit.NewResponseWriter(w, r), r)
+	})
 }

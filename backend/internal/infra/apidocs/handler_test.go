@@ -9,16 +9,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
 )
 
-func newTestServer(t *testing.T) (*http.ServeMux, *Docs) {
+func newTestServer(t *testing.T) (http.Handler, *Docs) {
 	t.Helper()
 	d, err := load([]byte("<!doctype html>"), gzipped(t, []byte("console.log(1)")))
 	if err != nil {
 		t.Fatal(err)
 	}
-	e := http.NewServeMux()
+	e := httpkit.NewRouter(func(http.ResponseWriter, *http.Request, error) { t.Error("unexpected handler error") })
 	NewHandler(d).RegisterRoutes(e)
 	return e, d
 }

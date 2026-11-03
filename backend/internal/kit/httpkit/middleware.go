@@ -48,7 +48,9 @@ func Recover(onError ErrorHandler) Middleware {
 }
 
 // RequestID reuses the first incoming X-Request-Id, or generates 32 ASCII
-// letters when it is empty. It sets the response header and enriches context.
+// letters when it is empty. It sets the response header and passes next a
+// request whose context is enriched. Because next receives a new request,
+// RequestID must run outside RequestLogger, which reads the routed request.
 func RequestID(withID func(context.Context, string) context.Context) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -57,8 +59,7 @@ func RequestID(withID func(context.Context, string) context.Context) Middleware 
 				id = requestID()
 			}
 			w.Header().Set("X-Request-Id", id)
-			*r = *r.WithContext(withID(r.Context(), id))
-			next.ServeHTTP(w, r)
+			next.ServeHTTP(w, r.WithContext(withID(r.Context(), id)))
 		})
 	}
 }
@@ -77,7 +78,9 @@ func requestID() string {
 }
 
 // RequestLogger logs one request record after the final response, including
-// errors and panics handled by next. The route is taken from Request.Pattern.
+// errors and panics handled by next. The route is taken from Request.Pattern,
+// which http.ServeMux sets on the request it receives, so middleware between
+// RequestLogger and the mux must pass the same request on.
 func RequestLogger(log *slog.Logger) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

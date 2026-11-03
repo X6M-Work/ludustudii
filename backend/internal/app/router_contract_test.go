@@ -11,6 +11,7 @@ import (
 
 	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
 )
 
@@ -27,14 +28,14 @@ func TestRouter_PathSpellingAndReference(t *testing.T) {
 		status                int
 		body, allow, location string
 	}{
-		{"GET", "/api/lcards/.", 400, "{\"code\":\"param_error\"}\n", "", ""},
-		{"GET", "/api/lcards/..", 400, "{\"code\":\"param_error\"}\n", "", ""},
+		{"GET", "/api/lcards/.", 307, "<a href=\"/api/lcards\">Temporary Redirect</a>.\n\n", "", "/api/lcards"},
+		{"GET", "/api/lcards/..", 307, "<a href=\"/api\">Temporary Redirect</a>.\n\n", "", "/api"},
 		{"GET", "/api/lcards/bad%2fx", 400, "{\"code\":\"param_error\"}\n", "", ""},
-		{"GET", "/api//unknown", 404, "{\"code\":\"not_found\"}\n", "", ""},
+		{"GET", "/api//unknown", 307, "<a href=\"/api/unknown\">Temporary Redirect</a>.\n\n", "", "/api/unknown"},
 		{"GET", "/%61pi/nope", 200, string(clientApp.IndexFile.Bytes), "", ""},
-		{"GET", "/docs//", 200, string(clientApp.IndexFile.Bytes), "", ""},
-		{"GET", "/client//x", 200, string(clientApp.IndexFile.Bytes), "", ""},
-		{"GET", "/client/../", 200, string(clientApp.IndexFile.Bytes), "", ""},
+		{"GET", "/docs//", 307, "<a href=\"/docs/\">Temporary Redirect</a>.\n\n", "", "/docs/"},
+		{"GET", "/client//x", 307, "<a href=\"/client/x\">Temporary Redirect</a>.\n\n", "", "/client/x"},
+		{"GET", "/client/../", 307, "<a href=\"/\">Temporary Redirect</a>.\n\n", "", "/"},
 		{"GET", "/docs/unknown", 200, string(clientApp.IndexFile.Bytes), "", ""},
 		{"GET", "/docs/?q=x", 302, "", "", "/docs?q=x"},
 		{"HEAD", "/docs/?q=x", 302, "", "", "/docs?q=x"},
@@ -88,5 +89,27 @@ func TestRouter_RequestIDHeader(t *testing.T) {
 		if r.Header.Get("X-Request-Id") != value {
 			t.Fatal("incoming header changed")
 		}
+	}
+}
+
+func TestRouter_PathValuesFromMux(t *testing.T) {
+	t.Parallel()
+	clientApp, err := spa.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	var deckID, cardID string
+	handler := newRouter(slog.New(slog.DiscardHandler), clientApp, nil, nil, func(rt *httpkit.Router) {
+		rt.Resource("/api/decks/{deckId}/cards/{cardId}", map[string]httpkit.HandlerFunc{
+			http.MethodGet: func(w http.ResponseWriter, r *http.Request) error {
+				deckID, cardID = r.PathValue("deckId"), r.PathValue("cardId")
+				return httpkit.NoContent(w, http.StatusNoContent)
+			},
+		})
+	})
+	rec := httptest.NewRecorder()
+	handler.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/decks/d%2F1/cards/c2", nil))
+	if rec.Code != http.StatusNoContent || deckID != "d/1" || cardID != "c2" {
+		t.Fatalf("got %d deckId=%q cardId=%q, want 204 deckId=%q cardId=%q", rec.Code, deckID, cardID, "d/1", "c2")
 	}
 }

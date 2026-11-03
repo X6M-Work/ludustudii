@@ -19,7 +19,7 @@ type deleter interface {
 	Delete(ctx context.Context, p deleteParams) error
 }
 
-// Handler serves the DELETE /api/lcards/:id endpoint.
+// Handler serves the DELETE /api/lcards/{id} endpoint.
 type Handler struct {
 	store           deleter
 	validateParamID func(id string) error
@@ -35,7 +35,7 @@ func NewHandler(s deleter) *Handler {
 	}
 }
 
-// Handle deletes the card whose ID is the :id path parameter and responds 204,
+// Handle deletes the card whose ID is the {id} path parameter and responds 204,
 // 400 for an invalid ID, 428 for missing or invalid If-Match, 404 for an
 // unknown ID, or 412 for a stale version.
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {

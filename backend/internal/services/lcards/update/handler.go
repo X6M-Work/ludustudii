@@ -25,7 +25,7 @@ type updater interface {
 	Update(ctx context.Context, p updateParams) (int64, error)
 }
 
-// Handler serves the PUT /api/lcards/:id endpoint.
+// Handler serves the PUT /api/lcards/{id} endpoint.
 type Handler struct {
 	store           updater
 	bind            func(w http.ResponseWriter, r *http.Request, i any) error
@@ -46,7 +46,7 @@ func NewHandler(s updater) *Handler {
 }
 
 // Handle sanitizes and validates the JSON title and description, replaces
-// them on the card whose ID is the :id path parameter and responds 204.
+// them on the card whose ID is the {id} path parameter and responds 204.
 // Invalid input or an ID that is not a UUIDv7 (case-insensitive) gets 400,
 // an unknown ID gets 404, missing or invalid If-Match gets 428, and a stale
 // version gets 412. Success includes the new version as an ETag. An oversized
