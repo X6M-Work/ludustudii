@@ -23,7 +23,7 @@ type deleter interface {
 type Handler struct {
 	store           deleter
 	validateParamID func(id string) error
-	parseIfMatch    func(string) (int64, error)
+	parseVersion    func(string) (int64, error)
 }
 
 // NewHandler returns a Handler that uses s for storage.
@@ -31,7 +31,7 @@ func NewHandler(s deleter) *Handler {
 	return &Handler{
 		store:           s,
 		validateParamID: validateParamID,
-		parseIfMatch:    etag.ParseIfMatch,
+		parseVersion:    etag.ParseVersion,
 	}
 }
 
@@ -47,7 +47,7 @@ func (h *Handler) Handle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, erresp.Param())
 	}
 
-	version, err := h.parseIfMatch(strings.Join(c.Request().Header.Values("If-Match"), ","))
+	version, err := h.parseVersion(strings.Join(c.Request().Header.Values("If-Match"), ","))
 	if err != nil {
 		return c.JSON(http.StatusPreconditionRequired, erresp.PreconditionRequired())
 	}

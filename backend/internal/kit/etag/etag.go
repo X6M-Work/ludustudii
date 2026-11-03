@@ -14,8 +14,8 @@ func Format(version int64) string {
 	return `"` + strconv.FormatInt(version, 10) + `"`
 }
 
-// ParseIfMatch accepts exactly one quoted positive decimal int64.
-func ParseIfMatch(value string) (int64, error) {
+// ParseVersion accepts exactly one quoted positive decimal int64.
+func ParseVersion(value string) (int64, error) {
 	if len(value) < 3 || value[0] != '"' || value[len(value)-1] != '"' {
 		return 0, ErrInvalid
 	}

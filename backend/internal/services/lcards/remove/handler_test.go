@@ -49,7 +49,7 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 
 	h := &Handler{
 		store:           m,
-		parseIfMatch:    func(string) (int64, error) { return 1, nil },
+		parseVersion:    func(string) (int64, error) { return 1, nil },
 		validateParamID: func(id string) error { return nil },
 	}
 	if setup != nil {
@@ -81,7 +81,7 @@ func TestHandler_Handle(t *testing.T) {
 		},
 		{
 			name:        "parser error",
-			setup:       func(h *Handler) { h.parseIfMatch = func(string) (int64, error) { return 0, errors.New("invalid") } },
+			setup:       func(h *Handler) { h.parseVersion = func(string) (int64, error) { return 0, errors.New("invalid") } },
 			wantCode:    http.StatusPreconditionRequired,
 			wantErrCode: erresp.CodePreconditionRequired,
 		},
