@@ -22,7 +22,7 @@ type request struct {
 }
 
 type updater interface {
-	Update(ctx context.Context, p updateParams, expectedVersion int64) (int64, error)
+	Update(ctx context.Context, p updateParams) (int64, error)
 }
 
 // Handler serves the PUT /api/lcards/:id endpoint.
@@ -83,7 +83,7 @@ func (h *Handler) Handle(c *echo.Context) error {
 		return c.JSON(http.StatusBadRequest, erresp.Validation(err))
 	}
 
-	newVersion, err := h.store.Update(ctx, toParams(req, id), version)
+	newVersion, err := h.store.Update(ctx, toParams(req, id, version))
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			slog.DebugContext(ctx, domain.TextNotFound, "error", err)
@@ -120,10 +120,11 @@ func sanitize(req *request) {
 	req.Description = sanitizer.String(req.Description)
 }
 
-func toParams(req request, id string) updateParams {
+func toParams(req request, id string, expectedVersion int64) updateParams {
 	return updateParams{
-		ID:          id,
-		Title:       req.Title,
-		Description: req.Description,
+		ExpectedVersion: expectedVersion,
+		ID:              id,
+		Title:           req.Title,
+		Description:     req.Description,
 	}
 }

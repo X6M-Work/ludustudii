@@ -18,11 +18,11 @@ import (
 )
 
 type mockStore struct {
-	updateFn func(ctx context.Context, p updateParams, _ int64) (int64, error)
+	updateFn func(ctx context.Context, p updateParams) (int64, error)
 }
 
-func (m *mockStore) Update(ctx context.Context, p updateParams, expectedVersion int64) (int64, error) {
-	return m.updateFn(ctx, p, expectedVersion)
+func (m *mockStore) Update(ctx context.Context, p updateParams) (int64, error) {
+	return m.updateFn(ctx, p)
 }
 
 func testContext(t *testing.T, id string, body []byte) (*echo.Context, *httptest.ResponseRecorder) {
@@ -41,7 +41,7 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 	t.Helper()
 
 	m := &mockStore{
-		updateFn: func(ctx context.Context, p updateParams, _ int64) (int64, error) {
+		updateFn: func(ctx context.Context, p updateParams) (int64, error) {
 			t.Fatal("unexpected call to updateFn")
 			return 0, errors.New("")
 		},
@@ -113,7 +113,7 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "version conflict",
 			store: func(m *mockStore) {
-				m.updateFn = func(_ context.Context, _ updateParams, _ int64) (int64, error) { return 0, domain.ErrVersionConflict }
+				m.updateFn = func(_ context.Context, _ updateParams) (int64, error) { return 0, domain.ErrVersionConflict }
 			},
 			wantCode:    http.StatusPreconditionFailed,
 			wantErrCode: erresp.CodePreconditionFailed,
@@ -121,7 +121,7 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "not found error",
 			store: func(m *mockStore) {
-				m.updateFn = func(_ context.Context, _ updateParams, _ int64) (int64, error) {
+				m.updateFn = func(_ context.Context, _ updateParams) (int64, error) {
 					return 0, domain.ErrNotFound
 				}
 			},
@@ -131,7 +131,7 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "update error",
 			store: func(m *mockStore) {
-				m.updateFn = func(_ context.Context, _ updateParams, _ int64) (int64, error) {
+				m.updateFn = func(_ context.Context, _ updateParams) (int64, error) {
 					return 0, errors.New("")
 				}
 			},
@@ -141,7 +141,7 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "success",
 			store: func(m *mockStore) {
-				m.updateFn = func(_ context.Context, _ updateParams, _ int64) (int64, error) {
+				m.updateFn = func(_ context.Context, _ updateParams) (int64, error) {
 					return 2, nil
 				}
 			},
@@ -237,10 +237,7 @@ func TestHandler_Wiring(t *testing.T) {
 
 	var gotParams updateParams
 	m := &mockStore{
-		updateFn: func(_ context.Context, p updateParams, expectedVersion int64) (int64, error) {
-			if expectedVersion != 7 {
-				t.Errorf("expected version: got %d, want 7", expectedVersion)
-			}
+		updateFn: func(_ context.Context, p updateParams) (int64, error) {
 			gotParams = p
 			return 2, nil
 		},
@@ -256,12 +253,13 @@ func TestHandler_Wiring(t *testing.T) {
 	}
 
 	wantParams := updateParams{
-		ID:          "01a1730e-199d-7f9f-b59d-3bcd6f84066c", // lowercased
-		Title:       "Caf\u00E9 Title",                      // composed é
-		Description: "Caf\u00E9 Description",                // composed é
+		ExpectedVersion: 7,
+		ID:              "01a1730e-199d-7f9f-b59d-3bcd6f84066c", // lowercased
+		Title:           "Caf\u00E9 Title",                      // composed é
+		Description:     "Caf\u00E9 Description",                // composed é
 	}
 	if gotParams != wantParams {
-		t.Errorf("params: got %+q, want %+q", gotParams, wantParams)
+		t.Errorf("params: got %+v, want %+v", gotParams, wantParams)
 	}
 
 	if rec.Body.Len() != 0 {
@@ -323,8 +321,8 @@ func TestToParams(t *testing.T) {
 	t.Parallel()
 
 	const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
-	got := toParams(request{Title: "Title", Description: "Description"}, id)
-	want := updateParams{ID: id, Title: "Title", Description: "Description"}
+	got := toParams(request{Title: "Title", Description: "Description"}, id, 7)
+	want := updateParams{ExpectedVersion: 7, ID: id, Title: "Title", Description: "Description"}
 	if got != want {
 		t.Errorf("params: got %+v, want %+v", got, want)
 	}
