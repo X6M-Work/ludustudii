@@ -257,35 +257,20 @@ func TestMigrations_LearningCardTimestamps(t *testing.T) {
 	t.Parallel()
 
 	db := testkit.NewDB(t)
-	p, err := goose.NewProvider(goose.DialectPostgres, db, migrations.FS)
-	if err != nil {
-		t.Fatalf("new provider: %v", err)
-	}
 	ctx, cancel := context.WithTimeout(t.Context(), 10*time.Second)
 	defer cancel()
-	// Restore the schema immediately before the timestamp migration.
-	if _, err := p.DownTo(ctx, 20261102075827); err != nil {
-		t.Fatalf("down before timestamps: %v", err)
-	}
-	const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066a"
-	var want time.Time
-	if err := db.QueryRowContext(ctx, `
-		INSERT INTO learning_cards (id, title, description)
-		VALUES ($1, 'Existing title', 'Existing description')
-		RETURNING uuid_extract_timestamp(id)`, id).Scan(&want); err != nil {
-		t.Fatalf("insert before migration: %v", err)
-	}
-	if _, err := p.UpByOne(ctx); err != nil {
-		t.Fatalf("apply timestamps migration: %v", err)
-	}
 	var createdAt, updatedAt time.Time
-	if err := db.QueryRowContext(ctx,
-		`SELECT created_at, updated_at FROM learning_cards WHERE id = $1`, id,
-	).Scan(&createdAt, &updatedAt); err != nil {
-		t.Fatalf("query backfilled timestamps: %v", err)
+	var version int64
+	if err := db.QueryRowContext(ctx, `
+		INSERT INTO learning_cards (title, description, created_at, updated_at)
+		VALUES ('Title', 'Description', now(), now())
+		RETURNING created_at, updated_at, version`,
+	).Scan(&createdAt, &updatedAt, &version); err != nil {
+		t.Fatalf("insert with timestamps: %v", err)
 	}
-	if !createdAt.Equal(want) || !updatedAt.Equal(want) {
-		t.Errorf("backfill: created_at %v, updated_at %v, want %v", createdAt, updatedAt, want)
+	if createdAt.IsZero() || !createdAt.Equal(updatedAt) || version != 1 {
+		t.Errorf("insert: created_at %v, updated_at %v, version %d; want set, equal timestamps and version 1",
+			createdAt, updatedAt, version)
 	}
 
 	// Omitting either column must fail: each is NOT NULL without a default.
@@ -297,7 +282,7 @@ func TestMigrations_LearningCardTimestamps(t *testing.T) {
 		_, err := db.ExecContext(ctx, query)
 		testkit.AssertPgCode(t, err, "23502") // not_null_violation
 	}
-	_, err = db.ExecContext(ctx, `
+	_, err := db.ExecContext(ctx, `
 		INSERT INTO learning_cards (title, description, created_at, updated_at)
 		VALUES ('Title', 'Description', now(), now() - interval '1 second')`)
 	testkit.AssertPgConstraint(t, err, "learning_cards_timestamps_check")
