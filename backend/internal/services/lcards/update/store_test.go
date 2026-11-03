@@ -9,6 +9,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
@@ -22,7 +23,7 @@ func TestMain(m *testing.M) {
 func insertCard(t *testing.T, db *sql.DB, id, title, description string) {
 	t.Helper()
 	_, err := db.ExecContext(t.Context(),
-		`INSERT INTO learning_cards (id, title, description) VALUES ($1, $2, $3)`,
+		`INSERT INTO learning_cards (id, title, description, created_at, updated_at) VALUES ($1, $2, $3, now(), now())`,
 		id, title, description,
 	)
 	if err != nil {
@@ -242,16 +243,27 @@ func TestStore_Update_CanceledContext(t *testing.T) {
 	}
 }
 
-func TestStore_Update_Version(t *testing.T) {
+func TestStore_Update_VersionAndTimestamps(t *testing.T) {
 	t.Parallel()
 	db := testkit.NewDB(t)
 	s := NewStore(db)
 	const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
-	insertCard(t, db, id, "Original", "Original description")
+	// Seed an earlier database timestamp so strict advancement needs no sleep.
+	if _, err := db.ExecContext(t.Context(), `
+		INSERT INTO learning_cards (id, title, description, created_at, updated_at)
+		VALUES ($1, 'Original', 'Original description', now() - interval '1 second', now() - interval '1 second')`, id); err != nil {
+		t.Fatalf("insert card: %v", err)
+	}
+	createdBefore, updatedBefore := getTimestamps(t, db, id)
 	p := updateParams{Version: 1, ID: id, Title: "Updated", Description: "Updated description"}
 	version, err := s.Update(t.Context(), p)
 	if err != nil || version != 2 {
 		t.Fatalf("update: version %d, error %v", version, err)
+	}
+	createdAfter, updatedAfter := getTimestamps(t, db, id)
+	if !createdAfter.Equal(createdBefore) || !updatedAfter.After(updatedBefore) {
+		t.Fatalf("timestamps after update: created_at %v (was %v), updated_at %v (was %v)",
+			createdAfter, createdBefore, updatedAfter, updatedBefore)
 	}
 	stale := updateParams{Version: 1, ID: id, Title: "Stale", Description: "Stale description"}
 	if _, err := s.Update(t.Context(), stale); !errors.Is(err, domain.ErrVersionConflict) {
@@ -259,6 +271,10 @@ func TestStore_Update_Version(t *testing.T) {
 	}
 	if got := getCard(t, db, id); got != (cardRow{ID: p.ID, Title: p.Title, Description: p.Description}) {
 		t.Fatalf("stale update changed row: %+v", got)
+	}
+	createdStale, updatedStale := getTimestamps(t, db, id)
+	if !createdStale.Equal(createdAfter) || !updatedStale.Equal(updatedAfter) {
+		t.Fatalf("stale update changed timestamps: created_at %v, updated_at %v", createdStale, updatedStale)
 	}
 	var storedVersion int64
 	if err := db.QueryRowContext(t.Context(), `SELECT version FROM learning_cards WHERE id = $1`, id).Scan(&storedVersion); err != nil {
@@ -270,4 +286,15 @@ func TestStore_Update_Version(t *testing.T) {
 	if _, err := s.Update(t.Context(), updateParams{Version: 99, ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066d"}); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("unknown card: %v", err)
 	}
+}
+
+func getTimestamps(t *testing.T, db *sql.DB, id string) (time.Time, time.Time) {
+	t.Helper()
+	var createdAt, updatedAt time.Time
+	if err := db.QueryRowContext(t.Context(),
+		`SELECT created_at, updated_at FROM learning_cards WHERE id = $1`, id,
+	).Scan(&createdAt, &updatedAt); err != nil {
+		t.Fatalf("query timestamps: %v", err)
+	}
+	return createdAt, updatedAt
 }

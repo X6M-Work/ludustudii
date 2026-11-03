@@ -30,7 +30,7 @@ func NewStore(db *sql.DB) *Store {
 // It returns the new version, ErrNotFound for an unknown ID, or
 // ErrVersionConflict when p.Version is stale.
 func (s *Store) Update(ctx context.Context, p updateParams) (int64, error) {
-	query := `UPDATE learning_cards SET title = $1, description = $2, version = version + 1 WHERE id = $3 AND version = $4 RETURNING version`
+	query := `UPDATE learning_cards SET title = $1, description = $2, version = version + 1, updated_at = now() WHERE id = $3 AND version = $4 RETURNING version`
 	var version int64
 	err := s.db.QueryRowContext(ctx, query, p.Title, p.Description, p.ID, p.Version).Scan(&version)
 	if err == nil {

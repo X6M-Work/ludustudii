@@ -27,7 +27,7 @@ func NewStore(db *sql.DB) *Store {
 
 // Create inserts a card and returns its database-generated ID and version.
 func (s *Store) Create(ctx context.Context, p createParams) (row, error) {
-	query := `INSERT INTO learning_cards (title, description) VALUES ($1, $2) RETURNING id, version`
+	query := `INSERT INTO learning_cards (title, description, created_at, updated_at) VALUES ($1, $2, now(), now()) RETURNING id, version`
 	var data row
 	err := s.db.
 		QueryRowContext(ctx, query, p.Title, p.Description).

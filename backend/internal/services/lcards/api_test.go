@@ -45,7 +45,7 @@ type cardRow struct {
 func insertCard(t *testing.T, db *sql.DB, id, title, description string) {
 	t.Helper()
 	_, err := db.ExecContext(t.Context(),
-		`INSERT INTO learning_cards (id, title, description) VALUES ($1, $2, $3)`,
+		`INSERT INTO learning_cards (id, title, description, created_at, updated_at) VALUES ($1, $2, $3, now(), now())`,
 		id, title, description,
 	)
 	if err != nil {

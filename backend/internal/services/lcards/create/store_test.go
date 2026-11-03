@@ -8,6 +8,7 @@ import (
 	"os"
 	"strings"
 	"testing"
+	"time"
 	"unicode/utf8"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
@@ -50,6 +51,16 @@ func TestStore_Create(t *testing.T) {
 	}
 	if got != want {
 		t.Errorf("row: got %+v, want %+v", got, want)
+	}
+
+	var createdAt, updatedAt time.Time
+	if err := db.QueryRowContext(t.Context(),
+		`SELECT created_at, updated_at FROM learning_cards WHERE id = $1`, data.ID,
+	).Scan(&createdAt, &updatedAt); err != nil {
+		t.Fatalf("query timestamps: %v", err)
+	}
+	if createdAt.IsZero() || !createdAt.Equal(updatedAt) {
+		t.Errorf("timestamps: created_at %v, updated_at %v; want set and equal", createdAt, updatedAt)
 	}
 }
 
