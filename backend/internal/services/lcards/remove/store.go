@@ -9,8 +9,8 @@ import (
 )
 
 type deleteParams struct {
-	ID              string
-	ExpectedVersion int64
+	ID      string
+	Version int64
 }
 
 // Store deletes learning cards from the database.
@@ -23,11 +23,11 @@ func NewStore(db *sql.DB) *Store {
 	return &Store{db: db}
 }
 
-// Delete removes the card only when p.ExpectedVersion matches. It returns
+// Delete removes the card only when p.Version matches. It returns
 // domain.ErrNotFound for an unknown ID or domain.ErrVersionConflict for a stale version.
 func (s *Store) Delete(ctx context.Context, p deleteParams) error {
 	query := `DELETE FROM learning_cards WHERE id = $1 AND version = $2`
-	res, err := s.db.ExecContext(ctx, query, p.ID, p.ExpectedVersion)
+	res, err := s.db.ExecContext(ctx, query, p.ID, p.Version)
 	if err != nil {
 		return fmt.Errorf("delete: %w", err)
 	}

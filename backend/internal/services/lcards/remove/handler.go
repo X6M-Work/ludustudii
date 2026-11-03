@@ -52,7 +52,7 @@ func (h *Handler) Handle(c *echo.Context) error {
 		return c.JSON(http.StatusPreconditionRequired, erresp.PreconditionRequired())
 	}
 
-	if err := h.store.Delete(ctx, deleteParams{ID: id, ExpectedVersion: version}); err != nil {
+	if err := h.store.Delete(ctx, deleteParams{ID: id, Version: version}); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			slog.DebugContext(ctx, domain.TextNotFound, "error", err)
 			return c.JSON(http.StatusNotFound, erresp.NotFound())

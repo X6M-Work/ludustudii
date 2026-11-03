@@ -253,10 +253,10 @@ func TestHandler_Wiring(t *testing.T) {
 	}
 
 	wantParams := updateParams{
-		ExpectedVersion: 7,
-		ID:              "01a1730e-199d-7f9f-b59d-3bcd6f84066c", // lowercased
-		Title:           "Caf\u00E9 Title",                      // composed é
-		Description:     "Caf\u00E9 Description",                // composed é
+		Version:     7,
+		ID:          "01a1730e-199d-7f9f-b59d-3bcd6f84066c", // lowercased
+		Title:       "Caf\u00E9 Title",                      // composed é
+		Description: "Caf\u00E9 Description",                // composed é
 	}
 	if gotParams != wantParams {
 		t.Errorf("params: got %+v, want %+v", gotParams, wantParams)
@@ -322,7 +322,7 @@ func TestToParams(t *testing.T) {
 
 	const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
 	got := toParams(request{Title: "Title", Description: "Description"}, id, 7)
-	want := updateParams{ExpectedVersion: 7, ID: id, Title: "Title", Description: "Description"}
+	want := updateParams{Version: 7, ID: id, Title: "Title", Description: "Description"}
 	if got != want {
 		t.Errorf("params: got %+v, want %+v", got, want)
 	}

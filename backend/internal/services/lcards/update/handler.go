@@ -120,11 +120,11 @@ func sanitize(req *request) {
 	req.Description = sanitizer.String(req.Description)
 }
 
-func toParams(req request, id string, expectedVersion int64) updateParams {
+func toParams(req request, id string, version int64) updateParams {
 	return updateParams{
-		ExpectedVersion: expectedVersion,
-		ID:              id,
-		Title:           req.Title,
-		Description:     req.Description,
+		Version:     version,
+		ID:          id,
+		Title:       req.Title,
+		Description: req.Description,
 	}
 }

@@ -59,19 +59,19 @@ func TestStore_Update(t *testing.T) {
 		id2 = "01a1730e-199d-7f9f-b59d-3bcd6f84066b"
 	)
 	other := updateParams{
-		ExpectedVersion: 1,
-		ID:              id1,
-		Title:           "Other Title",
-		Description:     "Other Description",
+		Version:     1,
+		ID:          id1,
+		Title:       "Other Title",
+		Description: "Other Description",
 	}
 	insertCard(t, db, other.ID, other.Title, other.Description)
 	insertCard(t, db, id2, "Old Title", "Old Description")
 
 	want := updateParams{
-		ExpectedVersion: 1,
-		ID:              id2,
-		Title:           "New Title",
-		Description:     "New Description",
+		Version:     1,
+		ID:          id2,
+		Title:       "New Title",
+		Description: "New Description",
 	}
 	if _, err := s.Update(t.Context(), want); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -95,10 +95,10 @@ func TestStore_Update_MaxLengths(t *testing.T) {
 	insertCard(t, db, id, "Old Title", "Old Description")
 
 	want := updateParams{
-		ExpectedVersion: 1,
-		ID:              id,
-		Title:           strings.Repeat("\u00E9", domain.TitleMaxLength),
-		Description:     strings.Repeat("\u00E9", domain.DescriptionMaxLength),
+		Version:     1,
+		ID:          id,
+		Title:       strings.Repeat("\u00E9", domain.TitleMaxLength),
+		Description: strings.Repeat("\u00E9", domain.DescriptionMaxLength),
 	}
 	if _, err := s.Update(t.Context(), want); err != nil {
 		t.Fatalf("unexpected error: %v", err)
@@ -118,10 +118,10 @@ func TestStore_Update_NotFound(t *testing.T) {
 	s := NewStore(db)
 
 	_, err := s.Update(t.Context(), updateParams{
-		ExpectedVersion: 1,
-		ID:              "01a1730e-199d-7f9f-b59d-3bcd6f84066c",
-		Title:           "Title",
-		Description:     "Description",
+		Version:     1,
+		ID:          "01a1730e-199d-7f9f-b59d-3bcd6f84066c",
+		Title:       "Title",
+		Description: "Description",
 	})
 	if !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("err: got %v, want %v", err, domain.ErrNotFound)
@@ -137,10 +137,10 @@ func TestStore_Update_RejectsNonUUID(t *testing.T) {
 	s := NewStore(db)
 
 	_, err := s.Update(t.Context(), updateParams{
-		ExpectedVersion: 1,
-		ID:              "not-a-uuid",
-		Title:           "Title",
-		Description:     "Description",
+		Version:     1,
+		ID:          "not-a-uuid",
+		Title:       "Title",
+		Description: "Description",
 	})
 	testkit.AssertPgCode(t, err, testkit.PgCodeInvalidTextRepresentation)
 }
@@ -158,40 +158,40 @@ func TestStore_Update_CheckConstraints(t *testing.T) {
 		{
 			name: "empty title",
 			params: updateParams{
-				ExpectedVersion: 1,
-				ID:              id,
-				Title:           "",
-				Description:     "Description",
+				Version:     1,
+				ID:          id,
+				Title:       "",
+				Description: "Description",
 			},
 			wantConstraint: "learning_cards_title_check",
 		},
 		{
 			name: "title over max length",
 			params: updateParams{
-				ExpectedVersion: 1,
-				ID:              id,
-				Title:           strings.Repeat("a", domain.TitleMaxLength+1),
-				Description:     "Description",
+				Version:     1,
+				ID:          id,
+				Title:       strings.Repeat("a", domain.TitleMaxLength+1),
+				Description: "Description",
 			},
 			wantConstraint: "learning_cards_title_check",
 		},
 		{
 			name: "empty description",
 			params: updateParams{
-				ExpectedVersion: 1,
-				ID:              id,
-				Title:           "Title",
-				Description:     "",
+				Version:     1,
+				ID:          id,
+				Title:       "Title",
+				Description: "",
 			},
 			wantConstraint: "learning_cards_description_check",
 		},
 		{
 			name: "description over max length",
 			params: updateParams{
-				ExpectedVersion: 1,
-				ID:              id,
-				Title:           "Title",
-				Description:     strings.Repeat("a", domain.DescriptionMaxLength+1),
+				Version:     1,
+				ID:          id,
+				Title:       "Title",
+				Description: strings.Repeat("a", domain.DescriptionMaxLength+1),
 			},
 			wantConstraint: "learning_cards_description_check",
 		},
@@ -205,10 +205,10 @@ func TestStore_Update_CheckConstraints(t *testing.T) {
 			s := NewStore(db)
 
 			original := updateParams{
-				ExpectedVersion: 1,
-				ID:              id,
-				Title:           "Original Title",
-				Description:     "Original Description",
+				Version:     1,
+				ID:          id,
+				Title:       "Original Title",
+				Description: "Original Description",
 			}
 			insertCard(t, db, original.ID, original.Title, original.Description)
 
@@ -232,10 +232,10 @@ func TestStore_Update_CanceledContext(t *testing.T) {
 	cancel()
 
 	_, err := s.Update(ctx, updateParams{
-		ExpectedVersion: 1,
-		ID:              "01a1730e-199d-7f9f-b59d-3bcd6f84066c",
-		Title:           "Title",
-		Description:     "Description",
+		Version:     1,
+		ID:          "01a1730e-199d-7f9f-b59d-3bcd6f84066c",
+		Title:       "Title",
+		Description: "Description",
 	})
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("err: got %v, want %v", err, context.Canceled)
@@ -248,12 +248,12 @@ func TestStore_Update_Version(t *testing.T) {
 	s := NewStore(db)
 	const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
 	insertCard(t, db, id, "Original", "Original description")
-	p := updateParams{ExpectedVersion: 1, ID: id, Title: "Updated", Description: "Updated description"}
+	p := updateParams{Version: 1, ID: id, Title: "Updated", Description: "Updated description"}
 	version, err := s.Update(t.Context(), p)
 	if err != nil || version != 2 {
 		t.Fatalf("update: version %d, error %v", version, err)
 	}
-	stale := updateParams{ExpectedVersion: 1, ID: id, Title: "Stale", Description: "Stale description"}
+	stale := updateParams{Version: 1, ID: id, Title: "Stale", Description: "Stale description"}
 	if _, err := s.Update(t.Context(), stale); !errors.Is(err, domain.ErrVersionConflict) {
 		t.Fatalf("stale update: %v", err)
 	}
@@ -267,7 +267,7 @@ func TestStore_Update_Version(t *testing.T) {
 	if storedVersion != 2 {
 		t.Fatalf("stored version: %d", storedVersion)
 	}
-	if _, err := s.Update(t.Context(), updateParams{ExpectedVersion: 99, ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066d"}); !errors.Is(err, domain.ErrNotFound) {
+	if _, err := s.Update(t.Context(), updateParams{Version: 99, ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066d"}); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("unknown card: %v", err)
 	}
 }

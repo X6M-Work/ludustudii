@@ -183,8 +183,8 @@ func TestHandler_Wiring(t *testing.T) {
 	}
 
 	wantParams := deleteParams{
-		ID:              "01a1730e-199d-7f9f-b59d-3bcd6f84066c", // lowercased
-		ExpectedVersion: 7,
+		ID:      "01a1730e-199d-7f9f-b59d-3bcd6f84066c", // lowercased
+		Version: 7,
 	}
 	if gotParams != wantParams {
 		t.Errorf("params: got %+v, want %+v", gotParams, wantParams)

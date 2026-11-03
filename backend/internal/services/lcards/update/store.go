@@ -10,10 +10,10 @@ import (
 )
 
 type updateParams struct {
-	ExpectedVersion int64
-	ID              string
-	Title           string
-	Description     string
+	Version     int64
+	ID          string
+	Title       string
+	Description string
 }
 
 // Store updates learning cards in the database.
@@ -28,11 +28,11 @@ func NewStore(db *sql.DB) *Store {
 
 // Update conditionally replaces card p.ID and increments its version atomically.
 // It returns the new version, ErrNotFound for an unknown ID, or
-// ErrVersionConflict when p.ExpectedVersion is stale.
+// ErrVersionConflict when p.Version is stale.
 func (s *Store) Update(ctx context.Context, p updateParams) (int64, error) {
 	query := `UPDATE learning_cards SET title = $1, description = $2, version = version + 1 WHERE id = $3 AND version = $4 RETURNING version`
 	var version int64
-	err := s.db.QueryRowContext(ctx, query, p.Title, p.Description, p.ID, p.ExpectedVersion).Scan(&version)
+	err := s.db.QueryRowContext(ctx, query, p.Title, p.Description, p.ID, p.Version).Scan(&version)
 	if err == nil {
 		return version, nil
 	}

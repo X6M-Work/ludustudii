@@ -53,7 +53,7 @@ func TestStore_Delete(t *testing.T) {
 	insertCard(t, db, id1, "Title 1", "Description 1")
 	insertCard(t, db, id2, "Title 2", "Description 2")
 
-	if err := s.Delete(t.Context(), deleteParams{ID: id1, ExpectedVersion: 1}); err != nil {
+	if err := s.Delete(t.Context(), deleteParams{ID: id1, Version: 1}); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 
@@ -71,7 +71,7 @@ func TestStore_Delete_NotFound(t *testing.T) {
 	db := testkit.NewDB(t)
 	s := NewStore(db)
 
-	err := s.Delete(t.Context(), deleteParams{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", ExpectedVersion: 1})
+	err := s.Delete(t.Context(), deleteParams{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", Version: 1})
 	if !errors.Is(err, domain.ErrNotFound) {
 		t.Errorf("err: got %v, want %v", err, domain.ErrNotFound)
 	}
@@ -85,7 +85,7 @@ func TestStore_Delete_RejectsNonUUID(t *testing.T) {
 	db := testkit.NewDB(t)
 	s := NewStore(db)
 
-	err := s.Delete(t.Context(), deleteParams{ID: "not-a-uuid", ExpectedVersion: 1})
+	err := s.Delete(t.Context(), deleteParams{ID: "not-a-uuid", Version: 1})
 	testkit.AssertPgCode(t, err, testkit.PgCodeInvalidTextRepresentation)
 }
 
@@ -98,7 +98,7 @@ func TestStore_Delete_CanceledContext(t *testing.T) {
 	ctx, cancel := context.WithCancel(t.Context())
 	cancel()
 
-	err := s.Delete(ctx, deleteParams{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", ExpectedVersion: 1})
+	err := s.Delete(ctx, deleteParams{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", Version: 1})
 	if !errors.Is(err, context.Canceled) {
 		t.Errorf("err: got %v, want %v", err, context.Canceled)
 	}
@@ -110,7 +110,7 @@ func TestStore_Delete_StaleVersion(t *testing.T) {
 	s := NewStore(db)
 	const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
 	insertCard(t, db, id, "Original", "Original description")
-	if err := s.Delete(t.Context(), deleteParams{ID: id, ExpectedVersion: 99}); !errors.Is(err, domain.ErrVersionConflict) {
+	if err := s.Delete(t.Context(), deleteParams{ID: id, Version: 99}); !errors.Is(err, domain.ErrVersionConflict) {
 		t.Fatalf("stale delete: %v", err)
 	}
 	var title, description string
@@ -121,10 +121,10 @@ func TestStore_Delete_StaleVersion(t *testing.T) {
 	if title != "Original" || description != "Original description" || version != 1 {
 		t.Fatalf("stale delete changed row: %s, %s, %d", title, description, version)
 	}
-	if err := s.Delete(t.Context(), deleteParams{ID: id, ExpectedVersion: 1}); err != nil {
+	if err := s.Delete(t.Context(), deleteParams{ID: id, Version: 1}); err != nil {
 		t.Fatal(err)
 	}
-	if err := s.Delete(t.Context(), deleteParams{ID: id, ExpectedVersion: 99}); !errors.Is(err, domain.ErrNotFound) {
+	if err := s.Delete(t.Context(), deleteParams{ID: id, Version: 99}); !errors.Is(err, domain.ErrNotFound) {
 		t.Fatalf("unknown card: %v", err)
 	}
 }
