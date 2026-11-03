@@ -35,7 +35,7 @@ func TestContractConventions(t *testing.T) {
 	}
 	ids := make(map[string]string)
 	for path, item := range doc.Paths.Map() {
-		// Echo AutoHandleHEAD exposes HEAD for every GET operation.
+		// ServeMux GET patterns exposes HEAD for every GET operation.
 		if item.Get != nil && item.Head == nil {
 			t.Errorf("%s has GET but no documented HEAD", path)
 		}

@@ -8,8 +8,8 @@ import (
 	"path"
 	"strings"
 
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
-	"github.com/labstack/echo/v5"
 )
 
 // Handler serves the client app for GET and HEAD requests. Paths that name a
@@ -32,17 +32,15 @@ func NewHandler(clientApp *ClientApp) *Handler {
 	}
 }
 
-// RegisterRoutes registers the handler as e's catch-all for paths no other
-// route matches. Register it after all other routes.
-func (h *Handler) RegisterRoutes(e *echo.Echo) {
-	e.RouteNotFound("/*", h.serve)
+// RegisterRoutes registers the client application's catch-all route.
+func (h *Handler) RegisterRoutes(mux *http.ServeMux, onError httpkit.ErrorHandler) {
+	mux.Handle("/", httpkit.Adapt(h.serve, onError))
 }
 
-func (h *Handler) serve(c *echo.Context) error {
-	w, r := c.Response(), c.Request()
+func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {
 	if r.Method != http.MethodGet && r.Method != http.MethodHead {
 		w.Header().Set("Allow", "GET, HEAD")
-		return c.String(http.StatusMethodNotAllowed, "method not allowed\n")
+		return httpkit.Text(w, http.StatusMethodNotAllowed, "method not allowed\n")
 	}
 
 	reqPath := strings.TrimPrefix(path.Clean(r.URL.Path), "/")
@@ -57,7 +55,7 @@ func (h *Handler) serve(c *echo.Context) error {
 		if errors.Is(err, fs.ErrNotExist) {
 			// Do not serve index.html for missing static assets (.js, .css, .png, etc.)
 			if path.Ext(reqPath) != "" {
-				return c.String(http.StatusNotFound, "404 page not found\n")
+				return httpkit.Text(w, http.StatusNotFound, "404 page not found\n")
 			}
 
 			h.indexFile.Serve(w, r)
@@ -70,7 +68,7 @@ func (h *Handler) serve(c *echo.Context) error {
 			slog.Any("error", err),
 		)
 
-		return c.String(http.StatusInternalServerError, "Internal Server Error\n")
+		return httpkit.Text(w, http.StatusInternalServerError, "Internal Server Error\n")
 	}
 
 	if stat.IsDir() {

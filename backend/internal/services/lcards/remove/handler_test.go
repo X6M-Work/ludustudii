@@ -12,7 +12,6 @@ import (
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
-	"github.com/labstack/echo/v5"
 )
 
 type mockStore struct {
@@ -23,15 +22,13 @@ func (m *mockStore) Delete(ctx context.Context, p deleteParams) error {
 	return m.deleteFn(ctx, p)
 }
 
-func testContext(t *testing.T, id string) (*echo.Context, *httptest.ResponseRecorder) {
+func testContext(t *testing.T, id string) (*http.Request, *httptest.ResponseRecorder) {
 	t.Helper()
-	e := echo.New()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodDelete, "/api/lcards/"+id, nil)
 	req.Header.Set("If-Match", `"1"`)
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPathValues(echo.PathValues{{Name: "id", Value: id}})
-	return c, rec
+	req.SetPathValue("id", id)
+	return req, rec
 }
 
 func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Handler {
@@ -130,14 +127,14 @@ func TestHandler_Handle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Setup Echo context and request/response recorder
+			// Setup request and request/response recorder
 			c, rec := testContext(t, id)
 
 			// Setup handler with mock store
 			h := testHandler(t, tt.store, tt.setup)
 
 			// Call the handler and check the response
-			if err := h.Handle(c); err != nil {
+			if err := h.Handle(rec, c); err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -173,9 +170,9 @@ func TestHandler_Wiring(t *testing.T) {
 		},
 	}
 	h := NewHandler(m)
-	c.Request().Header.Set("If-Match", `"7"`)
+	c.Header.Set("If-Match", `"7"`)
 
-	if err := h.Handle(c); err != nil {
+	if err := h.Handle(rec, c); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if rec.Code != http.StatusNoContent {

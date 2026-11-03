@@ -15,7 +15,6 @@ import (
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
-	"github.com/labstack/echo/v5"
 )
 
 type mockStore struct {
@@ -26,13 +25,11 @@ func (m *mockStore) List(ctx context.Context, p listParams) (page, error) {
 	return m.listFn(ctx, p)
 }
 
-func testContext(t *testing.T, target string) (*echo.Context, *httptest.ResponseRecorder) {
+func testContext(t *testing.T, target string) (*http.Request, *httptest.ResponseRecorder) {
 	t.Helper()
-	e := echo.New()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodGet, target, nil)
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	return c, rec
+	return req, rec
 }
 
 func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Handler {
@@ -50,7 +47,6 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 
 	h := &Handler{
 		store:    m,
-		bind:     func(*echo.Context, any) error { return nil },
 		validate: func(request) error { return nil },
 	}
 	if setup != nil {
@@ -71,16 +67,6 @@ func TestHandler_Handle(t *testing.T) {
 		wantResp    *response
 		wantErrCode string
 	}{
-		{
-			name: "binding error",
-			setup: func(h *Handler) {
-				h.bind = func(c *echo.Context, i any) error {
-					return errors.New("")
-				}
-			},
-			wantCode:    http.StatusBadRequest,
-			wantErrCode: erresp.CodeBinding,
-		},
 		{
 			name: "validation error",
 			setup: func(h *Handler) {
@@ -143,14 +129,14 @@ func TestHandler_Handle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Setup Echo context and request/response recorder
+			// Setup request and request/response recorder
 			c, rec := testContext(t, "/api/lcards")
 
 			// Setup handler with mock store
 			h := testHandler(t, tt.store, tt.setup)
 
 			// Call the handler and check the response
-			if err := h.Handle(c); err != nil {
+			if err := h.Handle(rec, c); err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -226,7 +212,7 @@ func TestHandler_Wiring(t *testing.T) {
 			}
 			h := NewHandler(m)
 
-			if err := h.Handle(c); err != nil {
+			if err := h.Handle(rec, c); err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 			if rec.Code != http.StatusOK {

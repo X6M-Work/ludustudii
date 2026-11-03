@@ -520,7 +520,7 @@ func TestCheckResponse(t *testing.T) {
 	}
 }
 
-// Production documents HEAD wherever GET is available (Echo AutoHandleHEAD).
+// Production documents HEAD wherever GET is available (ServeMux GET patterns).
 // A local spec without HEAD exercises the unsupported-method fallback itself.
 func TestCheckUnmatchedRouteHEADMethodNotAllowed(t *testing.T) {
 	t.Parallel()

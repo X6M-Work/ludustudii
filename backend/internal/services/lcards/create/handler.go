@@ -9,9 +9,9 @@ import (
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 	"github.com/apotourlyan/ludustudii/internal/kit/etag"
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/sanitizer"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
-	"github.com/labstack/echo/v5"
 )
 
 type request struct {
@@ -30,7 +30,7 @@ type creator interface {
 // Handler serves the POST /api/lcards endpoint.
 type Handler struct {
 	store    creator
-	bind     func(c *echo.Context, i any) error
+	bind     func(w http.ResponseWriter, r *http.Request, i any) error
 	validate func(req request) error
 }
 
@@ -47,39 +47,39 @@ func NewHandler(s creator) *Handler {
 // card and responds 201 with its ID in the body and its URL in the Location
 // header. Invalid input gets 400. An oversized body (413) or an unsupported
 // Content-Type (415) is returned for the router's error handler to report.
-func (h *Handler) Handle(c *echo.Context) error {
-	ctx := c.Request().Context()
+func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
 
 	var req request
-	if err := h.bind(c, &req); err != nil {
+	if err := h.bind(w, r, &req); err != nil {
 		slog.DebugContext(ctx, domain.TextBinding, "error", err)
-		switch echo.StatusCode(err) {
+		switch httpkit.StatusCode(err) {
 		case http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType:
 			return err
 		}
-		return c.JSON(http.StatusBadRequest, erresp.Binding())
+		return httpkit.JSON(w, http.StatusBadRequest, erresp.Binding())
 	}
 
 	sanitize(&req)
 
 	if err := h.validate(req); err != nil {
 		slog.DebugContext(ctx, domain.TextValidation, "error", err)
-		return c.JSON(http.StatusBadRequest, erresp.Validation(err))
+		return httpkit.JSON(w, http.StatusBadRequest, erresp.Validation(err))
 	}
 
 	data, err := h.store.Create(ctx, toParams(req))
 	if err != nil {
 		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
-		return c.JSON(http.StatusInternalServerError, erresp.Unexpected())
+		return httpkit.JSON(w, http.StatusInternalServerError, erresp.Unexpected())
 	}
 
-	c.Response().Header().Set("ETag", etag.Format(data.Version))
-	c.Response().Header().Set(echo.HeaderLocation, domain.CardsPath+"/"+data.ID)
-	return c.JSON(http.StatusCreated, toResp(data))
+	w.Header().Set("ETag", etag.Format(data.Version))
+	w.Header().Set("Location", domain.CardsPath+"/"+data.ID)
+	return httpkit.JSON(w, http.StatusCreated, toResp(data))
 }
 
-func bind(c *echo.Context, i any) error {
-	return c.Bind(i)
+func bind(w http.ResponseWriter, r *http.Request, i any) error {
+	return httpkit.BindJSON(w, r, i)
 }
 
 func validate(req request) error {

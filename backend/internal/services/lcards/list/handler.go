@@ -10,14 +10,14 @@ import (
 	"strings"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
-	"github.com/labstack/echo/v5"
 )
 
 type request struct {
-	Limit  string `query:"limit"`
-	Cursor string `query:"cursor"`
+	Limit  string
+	Cursor string
 }
 
 type item struct {
@@ -39,7 +39,6 @@ type lister interface {
 // Handler serves the GET /api/lcards endpoint.
 type Handler struct {
 	store    lister
-	bind     func(c *echo.Context, i any) error
 	validate func(req request) error
 }
 
@@ -47,7 +46,6 @@ type Handler struct {
 func NewHandler(s lister) *Handler {
 	return &Handler{
 		store:    s,
-		bind:     bind,
 		validate: validate,
 	}
 }
@@ -57,34 +55,29 @@ func NewHandler(s lister) *Handler {
 // domain.ListMaxLimit, default domain.ListDefaultLimit). The optional cursor
 // is the next_cursor of the previous page, matched case-insensitively;
 // next_cursor is null on the last page. Invalid parameters get 400.
-func (h *Handler) Handle(c *echo.Context) error {
-	ctx := c.Request().Context()
+func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
 
-	var req request
-	if err := h.bind(c, &req); err != nil {
-		slog.DebugContext(ctx, domain.TextBinding, "error", err)
-		return c.JSON(http.StatusBadRequest, erresp.Binding())
+	query := r.URL.Query()
+	req := request{
+		Limit:  query.Get("limit"),
+		Cursor: query.Get("cursor"),
 	}
 
 	sanitize(&req)
 
 	if err := h.validate(req); err != nil {
 		slog.DebugContext(ctx, domain.TextValidation, "error", err)
-		return c.JSON(http.StatusBadRequest, erresp.Validation(err))
+		return httpkit.JSON(w, http.StatusBadRequest, erresp.Validation(err))
 	}
 
 	data, err := h.store.List(ctx, toParams(req))
 	if err != nil {
 		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
-		return c.JSON(http.StatusInternalServerError, erresp.Unexpected())
+		return httpkit.JSON(w, http.StatusInternalServerError, erresp.Unexpected())
 	}
 
-	return c.JSON(http.StatusOK, toResp(data))
-}
-
-// The Echo-wide binder only binds JSON bodies, so query params are bound here.
-func bind(c *echo.Context, i any) error {
-	return echo.BindQueryParams(c, i)
+	return httpkit.JSON(w, http.StatusOK, toResp(data))
 }
 
 func validate(req request) error {

@@ -10,18 +10,15 @@ import (
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
-	"github.com/labstack/echo/v5"
 )
 
-func newTestServer(t *testing.T) (*echo.Echo, *Docs) {
+func newTestServer(t *testing.T) (*http.ServeMux, *Docs) {
 	t.Helper()
 	d, err := load([]byte("<!doctype html>"), gzipped(t, []byte("console.log(1)")))
 	if err != nil {
 		t.Fatal(err)
 	}
-	e := echo.NewWithConfig(echo.Config{
-		Router: echo.NewRouter(echo.RouterConfig{AutoHandleHEAD: true}),
-	})
+	e := http.NewServeMux()
 	NewHandler(d).RegisterRoutes(e)
 	return e, d
 }

@@ -10,9 +10,9 @@ import (
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 	"github.com/apotourlyan/ludustudii/internal/kit/etag"
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
-	"github.com/labstack/echo/v5"
 )
 
 type response struct {
@@ -39,27 +39,27 @@ func NewHandler(s getter) *Handler {
 
 // Handle responds 200 with the card whose ID is the :id path parameter, 400 if
 // the ID is not a UUIDv7 (case-insensitive) and 404 if no card has it.
-func (h *Handler) Handle(c *echo.Context) error {
-	ctx := c.Request().Context()
+func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
 
-	id := strings.ToLower(c.Param("id"))
+	id := strings.ToLower(r.PathValue("id"))
 	if err := h.validateParamID(id); err != nil {
 		slog.DebugContext(ctx, domain.TextInvalidID, "error", err)
-		return c.JSON(http.StatusBadRequest, erresp.Param())
+		return httpkit.JSON(w, http.StatusBadRequest, erresp.Param())
 	}
 
 	data, err := h.store.Get(ctx, id)
 	if err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			slog.DebugContext(ctx, domain.TextNotFound, "error", err)
-			return c.JSON(http.StatusNotFound, erresp.NotFound())
+			return httpkit.JSON(w, http.StatusNotFound, erresp.NotFound())
 		}
 		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
-		return c.JSON(http.StatusInternalServerError, erresp.Unexpected())
+		return httpkit.JSON(w, http.StatusInternalServerError, erresp.Unexpected())
 	}
 
-	c.Response().Header().Set("ETag", etag.Format(data.Version))
-	return c.JSON(http.StatusOK, toResp(data))
+	w.Header().Set("ETag", etag.Format(data.Version))
+	return httpkit.JSON(w, http.StatusOK, toResp(data))
 }
 
 func validateParamID(id string) error {

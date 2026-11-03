@@ -1,6 +1,6 @@
 //go:build unit
 
-package app
+package httpkit
 
 import (
 	"errors"
@@ -8,8 +8,6 @@ import (
 	"net/http/httptest"
 	"strings"
 	"testing"
-
-	"github.com/labstack/echo/v5"
 )
 
 func TestJSONBinder(t *testing.T) {
@@ -29,7 +27,7 @@ func TestJSONBinder(t *testing.T) {
 	}{
 		{
 			name:        "json / valid",
-			contentType: echo.MIMEApplicationJSON,
+			contentType: "application/json",
 			body:        `{"title":"Hello"}`,
 			want:        payload{Title: "Hello"},
 		},
@@ -41,7 +39,7 @@ func TestJSONBinder(t *testing.T) {
 		},
 		{
 			name:        "json / empty / nil",
-			contentType: echo.MIMEApplicationJSON,
+			contentType: "application/json",
 			body:        "",
 			want:        payload{},
 		},
@@ -55,38 +53,39 @@ func TestJSONBinder(t *testing.T) {
 			name:        "none / non-empty / unsupported media type",
 			contentType: "",
 			body:        `{"title":"Hello"}`,
-			wantErr:     echo.ErrUnsupportedMediaType,
+			wantErr:     ErrUnsupportedMediaType,
 			wantStatus:  http.StatusUnsupportedMediaType,
 		},
 		{
 			name:        "xml / non-empty / unsupported media type",
-			contentType: echo.MIMEApplicationXML,
+			contentType: "application/xml",
 			body:        `<payload><Title>Hello</Title></payload>`,
-			wantErr:     echo.ErrUnsupportedMediaType,
+			wantErr:     ErrUnsupportedMediaType,
 			wantStatus:  http.StatusUnsupportedMediaType,
 		},
 		{
 			name:        "json / malformed / bad request",
-			contentType: echo.MIMEApplicationJSON,
+			contentType: "application/json",
 			body:        `{"title":`,
 			wantStatus:  http.StatusBadRequest,
 		},
+		{name: "trailing JSON rejected", contentType: "application/json", body: `{"title":"one"}{"title":"two"}`, wantStatus: http.StatusBadRequest},
+		{name: "media type is case sensitive", contentType: "Application/JSON", body: `{}`, wantErr: ErrUnsupportedMediaType, wantStatus: http.StatusUnsupportedMediaType},
+		{name: "null accepted", contentType: "application/json", body: `null`, want: payload{}},
 	}
 
 	for _, tt := range tests {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			e := echo.NewWithConfig(echo.Config{Binder: jsonBinder{}})
 			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", strings.NewReader(tt.body))
 			if tt.contentType != "" {
-				req.Header.Set(echo.HeaderContentType, tt.contentType)
+				req.Header.Set("Content-Type", tt.contentType)
 			}
 			rec := httptest.NewRecorder()
-			c := e.NewContext(req, rec)
 
 			var got payload
-			err := c.Bind(&got)
+			err := BindJSON(rec, req, &got)
 			if tt.wantErr != nil || tt.wantStatus != 0 {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -94,7 +93,7 @@ func TestJSONBinder(t *testing.T) {
 				if tt.wantErr != nil && !errors.Is(err, tt.wantErr) {
 					t.Errorf("err: got %v, want %v", err, tt.wantErr)
 				}
-				if status := echo.StatusCode(err); status != tt.wantStatus {
+				if status := StatusCode(err); status != tt.wantStatus {
 					t.Errorf("status code: got %d, want %d (%v)", status, tt.wantStatus, err)
 				}
 				return
@@ -111,15 +110,38 @@ func TestJSONBinder(t *testing.T) {
 
 func TestJSONBinder_ChunkedWithoutContentType(t *testing.T) {
 	t.Parallel()
-	e := echo.NewWithConfig(echo.Config{Binder: jsonBinder{}})
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", strings.NewReader(`{"title":"Hello"}`))
 	req.ContentLength = -1 // unknown length, as with Transfer-Encoding: chunked
-	c := e.NewContext(req, httptest.NewRecorder())
 
 	var dst struct {
 		Title string `json:"title"`
 	}
-	if err := c.Bind(&dst); !errors.Is(err, echo.ErrUnsupportedMediaType) {
-		t.Errorf("err: got %v, want %v", err, echo.ErrUnsupportedMediaType)
+	if err := BindJSON(httptest.NewRecorder(), req, &dst); !errors.Is(err, ErrUnsupportedMediaType) {
+		t.Errorf("err: got %v, want %v", err, ErrUnsupportedMediaType)
+	}
+}
+
+func TestJSONBinder_EmptyPreservesTarget(t *testing.T) {
+	t.Parallel()
+	r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/?title=query", nil)
+	dst := struct {
+		Title string `json:"title"`
+	}{Title: "original"}
+	if err := BindJSON(httptest.NewRecorder(), r, &dst); err != nil {
+		t.Fatal(err)
+	}
+	if dst.Title != "original" {
+		t.Fatalf("target changed: %+v", dst)
+	}
+}
+
+func TestJSONBinder_UnknownLengthEmpty(t *testing.T) {
+	t.Parallel()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", strings.NewReader(""))
+	req.ContentLength = -1
+	req.Header.Set("Content-Type", "application/json")
+	var dst any
+	if err := BindJSON(httptest.NewRecorder(), req, &dst); StatusCode(err) != http.StatusBadRequest {
+		t.Fatalf("error: %v, want 400", err)
 	}
 }

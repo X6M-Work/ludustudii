@@ -12,9 +12,9 @@ import (
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
-	"github.com/labstack/echo/v5"
 )
 
 type mockStore struct {
@@ -25,16 +25,14 @@ func (m *mockStore) Update(ctx context.Context, p updateParams) (int64, error) {
 	return m.updateFn(ctx, p)
 }
 
-func testContext(t *testing.T, id string, body []byte) (*echo.Context, *httptest.ResponseRecorder) {
+func testContext(t *testing.T, id string, body []byte) (*http.Request, *httptest.ResponseRecorder) {
 	t.Helper()
-	e := echo.New()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPut, "/api/lcards/"+id, bytes.NewReader(body))
 	req.Header.Set("If-Match", `"1"`)
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	c.SetPathValues(echo.PathValues{{Name: "id", Value: id}})
-	return c, rec
+	req.SetPathValue("id", id)
+	return req, rec
 }
 
 func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Handler {
@@ -53,7 +51,7 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 	h := &Handler{
 		store:           m,
 		parseVersion:    func(string) (int64, error) { return 1, nil },
-		bind:            func(*echo.Context, any) error { return nil },
+		bind:            func(http.ResponseWriter, *http.Request, any) error { return nil },
 		validate:        func(request) error { return nil },
 		validateParamID: func(id string) error { return nil },
 	}
@@ -87,7 +85,7 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "binding error",
 			setup: func(h *Handler) {
-				h.bind = func(c *echo.Context, i any) error {
+				h.bind = func(w http.ResponseWriter, r *http.Request, i any) error {
 					return errors.New("")
 				}
 			},
@@ -156,14 +154,14 @@ func TestHandler_Handle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Setup Echo context and request/response recorder
+			// Setup request and request/response recorder
 			c, rec := testContext(t, id, body)
 
 			// Setup handler with mock store
 			h := testHandler(t, tt.store, tt.setup)
 
 			// Call the handler and check the response
-			if err := h.Handle(c); err != nil {
+			if err := h.Handle(rec, c); err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -199,8 +197,8 @@ func TestHandler_HandleBindStatusError(t *testing.T) {
 		err      error
 		wantCode int
 	}{
-		{name: "payload too large", err: echo.ErrStatusRequestEntityTooLarge, wantCode: http.StatusRequestEntityTooLarge},
-		{name: "unsupported media type", err: echo.ErrUnsupportedMediaType, wantCode: http.StatusUnsupportedMediaType},
+		{name: "payload too large", err: httpkit.ErrPayloadTooLarge, wantCode: http.StatusRequestEntityTooLarge},
+		{name: "unsupported media type", err: httpkit.ErrUnsupportedMediaType, wantCode: http.StatusUnsupportedMediaType},
 	}
 
 	const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
@@ -212,11 +210,11 @@ func TestHandler_HandleBindStatusError(t *testing.T) {
 
 			c, rec := testContext(t, id, body)
 			h := testHandler(t, nil, func(h *Handler) {
-				h.bind = func(*echo.Context, any) error { return tt.err }
+				h.bind = func(http.ResponseWriter, *http.Request, any) error { return tt.err }
 			})
 
-			err := h.Handle(c)
-			if got := echo.StatusCode(err); got != tt.wantCode {
+			err := h.Handle(rec, c)
+			if got := httpkit.StatusCode(err); got != tt.wantCode {
 				t.Fatalf("returned error status: got %d (%v), want %d", got, err, tt.wantCode)
 			}
 			if rec.Body.Len() != 0 {
@@ -243,9 +241,9 @@ func TestHandler_Wiring(t *testing.T) {
 		},
 	}
 	h := NewHandler(m)
-	c.Request().Header.Set("If-Match", `"7"`)
+	c.Header.Set("If-Match", `"7"`)
 
-	if err := h.Handle(c); err != nil {
+	if err := h.Handle(rec, c); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if rec.Code != http.StatusNoContent {

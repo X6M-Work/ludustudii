@@ -3,8 +3,8 @@ package apidocs
 import (
 	"net/http"
 
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
-	"github.com/labstack/echo/v5"
 )
 
 // Path is where the reference page is served. The specification and the
@@ -24,40 +24,43 @@ func NewHandler(docs *Docs) *Handler {
 	return &Handler{docs: docs}
 }
 
-// RegisterRoutes registers the reference routes on e. Register them before
-// the SPA catch-all, which would otherwise serve the client app for Path+"/".
-// Other methods get the same plain-text 405 as the SPA rather than the JSON
-// error of the API.
-func (h *Handler) RegisterRoutes(e *echo.Echo) {
-	e.GET(Path, serveFile(h.docs.Page))
-	e.GET(Path+"/", redirectToPath)
-	e.GET(Path+"/openapi.json", serveFile(h.docs.Spec))
-	e.GET(Path+"/scalar.js", serveFile(h.docs.Script))
-	for _, p := range []string{Path, Path + "/", Path + "/openapi.json", Path + "/scalar.js"} {
-		e.Any(p, methodNotAllowed)
-	}
+// RegisterRoutes registers the reference routes, including HEAD and plain-text
+// method errors. The trailing slash redirects only at the exact /docs/ path.
+func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+	mux.HandleFunc(Path, serveFile(h.docs.Page))
+	mux.HandleFunc(Path+"/{$}", redirectToPath)
+	mux.HandleFunc(Path+"/openapi.json", serveFile(h.docs.Spec))
+	mux.HandleFunc(Path+"/scalar.js", serveFile(h.docs.Script))
 }
 
-// methodNotAllowed answers methods other than GET and HEAD. Echo routes a
-// method-specific route ahead of an Any route for the same path.
-func methodNotAllowed(c *echo.Context) error {
-	c.Response().Header().Set("Allow", "GET, HEAD")
-	return c.String(http.StatusMethodNotAllowed, "method not allowed\n")
+func methodNotAllowed(w http.ResponseWriter, r *http.Request) bool {
+	if r.Method == http.MethodGet || r.Method == http.MethodHead {
+		return false
+	}
+	w.Header().Set("Allow", "GET, HEAD")
+	_ = httpkit.Text(w, http.StatusMethodNotAllowed, "method not allowed\n")
+	return true
 }
 
 // redirectToPath redirects Path+"/" to Path, keeping the query. The redirect
 // is temporary so browsers do not keep it once the reference is disabled.
-func redirectToPath(c *echo.Context) error {
+func redirectToPath(w http.ResponseWriter, r *http.Request) {
+	if methodNotAllowed(w, r) {
+		return
+	}
 	target := Path
-	if q := c.Request().URL.RawQuery; q != "" {
+	if q := r.URL.RawQuery; q != "" {
 		target += "?" + q
 	}
-	return c.Redirect(http.StatusFound, target)
+	w.Header().Set("Location", target)
+	w.WriteHeader(http.StatusFound)
 }
 
-func serveFile(f staticfile.File) echo.HandlerFunc {
-	return func(c *echo.Context) error {
-		f.Serve(c.Response(), c.Request())
-		return nil
+func serveFile(f staticfile.File) http.HandlerFunc {
+	return func(w http.ResponseWriter, r *http.Request) {
+		if methodNotAllowed(w, r) {
+			return
+		}
+		f.Serve(w, r)
 	}
 }

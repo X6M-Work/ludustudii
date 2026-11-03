@@ -1,10 +1,11 @@
 package app
 
 import (
+	"log/slog"
 	"net/http"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
-	"github.com/labstack/echo/v5"
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 )
 
 // httpErrorHandler writes an erresp.ErrorResponse for errors returned by
@@ -14,12 +15,12 @@ import (
 // "unexpected_error" so internal details never reach the client. HEAD
 // requests get the status only. Nothing is written if the response has
 // already been committed.
-func httpErrorHandler(c *echo.Context, err error) {
-	if r, _ := echo.UnwrapResponse(c.Response()); r != nil && r.Committed {
+func httpErrorHandler(log *slog.Logger, w http.ResponseWriter, r *http.Request, err error) {
+	if httpkit.IsCommitted(w) {
 		return
 	}
 
-	code := echo.StatusCode(err)
+	code := httpkit.StatusCode(err)
 	var resp erresp.ErrorResponse
 	switch code {
 	case http.StatusNotFound:
@@ -32,8 +33,8 @@ func httpErrorHandler(c *echo.Context, err error) {
 		resp = erresp.UnsupportedMediaType()
 	default:
 		if code == 0 || code >= http.StatusInternalServerError {
-			c.Logger().ErrorContext(c.Request().Context(), "Unhandled error",
-				"error", err, "method", c.Request().Method, "path", c.Request().URL.Path)
+			log.ErrorContext(r.Context(), "Unhandled error",
+				"error", err, "method", r.Method, "path", r.URL.Path)
 			code = http.StatusInternalServerError
 			resp = erresp.Unexpected()
 		} else {
@@ -42,12 +43,12 @@ func httpErrorHandler(c *echo.Context, err error) {
 	}
 
 	var cErr error
-	if c.Request().Method == http.MethodHead {
-		cErr = c.NoContent(code)
+	if r.Method == http.MethodHead {
+		cErr = httpkit.NoContent(w, code)
 	} else {
-		cErr = c.JSON(code, resp)
+		cErr = httpkit.JSON(w, code, resp)
 	}
 	if cErr != nil {
-		c.Logger().Error("Failed to send error response", "error", cErr)
+		log.ErrorContext(r.Context(), "Failed to send error response", "error", cErr)
 	}
 }

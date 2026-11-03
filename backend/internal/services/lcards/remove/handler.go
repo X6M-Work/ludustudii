@@ -10,9 +10,9 @@ import (
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 	"github.com/apotourlyan/ludustudii/internal/kit/etag"
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
-	"github.com/labstack/echo/v5"
 )
 
 type deleter interface {
@@ -38,33 +38,33 @@ func NewHandler(s deleter) *Handler {
 // Handle deletes the card whose ID is the :id path parameter and responds 204,
 // 400 for an invalid ID, 428 for missing or invalid If-Match, 404 for an
 // unknown ID, or 412 for a stale version.
-func (h *Handler) Handle(c *echo.Context) error {
-	ctx := c.Request().Context()
+func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
+	ctx := r.Context()
 
-	id := strings.ToLower(c.Param("id"))
+	id := strings.ToLower(r.PathValue("id"))
 	if err := h.validateParamID(id); err != nil {
 		slog.DebugContext(ctx, domain.TextInvalidID, "error", err)
-		return c.JSON(http.StatusBadRequest, erresp.Param())
+		return httpkit.JSON(w, http.StatusBadRequest, erresp.Param())
 	}
 
-	version, err := h.parseVersion(strings.Join(c.Request().Header.Values("If-Match"), ","))
+	version, err := h.parseVersion(strings.Join(r.Header.Values("If-Match"), ","))
 	if err != nil {
-		return c.JSON(http.StatusPreconditionRequired, erresp.PreconditionRequired())
+		return httpkit.JSON(w, http.StatusPreconditionRequired, erresp.PreconditionRequired())
 	}
 
 	if err := h.store.Delete(ctx, deleteParams{ID: id, Version: version}); err != nil {
 		if errors.Is(err, domain.ErrNotFound) {
 			slog.DebugContext(ctx, domain.TextNotFound, "error", err)
-			return c.JSON(http.StatusNotFound, erresp.NotFound())
+			return httpkit.JSON(w, http.StatusNotFound, erresp.NotFound())
 		}
 		if errors.Is(err, domain.ErrVersionConflict) {
-			return c.JSON(http.StatusPreconditionFailed, erresp.PreconditionFailed())
+			return httpkit.JSON(w, http.StatusPreconditionFailed, erresp.PreconditionFailed())
 		}
 		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
-		return c.JSON(http.StatusInternalServerError, erresp.Unexpected())
+		return httpkit.JSON(w, http.StatusInternalServerError, erresp.Unexpected())
 	}
 
-	return c.NoContent(http.StatusNoContent)
+	return httpkit.NoContent(w, http.StatusNoContent)
 }
 
 func validateParamID(id string) error {

@@ -12,8 +12,8 @@ import (
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
-	"github.com/labstack/echo/v5"
 )
 
 type mockStore struct {
@@ -24,14 +24,12 @@ func (m *mockStore) Create(ctx context.Context, p createParams) (row, error) {
 	return m.createFn(ctx, p)
 }
 
-func testContext(t *testing.T, body []byte) (*echo.Context, *httptest.ResponseRecorder) {
+func testContext(t *testing.T, body []byte) (*http.Request, *httptest.ResponseRecorder) {
 	t.Helper()
-	e := echo.New()
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/lcards", bytes.NewReader(body))
-	req.Header.Set(echo.HeaderContentType, echo.MIMEApplicationJSON)
+	req.Header.Set("Content-Type", "application/json")
 	rec := httptest.NewRecorder()
-	c := e.NewContext(req, rec)
-	return c, rec
+	return req, rec
 }
 
 func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Handler {
@@ -49,7 +47,7 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 
 	h := &Handler{
 		store:    m,
-		bind:     func(*echo.Context, any) error { return nil },
+		bind:     func(http.ResponseWriter, *http.Request, any) error { return nil },
 		validate: func(request) error { return nil },
 	}
 	if setup != nil {
@@ -74,7 +72,7 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "binding error",
 			setup: func(h *Handler) {
-				h.bind = func(c *echo.Context, i any) error {
+				h.bind = func(w http.ResponseWriter, r *http.Request, i any) error {
 					return errors.New("")
 				}
 			},
@@ -120,14 +118,14 @@ func TestHandler_Handle(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			// Setup Echo context and request/response recorder
+			// Setup request and request/response recorder
 			c, rec := testContext(t, body)
 
 			// Setup handler with mock store
 			h := testHandler(t, tt.store, tt.setup)
 
 			// Call the handler and check the response
-			if err := h.Handle(c); err != nil {
+			if err := h.Handle(rec, c); err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -140,7 +138,7 @@ func TestHandler_Handle(t *testing.T) {
 				t.Errorf("ETag: got %q, want quoted 1", rec.Header().Get("ETag"))
 			}
 			// Check the Location header (set on success only)
-			if got := rec.Header().Get(echo.HeaderLocation); got != tt.wantLocation {
+			if got := rec.Header().Get("Location"); got != tt.wantLocation {
 				t.Errorf("location: got %q, want %q", got, tt.wantLocation)
 			}
 
@@ -179,8 +177,8 @@ func TestHandler_HandleBindStatusError(t *testing.T) {
 		err      error
 		wantCode int
 	}{
-		{name: "payload too large", err: echo.ErrStatusRequestEntityTooLarge, wantCode: http.StatusRequestEntityTooLarge},
-		{name: "unsupported media type", err: echo.ErrUnsupportedMediaType, wantCode: http.StatusUnsupportedMediaType},
+		{name: "payload too large", err: httpkit.ErrPayloadTooLarge, wantCode: http.StatusRequestEntityTooLarge},
+		{name: "unsupported media type", err: httpkit.ErrUnsupportedMediaType, wantCode: http.StatusUnsupportedMediaType},
 	}
 
 	body, _ := json.Marshal(request{Title: "Title", Description: "Description"})
@@ -191,11 +189,11 @@ func TestHandler_HandleBindStatusError(t *testing.T) {
 
 			c, rec := testContext(t, body)
 			h := testHandler(t, nil, func(h *Handler) {
-				h.bind = func(*echo.Context, any) error { return tt.err }
+				h.bind = func(http.ResponseWriter, *http.Request, any) error { return tt.err }
 			})
 
-			err := h.Handle(c)
-			if got := echo.StatusCode(err); got != tt.wantCode {
+			err := h.Handle(rec, c)
+			if got := httpkit.StatusCode(err); got != tt.wantCode {
 				t.Fatalf("returned error status: got %d (%v), want %d", got, err, tt.wantCode)
 			}
 			if rec.Body.Len() != 0 {
@@ -223,7 +221,7 @@ func TestHandler_Wiring(t *testing.T) {
 	}
 	h := NewHandler(m)
 
-	if err := h.Handle(c); err != nil {
+	if err := h.Handle(rec, c); err != nil {
 		t.Fatalf("unexpected error: %v", err)
 	}
 	if rec.Code != http.StatusCreated {
@@ -249,7 +247,7 @@ func TestHandler_Wiring(t *testing.T) {
 	}
 
 	wantLocation := "/api/lcards/" + "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
-	if gotLocation := rec.Header().Get(echo.HeaderLocation); gotLocation != wantLocation {
+	if gotLocation := rec.Header().Get("Location"); gotLocation != wantLocation {
 		t.Errorf("location: got %q, want %q", gotLocation, wantLocation)
 	}
 }

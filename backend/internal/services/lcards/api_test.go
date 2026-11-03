@@ -18,7 +18,6 @@ import (
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 	"github.com/apotourlyan/ludustudii/internal/testkit"
 	"github.com/google/uuid"
-	"github.com/labstack/echo/v5"
 )
 
 func TestMain(m *testing.M) {
@@ -101,7 +100,7 @@ func TestRouting(t *testing.T) {
 			Path:   "/api/lcards",
 		})
 		testkit.AssertStatus(t, resp, http.StatusOK)
-		if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, echo.MIMEApplicationJSON) {
+		if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
 			t.Errorf("content-type: got %q, want JSON", ct)
 		}
 	})
@@ -121,7 +120,7 @@ func TestRouting(t *testing.T) {
 			if len(resp.Body) != 0 {
 				t.Errorf("body: got %q, want empty", resp.Body)
 			}
-			if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, echo.MIMEApplicationJSON) {
+			if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "application/json") {
 				t.Errorf("content-type: got %q, want JSON", ct)
 			}
 		})
@@ -136,7 +135,7 @@ func TestRouting(t *testing.T) {
 			Path:   "/api/lcards",
 		})
 		testkit.AssertStatus(t, resp, http.StatusMethodNotAllowed)
-		if got := resp.Header.Get(echo.HeaderAllow); got != "GET, HEAD, POST" {
+		if got := resp.Header.Get("Allow"); got != "GET, HEAD, POST" {
 			t.Errorf("Allow: got %q, want %q", got, "GET, HEAD, POST")
 		}
 		testkit.AssertJSON(t, resp.Body, `{"code":"method_not_allowed"}`)
@@ -151,7 +150,7 @@ func TestRouting(t *testing.T) {
 			Path:   "/api/lcards/01a1730e-199d-7f9f-b59d-3bcd6f84066c",
 		})
 		testkit.AssertStatus(t, resp, http.StatusMethodNotAllowed)
-		if got := resp.Header.Get(echo.HeaderAllow); got != "GET, HEAD, PUT, DELETE" {
+		if got := resp.Header.Get("Allow"); got != "GET, HEAD, PUT, DELETE" {
 			t.Errorf("Allow: got %q, want %q", got, "GET, HEAD, PUT, DELETE")
 		}
 		testkit.AssertJSON(t, resp.Body, `{"code":"method_not_allowed"}`)
@@ -443,7 +442,7 @@ func TestCreate(t *testing.T) {
 		resp := testkit.Do(t, srv, testkit.DoOpts{
 			Method:      http.MethodPost,
 			Path:        "/api/lcards",
-			ContentType: echo.MIMEApplicationJSON,
+			ContentType: "application/json",
 			Body:        `{"title":"\t Cafe\u0301 Title \n","description":"\t Cafe\u0301 Description \n"}`,
 		})
 		testkit.AssertStatus(t, resp, http.StatusCreated)
@@ -457,7 +456,7 @@ func TestCreate(t *testing.T) {
 		testkit.AssertJSON(t, resp.Body, fmt.Sprintf(`{"id":%q}`, got.ID))
 
 		wantLocation := "/api/lcards/" + got.ID
-		if location := resp.Header.Get(echo.HeaderLocation); location != wantLocation {
+		if location := resp.Header.Get("Location"); location != wantLocation {
 			t.Errorf("location: got %q, want %q", location, wantLocation)
 		}
 
@@ -498,7 +497,7 @@ func TestCreate(t *testing.T) {
 		resp := testkit.Do(t, srv, testkit.DoOpts{
 			Method:      http.MethodPost,
 			Path:        "/api/lcards",
-			ContentType: echo.MIMEApplicationJSON,
+			ContentType: "application/json",
 			Body:        `{"title":`,
 		})
 		testkit.AssertStatus(t, resp, http.StatusBadRequest)
@@ -514,7 +513,7 @@ func TestCreate(t *testing.T) {
 		resp := testkit.Do(t, srv, testkit.DoOpts{
 			Method:      http.MethodPost,
 			Path:        "/api/lcards",
-			ContentType: echo.MIMEApplicationJSON,
+			ContentType: "application/json",
 			Body:        "",
 		})
 		testkit.AssertStatus(t, resp, http.StatusBadRequest)
@@ -534,7 +533,7 @@ func TestCreate(t *testing.T) {
 		resp := testkit.Do(t, srv, testkit.DoOpts{
 			Method:      http.MethodPost,
 			Path:        "/api/lcards",
-			ContentType: echo.MIMEApplicationXML,
+			ContentType: "application/xml",
 			Body:        `<request><Title>Title</Title><Description>Description</Description></request>`,
 		})
 		testkit.AssertStatus(t, resp, http.StatusUnsupportedMediaType)
@@ -548,7 +547,7 @@ func TestCreate(t *testing.T) {
 		resp := testkit.Do(t, srv, testkit.DoOpts{
 			Method:      http.MethodPost,
 			Path:        "/api/lcards",
-			ContentType: echo.MIMEApplicationJSON,
+			ContentType: "application/json",
 			Body:        strings.Repeat("a", app.MaxBodyBytes+1),
 		})
 		testkit.AssertStatus(t, resp, http.StatusRequestEntityTooLarge)
@@ -564,7 +563,7 @@ func TestCreate(t *testing.T) {
 		resp := testkit.Do(t, srv, testkit.DoOpts{
 			Method:      http.MethodPost,
 			Path:        "/api/lcards",
-			ContentType: echo.MIMEApplicationJSON,
+			ContentType: "application/json",
 			Body:        strings.Repeat("a", app.MaxBodyBytes+1),
 			Chunked:     true,
 		})
@@ -587,7 +586,7 @@ func TestUpdate(t *testing.T) {
 			Method:      http.MethodPut,
 			Headers:     http.Header{"If-Match": {`"1"`}},
 			Path:        "/api/lcards/" + id,
-			ContentType: echo.MIMEApplicationJSON,
+			ContentType: "application/json",
 			Body:        `{"title":"\t Cafe\u0301 New Title \n","description":"\t Cafe\u0301 New Description \n"}`,
 		})
 		testkit.AssertStatus(t, resp, http.StatusNoContent)
@@ -612,7 +611,7 @@ func TestUpdate(t *testing.T) {
 			Method:      http.MethodPut,
 			Headers:     http.Header{"If-Match": {`"1"`}},
 			Path:        "/api/lcards/01a1730e-199d-7f9f-b59d-3bcd6f84066c",
-			ContentType: echo.MIMEApplicationJSON,
+			ContentType: "application/json",
 			Body:        `{"title":"Title","description":"Description"}`,
 		})
 		testkit.AssertStatus(t, resp, http.StatusNotFound)
@@ -627,7 +626,7 @@ func TestUpdate(t *testing.T) {
 			Method:      http.MethodPut,
 			Headers:     http.Header{"If-Match": {`"1"`}},
 			Path:        "/api/lcards/urn:uuid:01a1730e-199d-7f9f-b59d-3bcd6f84066c",
-			ContentType: echo.MIMEApplicationJSON,
+			ContentType: "application/json",
 			Body:        `{"title":"Title","description":"Description"}`,
 		})
 		testkit.AssertStatus(t, resp, http.StatusBadRequest)
@@ -649,7 +648,7 @@ func TestUpdate(t *testing.T) {
 			Method:      http.MethodPut,
 			Headers:     http.Header{"If-Match": {`"1"`}},
 			Path:        "/api/lcards/" + id,
-			ContentType: echo.MIMEApplicationXML,
+			ContentType: "application/xml",
 			Body:        `<request><Title>New Title</Title><Description>New Description</Description></request>`,
 		})
 		testkit.AssertStatus(t, resp, http.StatusUnsupportedMediaType)
@@ -675,7 +674,7 @@ func TestUpdate(t *testing.T) {
 			Method:      http.MethodPut,
 			Headers:     http.Header{"If-Match": {`"1"`}},
 			Path:        "/api/lcards/" + id,
-			ContentType: echo.MIMEApplicationJSON,
+			ContentType: "application/json",
 			Body:        `{"title":"","description":"New Description"}`,
 		})
 		testkit.AssertStatus(t, resp, http.StatusBadRequest)
@@ -706,7 +705,7 @@ func TestUpdate(t *testing.T) {
 			Method:      http.MethodPut,
 			Headers:     http.Header{"If-Match": {`"1"`}},
 			Path:        "/api/lcards/" + id,
-			ContentType: echo.MIMEApplicationJSON,
+			ContentType: "application/json",
 			Body:        strings.Repeat("a", app.MaxBodyBytes+1),
 			Chunked:     true,
 		})
@@ -773,7 +772,7 @@ func TestLifecycle(t *testing.T) {
 	resp := testkit.Do(t, srv, testkit.DoOpts{
 		Method:      http.MethodPost,
 		Path:        "/api/lcards",
-		ContentType: echo.MIMEApplicationJSON,
+		ContentType: "application/json",
 		Body:        `{"title":"Initial Title","description":"Initial Description"}`,
 	})
 	testkit.AssertStatus(t, resp, http.StatusCreated)
@@ -784,7 +783,7 @@ func TestLifecycle(t *testing.T) {
 		t.Fatalf("unmarshal POST response: %v\n%s", err, resp.Body)
 	}
 
-	location := resp.Header.Get(echo.HeaderLocation)
+	location := resp.Header.Get("Location")
 	if location == "" {
 		t.Fatal("POST response: missing Location header")
 	}
@@ -807,7 +806,7 @@ func TestLifecycle(t *testing.T) {
 		Method:      http.MethodPut,
 		Headers:     http.Header{"If-Match": {`"1"`}},
 		Path:        path,
-		ContentType: echo.MIMEApplicationJSON,
+		ContentType: "application/json",
 		Body:        `{"title":"Updated Title","description":"Updated Description"}`,
 	})
 	testkit.AssertStatus(t, resp, http.StatusNoContent)
@@ -850,7 +849,7 @@ func TestPreconditions(t *testing.T) {
 	t.Parallel()
 	srv, _ := newServer(t)
 	created := testkit.Do(t, srv, testkit.DoOpts{
-		Method: http.MethodPost, Path: "/api/lcards", ContentType: echo.MIMEApplicationJSON,
+		Method: http.MethodPost, Path: "/api/lcards", ContentType: "application/json",
 		Body: `{"title":"Original","description":"Original description"}`,
 	})
 	testkit.AssertStatus(t, created, http.StatusCreated)
@@ -877,14 +876,14 @@ func TestPreconditions(t *testing.T) {
 	body := `{"title":"Updated","description":"Updated description"}`
 	for _, method := range []string{http.MethodPut, http.MethodDelete} {
 		for _, value := range []string{"", "*", `W/"1"`, `"1", "2"`, "1", `"0"`, `"-1"`, `"9223372036854775808"`} {
-			resp := testkit.Do(t, srv, testkit.DoOpts{Method: method, Path: path, Headers: http.Header{"If-Match": {value}}, ContentType: echo.MIMEApplicationJSON, Body: body})
+			resp := testkit.Do(t, srv, testkit.DoOpts{Method: method, Path: path, Headers: http.Header{"If-Match": {value}}, ContentType: "application/json", Body: body})
 			testkit.AssertStatus(t, resp, http.StatusPreconditionRequired)
 			testkit.AssertJSON(t, resp.Body, `{"code":"precondition_required"}`)
 		}
-		resp := testkit.Do(t, srv, testkit.DoOpts{Method: method, Path: path, Headers: http.Header{"If-Match": {`"1"`, `"1"`}}, ContentType: echo.MIMEApplicationJSON, Body: body})
+		resp := testkit.Do(t, srv, testkit.DoOpts{Method: method, Path: path, Headers: http.Header{"If-Match": {`"1"`, `"1"`}}, ContentType: "application/json", Body: body})
 		testkit.AssertStatus(t, resp, http.StatusPreconditionRequired)
 	}
-	put := testkit.DoOpts{Method: http.MethodPut, Path: path, Headers: http.Header{"If-Match": {get.Header.Get("ETag")}}, ContentType: echo.MIMEApplicationJSON, Body: body}
+	put := testkit.DoOpts{Method: http.MethodPut, Path: path, Headers: http.Header{"If-Match": {get.Header.Get("ETag")}}, ContentType: "application/json", Body: body}
 	updated := testkit.Do(t, srv, put)
 	testkit.AssertStatus(t, updated, http.StatusNoContent)
 	if got := updated.Header.Get("ETag"); got != `"2"` {
@@ -897,7 +896,7 @@ func TestPreconditions(t *testing.T) {
 	testkit.AssertStatus(t, staleDelete, http.StatusPreconditionFailed)
 	testkit.AssertJSON(t, staleDelete.Body, `{"code":"precondition_failed"}`)
 	for _, method := range []string{http.MethodPut, http.MethodDelete} {
-		unknown := testkit.Do(t, srv, testkit.DoOpts{Method: method, Path: "/api/lcards/01a1730e-199d-7f9f-b59d-3bcd6f84066d", Headers: http.Header{"If-Match": {`"99"`}}, ContentType: echo.MIMEApplicationJSON, Body: body})
+		unknown := testkit.Do(t, srv, testkit.DoOpts{Method: method, Path: "/api/lcards/01a1730e-199d-7f9f-b59d-3bcd6f84066d", Headers: http.Header{"If-Match": {`"99"`}}, ContentType: "application/json", Body: body})
 		testkit.AssertStatus(t, unknown, http.StatusNotFound)
 	}
 	final := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: path})
@@ -923,7 +922,7 @@ func TestConcurrentUpdates(t *testing.T) {
 			<-start
 			resp := testkit.Do(t, srv, testkit.DoOpts{
 				Method: http.MethodPut, Path: "/api/lcards/" + id,
-				Headers: http.Header{"If-Match": {`"1"`}}, ContentType: echo.MIMEApplicationJSON,
+				Headers: http.Header{"If-Match": {`"1"`}}, ContentType: "application/json",
 				Body: fmt.Sprintf(`{"title":"Writer %d","description":"Description"}`, i),
 			})
 			results <- resp.StatusCode
