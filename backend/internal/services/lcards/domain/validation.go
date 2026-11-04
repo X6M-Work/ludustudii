@@ -14,36 +14,12 @@ const (
 // most TitleMaxLength runes. It returns the first failed check as a
 // *validator.FieldError for the "title" field.
 func ValidateTitle(val string) error {
-	if err := validator.Trimmed("title", val); err != nil {
-		return err
-	}
-	if err := validator.Normalized("title", val); err != nil {
-		return err
-	}
-	if err := validator.Required("title", val); err != nil {
-		return err
-	}
-	if err := validator.MaxLength("title", val, TitleMaxLength); err != nil {
-		return err
-	}
-	return nil
+	return validator.ValidateMaxLengthText("title", val, TitleMaxLength)
 }
 
 // ValidateDescription checks that a card description is trimmed, in NFC, not
 // empty and at most DescriptionMaxLength runes. It returns the first failed
 // check as a *validator.FieldError for the "description" field.
 func ValidateDescription(val string) error {
-	if err := validator.Trimmed("description", val); err != nil {
-		return err
-	}
-	if err := validator.Normalized("description", val); err != nil {
-		return err
-	}
-	if err := validator.Required("description", val); err != nil {
-		return err
-	}
-	if err := validator.MaxLength("description", val, DescriptionMaxLength); err != nil {
-		return err
-	}
-	return nil
+	return validator.ValidateMaxLengthText("description", val, DescriptionMaxLength)
 }
