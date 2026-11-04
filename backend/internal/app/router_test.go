@@ -293,7 +293,7 @@ func TestNewRouter_UnpinnedContract(t *testing.T) {
 			if id != "first" {
 				t.Fatalf("request ID: %q", id)
 			}
-		} else if len(id) != 32 {
+		} else if id == "" {
 			t.Fatalf("generated ID: %q", id)
 		}
 	}

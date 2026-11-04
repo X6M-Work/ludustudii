@@ -81,7 +81,7 @@ func TestRouter_RequestIDHeader(t *testing.T) {
 				t.Fatalf("ID: %q, want %q", id, value)
 			}
 		} else {
-			if len(id) != 32 || strings.ContainsFunc(id, func(ch rune) bool { return (ch < 'a' || ch > 'z') && (ch < 'A' || ch > 'Z') }) {
+			if len(id) < 26 || strings.ContainsFunc(id, func(ch rune) bool { return (ch < 'A' || ch > 'Z') && (ch < '2' || ch > '7') }) {
 				t.Fatalf("generated ID: %q", id)
 			}
 		}

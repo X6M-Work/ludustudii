@@ -5,7 +5,6 @@ import (
 	"crypto/rand"
 	"fmt"
 	"log/slog"
-	"math/big"
 	"net/http"
 	"slices"
 	"time"
@@ -47,8 +46,8 @@ func Recover(onError ErrorHandler) Middleware {
 	}
 }
 
-// RequestID reuses the first incoming X-Request-Id, or generates 32 ASCII
-// letters when it is empty. It sets the response header and passes next a
+// RequestID reuses the first incoming X-Request-Id, or generates a random
+// base32 string when it is empty. It sets the response header and passes next a
 // request whose context is enriched. Because next receives a new request,
 // RequestID must run outside RequestLogger, which reads the routed request.
 func RequestID(withID func(context.Context, string) context.Context) Middleware {
@@ -56,25 +55,12 @@ func RequestID(withID func(context.Context, string) context.Context) Middleware 
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			id := r.Header.Get("X-Request-Id")
 			if id == "" {
-				id = requestID()
+				id = rand.Text()
 			}
 			w.Header().Set("X-Request-Id", id)
 			next.ServeHTTP(w, r.WithContext(withID(r.Context(), id)))
 		})
 	}
-}
-
-func requestID() string {
-	const letters = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz"
-	var id [32]byte
-	for i := range id {
-		n, err := rand.Int(rand.Reader, big.NewInt(int64(len(letters))))
-		if err != nil {
-			panic(err)
-		}
-		id[i] = letters[n.Int64()]
-	}
-	return string(id[:])
 }
 
 // RequestLogger logs one request record after the final response, including
