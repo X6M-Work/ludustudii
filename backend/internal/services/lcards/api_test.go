@@ -962,3 +962,39 @@ func TestConcurrentUpdates(t *testing.T) {
 		t.Fatalf("final version %d, ETag %q", card.Version, final.Header.Get("ETag"))
 	}
 }
+
+func TestUnknownRequestFields(t *testing.T) {
+	t.Parallel()
+	for _, method := range []string{http.MethodPost, http.MethodPut} {
+		t.Run(method, func(t *testing.T) {
+			t.Parallel()
+			srv, db := newServer(t)
+			const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
+			original := cardRow{Title: "Original", Description: "Original description"}
+			insertCard(t, db, id, original.Title, original.Description)
+			path := "/api/lcards"
+			if method == http.MethodPut {
+				path += "/" + id
+			}
+			resp := testkit.Do(t, srv, testkit.DoOpts{
+				Method:      method,
+				Path:        path,
+				Headers:     http.Header{"If-Match": {`"1"`}},
+				ContentType: "application/json",
+				Body:        `{"title":"Changed","description":"Changed description","extra":true}`,
+			})
+			testkit.AssertStatus(t, resp, http.StatusBadRequest)
+			testkit.AssertJSON(t, resp.Body, `{"code":"bind_error"}`)
+			if row := getCard(t, db, id); row != original {
+				t.Errorf("stored row: got %+q, want %+q", row, original)
+			}
+			var count int
+			if err := db.QueryRowContext(t.Context(), `SELECT count(*) FROM learning_cards`).Scan(&count); err != nil {
+				t.Fatal(err)
+			}
+			if count != 1 {
+				t.Errorf("card count: got %d, want 1", count)
+			}
+		})
+	}
+}

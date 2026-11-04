@@ -6,6 +6,7 @@ CardId:
   example: 019a0000-0000-7000-8000-000000000001
 LearningCardInput:
   type: object
+  additionalProperties: false
   description: |
     Length constraints apply to the canonical form of each field: NFC
     normalized, with leading and trailing white space removed, counted in

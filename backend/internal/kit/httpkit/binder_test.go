@@ -73,6 +73,10 @@ func TestJSONBinder(t *testing.T) {
 			body:        `{"title":`,
 			wantStatus:  http.StatusBadRequest,
 		},
+		{name: "unknown field rejected", contentType: "application/json", body: `{"title":"Hello","extra":true}`, wantStatus: http.StatusBadRequest},
+		{name: "trailing whitespace accepted", contentType: "application/json", body: "{\"title\":\"Hello\"} \n\t", want: payload{Title: "Hello"}},
+		{name: "trailing garbage rejected", contentType: "application/json", body: `{"title":"Hello"} invalid`, wantStatus: http.StatusBadRequest},
+		{name: "trailing null rejected", contentType: "application/json", body: `{"title":"Hello"} null`, wantStatus: http.StatusBadRequest},
 		{name: "trailing JSON rejected", contentType: "application/json", body: `{"title":"one"}{"title":"two"}`, wantStatus: http.StatusBadRequest},
 		{name: "media type is case sensitive", contentType: "Application/JSON", body: `{}`, wantErr: ErrUnsupportedMediaType, wantStatus: http.StatusUnsupportedMediaType},
 		{name: "null accepted", contentType: "application/json", body: `null`, want: payload{}},
@@ -193,3 +197,19 @@ func TestJSONBinder_ReadErrors(t *testing.T) {
 type failingReader struct{ err error }
 
 func (r failingReader) Read([]byte) (int, error) { return 0, r.err }
+
+func TestJSONBinder_UnknownNestedField(t *testing.T) {
+	t.Parallel()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", strings.NewReader(`{"item":{"title":"Hello","extra":true}}`))
+	req.Header.Set("Content-Type", "application/json")
+	var dst struct {
+		Item struct {
+			Title string `json:"title"`
+		} `json:"item"`
+	}
+	err := BindJSON(req, &dst)
+	typed, ok := errors.AsType[*StatusError](err)
+	if !ok || typed.Code != http.StatusBadRequest || typed.Response.Code != erresp.CodeBinding {
+		t.Fatalf("error: %#v, want 400 %s", typed, erresp.CodeBinding)
+	}
+}

@@ -116,7 +116,8 @@ through `log/slog` (`fmt.Print*` and `log.*` are forbidden by the linter).
 is the source of truth; the notes below summarize it.
 
 - **Requests** with a body must use `Content-Type: application/json` (otherwise
-  `415`). Bodies are limited to 1 MiB (`413`).
+  `415`). Bodies are limited to 1 MiB (`413`). Unknown JSON fields are rejected
+  with `400 bind_error`.
 - **Input** strings are normalized to Unicode NFC and trimmed before
   validation. Title is 1–200 and description 1–2000 code points; the database
   enforces the same limits with `CHECK` constraints.

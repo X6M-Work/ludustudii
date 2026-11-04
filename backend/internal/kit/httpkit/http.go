@@ -2,6 +2,7 @@
 package httpkit
 
 import (
+	"bytes"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -87,7 +88,8 @@ func Text(w http.ResponseWriter, status int, value string) error {
 
 // BindJSON binds only the JSON body, ignoring query and path values. A known
 // empty body leaves target unchanged; other bodies require application/json
-// (parameters ignored). Malformed JSON returns 400 and oversized input 413.
+// (parameters ignored). Malformed JSON, unknown fields and trailing JSON
+// return 400; oversized input returns 413.
 func BindJSON(r *http.Request, target any) error {
 	if r.ContentLength == 0 {
 		return nil
@@ -98,7 +100,18 @@ func BindJSON(r *http.Request, target any) error {
 	}
 	data, err := io.ReadAll(r.Body)
 	if err == nil {
-		err = json.Unmarshal(data, target)
+		dec := json.NewDecoder(bytes.NewReader(data))
+		dec.DisallowUnknownFields()
+		err = dec.Decode(target)
+		if err == nil {
+			if trailingErr := dec.Decode(new(any)); !errors.Is(trailingErr, io.EOF) {
+				if trailingErr != nil {
+					err = trailingErr
+				} else {
+					err = errors.New("unexpected trailing JSON value")
+				}
+			}
+		}
 	}
 	if err != nil {
 		if mbe, ok := errors.AsType[*http.MaxBytesError](err); ok {

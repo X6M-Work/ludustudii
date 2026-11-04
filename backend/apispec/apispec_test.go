@@ -25,8 +25,7 @@ func TestLoad(t *testing.T) {
 }
 
 // Every operation has a unique operationId, every GET has a documented HEAD,
-// object schemas reachable from responses are closed, and object schemas
-// reachable from request bodies deliberately tolerate unknown fields.
+// object schemas reachable from responses and request bodies are closed.
 func TestContractConventions(t *testing.T) {
 	t.Parallel()
 	doc, err := apispec.Load()
@@ -59,8 +58,8 @@ func TestContractConventions(t *testing.T) {
 				for mediaType, media := range op.RequestBody.Value.Content {
 					where := fmt.Sprintf("%s %s request %s", method, path, mediaType)
 					walkObjects(where, media.Schema, inputs, func(where string, s *openapi3.Schema) {
-						if s.AdditionalProperties.Has != nil || s.AdditionalProperties.Schema != nil {
-							t.Errorf("%s should permit unknown input fields", where)
+						if s.AdditionalProperties.Has == nil || *s.AdditionalProperties.Has || s.AdditionalProperties.Schema != nil {
+							t.Errorf("%s must declare additionalProperties: false", where)
 						}
 					})
 				}
