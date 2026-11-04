@@ -28,6 +28,7 @@ func Adapt(h HandlerFunc, onError ErrorHandler) http.Handler {
 
 // StatusError carries a public HTTP status and response body, plus an optional
 // underlying cause that is logged without exposing it to clients.
+// Use the constructors or shared sentinels to build status errors.
 type StatusError struct {
 	Code     int
 	Err      error
@@ -101,9 +102,6 @@ func BindJSON(r *http.Request, target any) error {
 	if err != nil {
 		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
 			return ErrPayloadTooLarge
-		}
-		if _, ok := errors.AsType[*StatusError](err); ok {
-			return err
 		}
 		return &StatusError{Code: http.StatusBadRequest, Err: err, Response: erresp.Binding()}
 	}
