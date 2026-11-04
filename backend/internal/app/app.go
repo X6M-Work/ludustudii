@@ -48,7 +48,7 @@ func Run() (err error) {
 		return fmt.Errorf("load client app: %w", err)
 	}
 
-	var apiDocs *apidocs.Handler
+	var adh *apidocs.Handler
 	if ev.AppAPIDocs {
 		// The API keeps running without its reference when only the Scalar
 		// bundle is missing, as in a checkout without frontend dependencies.
@@ -61,7 +61,7 @@ func Run() (err error) {
 		case err != nil:
 			return fmt.Errorf("load api docs: %w", err)
 		default:
-			apiDocs = apidocs.NewHandler(d)
+			adh = apidocs.NewHandler(d)
 			slog.Info("API reference enabled", "path", apidocs.Path)
 		}
 	}
@@ -82,7 +82,7 @@ func Run() (err error) {
 		}
 	}()
 
-	router := NewRouter(log, ca, apiDocs, db)
+	router := NewRouter(log, ca, adh, db)
 
 	server := &http.Server{
 		Addr:         net.JoinHostPort("", ev.AppPort),
