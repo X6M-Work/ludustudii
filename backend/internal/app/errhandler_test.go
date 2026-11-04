@@ -78,6 +78,7 @@ func TestHTTPErrorHandler(t *testing.T) {
 		{name: "precondition cause", method: http.MethodPut, err: httpkit.PreconditionRequired(errors.New("invalid ETag")), wantStatus: http.StatusPreconditionRequired, wantJSON: `{"code":"precondition_required"}`},
 		{name: "wrapped validation fields", method: http.MethodPost, err: fmt.Errorf("request: %w", httpkit.Validation(errors.Join(validator.Required("title", ""), validator.Required("description", "")))), wantStatus: http.StatusBadRequest, wantJSON: `{"code":"validation_error","errors":[{"field":"title","code":"required"},{"field":"description","code":"required"}]}`},
 		{name: "binding cause", method: http.MethodPost, err: bindingError(t), wantStatus: http.StatusBadRequest, wantJSON: `{"code":"bind_error"}`},
+		{name: "body limit cause", method: http.MethodPost, err: bodyLimitError(t), wantStatus: http.StatusRequestEntityTooLarge, wantJSON: `{"code":"payload_too_large"}`},
 		{name: "status error retains supplied response", method: http.MethodGet, err: &httpkit.StatusError{Code: http.StatusNotFound, Response: erresp.PreconditionFailed()}, wantStatus: http.StatusNotFound, wantJSON: `{"code":"precondition_failed"}`},
 		{name: "typed server error sent as supplied", method: http.MethodGet, err: &httpkit.StatusError{Code: http.StatusServiceUnavailable, Response: erresp.Unexpected()}, wantStatus: http.StatusServiceUnavailable, wantJSON: `{"code":"unexpected_error"}`},
 		{name: "unexpected sentinel", method: http.MethodGet, err: httpkit.ErrUnexpected, wantStatus: http.StatusInternalServerError, wantJSON: `{"code":"unexpected_error"}`},
@@ -155,4 +156,17 @@ func bindingError(t *testing.T) error {
 	req.Header.Set("Content-Type", "application/json")
 	var target any
 	return httpkit.BindJSON(req, &target)
+}
+
+func bodyLimitError(t *testing.T) error {
+	t.Helper()
+	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/lcards", strings.NewReader(`{"title":"too long"}`))
+	req.Header.Set("Content-Type", "application/json")
+	req.Body = http.MaxBytesReader(nil, req.Body, 8)
+	var target any
+	err := httpkit.BindJSON(req, &target)
+	if err == nil || !strings.Contains(err.Error(), "8-byte limit") {
+		t.Fatalf("expected body limit in binding error, got %v", err)
+	}
+	return err
 }

@@ -174,12 +174,14 @@ func TestJSONBinder_ReadErrors(t *testing.T) {
 			if !ok || typed.Code != tt.status || typed.Response.Code != tt.code {
 				t.Fatalf("error: %#v, want %d %s", typed, tt.status, tt.code)
 			}
-			if tt.status == http.StatusRequestEntityTooLarge {
-				if !errors.Is(err, ErrPayloadTooLarge) {
-					t.Fatalf("error: %v, want ErrPayloadTooLarge", err)
-				}
-			} else if !errors.Is(err, tt.cause) {
+			if !errors.Is(err, tt.cause) {
 				t.Fatalf("cause lost: %v", err)
+			}
+			if tt.status == http.StatusRequestEntityTooLarge {
+				limitErr, ok := errors.AsType[*http.MaxBytesError](err)
+				if !ok || limitErr.Limit != 8 || !strings.Contains(err.Error(), "8-byte limit") {
+					t.Fatalf("body limit lost: %v", err)
+				}
 			}
 		})
 	}

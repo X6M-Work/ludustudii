@@ -28,8 +28,9 @@ func TestBodyLimit(t *testing.T) {
 			t.Parallel()
 			entered := false
 			onError := func(w http.ResponseWriter, _ *http.Request, err error) {
-				if !errors.Is(err, ErrPayloadTooLarge) {
-					t.Errorf("error: %v, want ErrPayloadTooLarge", err)
+				typed, ok := errors.AsType[*StatusError](err)
+				if !ok || typed.Code != http.StatusRequestEntityTooLarge || typed.Response.Code != ErrPayloadTooLarge.Response.Code {
+					t.Errorf("error: %v, want payload-too-large status and response", err)
 				}
 				w.WriteHeader(StatusCode(err))
 			}

@@ -4,6 +4,7 @@ package httpkit
 import (
 	"encoding/json"
 	"errors"
+	"fmt"
 	"io"
 	"net/http"
 	"strings"
@@ -100,8 +101,12 @@ func BindJSON(r *http.Request, target any) error {
 		err = json.Unmarshal(data, target)
 	}
 	if err != nil {
-		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
-			return ErrPayloadTooLarge
+		if mbe, ok := errors.AsType[*http.MaxBytesError](err); ok {
+			return &StatusError{
+				Code:     http.StatusRequestEntityTooLarge,
+				Err:      fmt.Errorf("body exceeds %d-byte limit: %w", mbe.Limit, err),
+				Response: erresp.PayloadTooLarge(),
+			}
 		}
 		return &StatusError{Code: http.StatusBadRequest, Err: err, Response: erresp.Binding()}
 	}
