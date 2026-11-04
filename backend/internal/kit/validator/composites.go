@@ -1,8 +1,8 @@
 package validator
 
-// ValidateMaxLengthText checks that val is trimmed, in NFC, not empty and at
+// MaxLengthText checks that val is trimmed, in NFC, not empty and at
 // most max runes. It returns the first failed check as a *FieldError for field.
-func ValidateMaxLengthText(field, val string, max int) error {
+func MaxLengthText(field, val string, max int) error {
 	if err := Trimmed(field, val); err != nil {
 		return err
 	}

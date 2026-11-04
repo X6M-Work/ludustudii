@@ -7,7 +7,7 @@ import (
 	"testing"
 )
 
-func TestValidateMaxLengthText(t *testing.T) {
+func TestMaxLengthText(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -38,7 +38,7 @@ func TestValidateMaxLengthText(t *testing.T) {
 		t.Run(tt.name, func(t *testing.T) {
 			t.Parallel()
 
-			err := ValidateMaxLengthText(tt.field, tt.val, tt.max)
+			err := MaxLengthText(tt.field, tt.val, tt.max)
 			if tt.wantCode == "" {
 				if err != nil {
 					t.Fatalf("unexpected error: %v", err)

@@ -14,12 +14,12 @@ const (
 // most TitleMaxLength runes. It returns the first failed check as a
 // *validator.FieldError for the "title" field.
 func ValidateTitle(val string) error {
-	return validator.ValidateMaxLengthText("title", val, TitleMaxLength)
+	return validator.MaxLengthText("title", val, TitleMaxLength)
 }
 
 // ValidateDescription checks that a card description is trimmed, in NFC, not
 // empty and at most DescriptionMaxLength runes. It returns the first failed
 // check as a *validator.FieldError for the "description" field.
 func ValidateDescription(val string) error {
-	return validator.ValidateMaxLengthText("description", val, DescriptionMaxLength)
+	return validator.MaxLengthText("description", val, DescriptionMaxLength)
 }
