@@ -17,7 +17,7 @@ RequestId:
 Limit:
   name: limit
   in: query
-  description: Page size in canonical decimal form, without leading zeros, a plus sign, or whitespace. Omitted or empty values use 20.
+  description: Page size in canonical decimal form, without leading zeros, a plus sign, or whitespace. Omitted or empty values use 20. Malformed or overflowing integers return bind_error.
   schema:
     type: integer
     minimum: 1

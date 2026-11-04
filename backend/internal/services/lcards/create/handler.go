@@ -18,7 +18,8 @@ type request struct {
 }
 
 type response struct {
-	ID string `json:"id"`
+	ID      string `json:"id"`
+	Version int64  `json:"version"`
 }
 
 type creator interface {
@@ -90,5 +91,5 @@ func toParams(req request) createParams {
 }
 
 func toResp(data row) response {
-	return response{ID: data.ID}
+	return response(data)
 }

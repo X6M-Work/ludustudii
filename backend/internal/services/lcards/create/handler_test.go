@@ -107,7 +107,7 @@ func TestHandler_Handle(t *testing.T) {
 				}
 			},
 			wantCode:     http.StatusCreated,
-			wantResp:     &response{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
+			wantResp:     &response{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", Version: 1},
 			wantLocation: "/api/lcards/01a1730e-199d-7f9f-b59d-3bcd6f84066c",
 		},
 	}
@@ -250,7 +250,7 @@ func TestHandler_Wiring(t *testing.T) {
 		t.Fatalf("unmarshal response: %v", err)
 	}
 
-	wantResp := response{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"}
+	wantResp := response{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", Version: 1}
 	if gotResp != wantResp {
 		t.Errorf("resp: got %+v, want %+v", gotResp, wantResp)
 	}
@@ -326,7 +326,7 @@ func TestToResp(t *testing.T) {
 
 	const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
 	got := toResp(row{ID: id, Version: 1})
-	want := response{ID: id}
+	want := response{ID: id, Version: 1}
 	if got != want {
 		t.Errorf("resp: got %+v, want %+v", got, want)
 	}

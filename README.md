@@ -130,7 +130,9 @@ is the source of truth; the notes below summarize it.
   sanitization, validation, then storage. Each successful update increments
   the version atomically; clients must reload after a conflict.
 - **Pagination**: `limit` (1–100, default 20) and `cursor` (the previous
-  page's `next_cursor`). `next_cursor` is `null` on the last page.
+  page's `next_cursor`). `next_cursor` is `null` on the last page. Malformed
+  or overflowing limits return `bind_error`; integer limits outside 1–100
+  return `validation_error` with `out_of_range`.
 - **Request IDs**: every response carries `X-Request-Id`. A client-supplied
   value is reused, otherwise one is generated; it is attached to every log
   record for that request.

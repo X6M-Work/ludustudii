@@ -8,6 +8,40 @@ import (
 	"testing"
 )
 
+func TestEmptyOrUUID7(t *testing.T) {
+	t.Parallel()
+
+	tests := []struct {
+		name    string
+		val     string
+		wantErr bool
+	}{
+		{name: "empty"},
+		{name: "canonical UUID7", val: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
+		{name: "invalid", val: "bad", wantErr: true},
+		{name: "whitespace", val: " ", wantErr: true},
+		{name: "uppercase", val: "01A1730E-199D-7F9F-B59D-3BCD6F84066C", wantErr: true},
+		{name: "wrong version", val: "01a1730e-199d-4f9f-b59d-3bcd6f84066c", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+
+			err := EmptyOrUUID7("cursor", tt.val)
+			if !tt.wantErr {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			fe, ok := errors.AsType[*FieldError](err)
+			if !ok || fe.Field != "cursor" || fe.Code != CodeInvalidUUID7 || !errors.Is(err, ErrInvalidUUID7) {
+				t.Fatalf("expected cursor invalid_uuid7 field error, got %v", err)
+			}
+		})
+	}
+}
+
 func TestUUID7(t *testing.T) {
 	t.Parallel()
 

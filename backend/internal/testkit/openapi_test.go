@@ -106,7 +106,7 @@ func TestCheckResponse(t *testing.T) {
 			path:    "/api/lcards",
 			status:  http.StatusOK,
 			headers: jsonHeaders(),
-			body:    `{"id":"` + validID + `"}`,
+			body:    `{"id":"` + validID + `","version":1}`,
 			wantErr: "status 200 is not documented",
 		},
 		{
@@ -115,7 +115,7 @@ func TestCheckResponse(t *testing.T) {
 			path:    "/api/lcards",
 			status:  http.StatusCreated,
 			headers: jsonHeaders("Location", "/api/lcards/"+validID),
-			body:    `{"id":"` + validID + `"}`,
+			body:    `{"id":"` + validID + `","version":1}`,
 		},
 		{
 			name:    "201 POST missing Location header fails",
@@ -123,7 +123,7 @@ func TestCheckResponse(t *testing.T) {
 			path:    "/api/lcards",
 			status:  http.StatusCreated,
 			headers: jsonHeaders(),
-			body:    `{"id":"` + validID + `"}`,
+			body:    `{"id":"` + validID + `","version":1}`,
 			wantErr: `header "Location" missing`,
 		},
 		{
@@ -370,7 +370,7 @@ func TestCheckResponse(t *testing.T) {
 			path:    "/api/lcards",
 			status:  http.StatusCreated,
 			headers: jsonHeaders("Location", "/api/lcards/"+validID),
-			body:    `{"id":"` + validID + `","extra":true}`,
+			body:    `{"id":"` + validID + `","version":1,"extra":true}`,
 			wantErr: `property "extra" is unsupported`,
 		},
 		{

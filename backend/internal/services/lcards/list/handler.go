@@ -5,7 +5,6 @@ import (
 	"context"
 	"errors"
 	"net/http"
-	"strconv"
 	"strings"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
@@ -14,7 +13,7 @@ import (
 )
 
 type request struct {
-	Limit  string
+	Limit  int
 	Cursor string
 }
 
@@ -37,6 +36,7 @@ type lister interface {
 // Handler serves the GET /api/lcards endpoint.
 type Handler struct {
 	store    lister
+	parse    func(r *http.Request) (request, error)
 	validate func(req request) error
 }
 
@@ -44,6 +44,7 @@ type Handler struct {
 func NewHandler(s lister) *Handler {
 	return &Handler{
 		store:    s,
+		parse:    parse,
 		validate: validate,
 	}
 }
@@ -56,10 +57,9 @@ func NewHandler(s lister) *Handler {
 func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 
-	query := r.URL.Query()
-	req := request{
-		Limit:  query.Get("limit"),
-		Cursor: query.Get("cursor"),
+	req, err := h.parse(r)
+	if err != nil {
+		return err
 	}
 
 	sanitize(&req)
@@ -76,29 +76,20 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 	return httpkit.JSON(w, http.StatusOK, toResp(data))
 }
 
+func parse(r *http.Request) (request, error) {
+	limit, err := httpkit.BindQueryInt(r, "limit", domain.ListDefaultLimit)
+	if err != nil {
+		return request{}, err
+	}
+	cursor := r.URL.Query().Get("cursor")
+	return request{Limit: limit, Cursor: cursor}, nil
+}
+
 func validate(req request) error {
 	return errors.Join(
-		validateLimit(req.Limit),
-		validateCursor(req.Cursor),
+		validator.IntRange("limit", req.Limit, domain.ListMinLimit, domain.ListMaxLimit),
+		validator.EmptyOrUUID7("cursor", req.Cursor),
 	)
-}
-
-func validateLimit(val string) error {
-	if val == "" {
-		return nil
-	}
-	if err := validator.Integer("limit", val); err != nil {
-		return err
-	}
-	n, _ := strconv.Atoi(val)
-	return validator.IntRange("limit", n, domain.ListMinLimit, domain.ListMaxLimit)
-}
-
-func validateCursor(val string) error {
-	if val == "" {
-		return nil
-	}
-	return validator.UUID7("cursor", val)
 }
 
 // sanitize lowercases the cursor, so it is accepted in any case like the
@@ -107,16 +98,8 @@ func sanitize(req *request) {
 	req.Cursor = strings.ToLower(req.Cursor)
 }
 
-// toParams runs after validate, so Limit is either empty or a valid integer.
 func toParams(req request) listParams {
-	limit := domain.ListDefaultLimit
-	if req.Limit != "" {
-		limit, _ = strconv.Atoi(req.Limit)
-	}
-	return listParams{
-		Limit:  limit,
-		Cursor: req.Cursor,
-	}
+	return listParams(req)
 }
 
 func toResp(data page) response {

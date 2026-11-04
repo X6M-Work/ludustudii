@@ -53,7 +53,7 @@
         }
       },
       "Limit": {
-        "description": "Page size in canonical decimal form, without leading zeros, a plus sign, or whitespace. Omitted or empty values use 20.",
+        "description": "Page size in canonical decimal form, without leading zeros, a plus sign, or whitespace. Omitted or empty values use 20. Malformed or overflowing integers return bind_error.",
         "in": "query",
         "name": "limit",
         "schema": {
@@ -384,10 +384,14 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/CardId"
+          },
+          "version": {
+            "$ref": "#/components/schemas/LearningCard/properties/version"
           }
         },
         "required": [
-          "id"
+          "id",
+          "version"
         ],
         "type": "object"
       },
@@ -428,7 +432,7 @@
         "additionalProperties": false,
         "properties": {
           "code": {
-            "description": "Card fields (title, description) report required or max_length.\nQuery parameters report invalid_integer or out_of_range (limit) and\ninvalid_uuid7 (cursor). untrimmed and not_normalized are reserved:\ncard fields are trimmed and NFC-normalized before validation, so\nthese codes are not currently returned.\n",
+            "description": "Card fields (title, description) report required or max_length.\nQuery parameters report out_of_range (limit) and\ninvalid_uuid7 (cursor). untrimmed and not_normalized are reserved:\ncard fields are trimmed and NFC-normalized before validation, so\nthese codes are not currently returned.\n",
             "enum": [
               "invalid_uuid7",
               "required",
@@ -641,7 +645,7 @@
                 }
               }
             },
-            "description": "Card created. The body contains its ID and Location contains its relative URL.",
+            "description": "Card created. The body contains its ID and version, and Location contains its relative URL.",
             "headers": {
               "ETag": {
                 "$ref": "#/components/headers/ETag"

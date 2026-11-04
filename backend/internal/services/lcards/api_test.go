@@ -315,12 +315,12 @@ func TestList(t *testing.T) {
 		{
 			name:  "limit not an integer",
 			query: "?limit=abc",
-			want:  `{"code":"validation_error","errors":[{"field":"limit","code":"invalid_integer"}]}`,
+			want:  `{"code":"bind_error"}`,
 		},
 		{
 			name:  "limit not canonical",
 			query: "?limit=05",
-			want:  `{"code":"validation_error","errors":[{"field":"limit","code":"invalid_integer"}]}`,
+			want:  `{"code":"bind_error"}`,
 		},
 		{
 			name:  "limit below min",
@@ -453,7 +453,7 @@ func TestCreate(t *testing.T) {
 		if err := json.Unmarshal(resp.Body, &got); err != nil {
 			t.Fatalf("unmarshal response: %v\n%s", err, resp.Body)
 		}
-		testkit.AssertJSON(t, resp.Body, fmt.Sprintf(`{"id":%q}`, got.ID))
+		testkit.AssertJSON(t, resp.Body, fmt.Sprintf(`{"id":%q,"version":1}`, got.ID))
 
 		wantLocation := "/api/lcards/" + got.ID
 		if location := resp.Header.Get("Location"); location != wantLocation {

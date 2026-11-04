@@ -48,6 +48,7 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 
 	h := &Handler{
 		store:    m,
+		parse:    func(*http.Request) (request, error) { return request{}, nil },
 		validate: func(request) error { return nil },
 	}
 	if setup != nil {
@@ -68,6 +69,20 @@ func TestHandler_Handle(t *testing.T) {
 		wantResp    *response
 		wantErrCode string
 	}{
+		{
+			name: "parse error",
+			setup: func(h *Handler) {
+				h.parse = func(*http.Request) (request, error) {
+					return request{}, &httpkit.StatusError{Code: http.StatusBadRequest, Response: erresp.Binding()}
+				}
+				h.validate = func(request) error {
+					t.Fatal("unexpected validation after parse failure")
+					return nil
+				}
+			},
+			wantCode:    http.StatusBadRequest,
+			wantErrCode: erresp.CodeBinding,
+		},
 		{
 			name: "validation error",
 			setup: func(h *Handler) {
@@ -235,6 +250,48 @@ func TestHandler_Wiring(t *testing.T) {
 	}
 }
 
+func TestParse(t *testing.T) {
+	t.Parallel()
+
+	const cursor = "01A1730E-199D-7F9F-B59D-3BCD6F84066C"
+	tests := []struct {
+		name    string
+		query   string
+		want    request
+		wantErr bool
+	}{
+		{name: "omitted", want: request{Limit: domain.ListDefaultLimit}},
+		{name: "empty", query: "?limit=", want: request{Limit: domain.ListDefaultLimit}},
+		{name: "explicit", query: "?limit=5&cursor=" + cursor, want: request{Limit: 5, Cursor: cursor}},
+		{name: "zero for validation", query: "?limit=0", want: request{Limit: 0}},
+		{name: "negative for validation", query: "?limit=-1", want: request{Limit: -1}},
+		{name: "above maximum for validation", query: "?limit=101", want: request{Limit: 101}},
+		{name: "not integer", query: "?limit=abc", wantErr: true},
+		{name: "fraction", query: "?limit=1.5", wantErr: true},
+		{name: "leading zero", query: "?limit=05", wantErr: true},
+		{name: "plus sign", query: "?limit=%2B5", wantErr: true},
+		{name: "whitespace", query: "?limit=%205", wantErr: true},
+		{name: "overflow", query: "?limit=99999999999999999999999999999", wantErr: true},
+	}
+	for _, tt := range tests {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			r, _ := testContext(t, "/api/lcards"+tt.query)
+			got, err := parse(r)
+			if tt.wantErr {
+				typed, ok := errors.AsType[*httpkit.StatusError](err)
+				if !ok || typed.Code != http.StatusBadRequest || typed.Response.Code != erresp.CodeBinding || typed.Err == nil {
+					t.Fatalf("expected binding error retaining cause, got %v", err)
+				}
+				return
+			}
+			if err != nil || got != tt.want {
+				t.Fatalf("parse: got %+v, %v; want %+v", got, err, tt.want)
+			}
+		})
+	}
+}
+
 func TestValidate(t *testing.T) {
 	t.Parallel()
 
@@ -245,43 +302,33 @@ func TestValidate(t *testing.T) {
 		req      request
 		wantErrs []fieldErr
 	}{
-		{name: "empty", req: request{}},
-		{name: "valid", req: request{Limit: "5", Cursor: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"}},
-		{name: "limit at min", req: request{Limit: "1"}},
-		{name: "limit at max", req: request{Limit: "100"}},
-		{
-			name:     "limit not an integer",
-			req:      request{Limit: "abc"},
-			wantErrs: []fieldErr{{"limit", validator.CodeInvalidInteger}},
-		},
-		{
-			name:     "limit not canonical",
-			req:      request{Limit: "05"},
-			wantErrs: []fieldErr{{"limit", validator.CodeInvalidInteger}},
-		},
+		{name: "default", req: request{Limit: domain.ListDefaultLimit}},
+		{name: "valid", req: request{Limit: 5, Cursor: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"}},
+		{name: "limit at min", req: request{Limit: 1}},
+		{name: "limit at max", req: request{Limit: 100}},
 		{
 			name:     "limit below min",
-			req:      request{Limit: "0"},
+			req:      request{Limit: 0},
 			wantErrs: []fieldErr{{"limit", validator.CodeOutOfRange}},
 		},
 		{
 			name:     "limit above max",
-			req:      request{Limit: "101"},
+			req:      request{Limit: 101},
 			wantErrs: []fieldErr{{"limit", validator.CodeOutOfRange}},
 		},
 		{
 			name:     "cursor invalid",
-			req:      request{Cursor: "not-a-uuid"},
+			req:      request{Limit: domain.ListDefaultLimit, Cursor: "not-a-uuid"},
 			wantErrs: []fieldErr{{"cursor", validator.CodeInvalidUUID7}},
 		},
 		{
 			name:     "cursor uppercase",
-			req:      request{Cursor: "01A1730E-199D-7F9F-B59D-3BCD6F84066C"},
+			req:      request{Limit: domain.ListDefaultLimit, Cursor: "01A1730E-199D-7F9F-B59D-3BCD6F84066C"},
 			wantErrs: []fieldErr{{"cursor", validator.CodeInvalidUUID7}},
 		},
 		{
 			name: "both invalid",
-			req:  request{Limit: "0", Cursor: "bad"},
+			req:  request{Limit: 0, Cursor: "bad"},
 			wantErrs: []fieldErr{
 				{"limit", validator.CodeOutOfRange},
 				{"cursor", validator.CodeInvalidUUID7},
@@ -326,8 +373,8 @@ func TestSanitize(t *testing.T) {
 		{name: "empty", req: request{}, want: request{}},
 		{
 			name: "lowercase cursor unchanged",
-			req:  request{Limit: "5", Cursor: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
-			want: request{Limit: "5", Cursor: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
+			req:  request{Limit: 5, Cursor: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
+			want: request{Limit: 5, Cursor: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
 		},
 		{
 			name: "uppercase cursor lowercased",
@@ -361,12 +408,12 @@ func TestToParams(t *testing.T) {
 	}{
 		{
 			name: "default limit",
-			req:  request{},
+			req:  request{Limit: domain.ListDefaultLimit},
 			want: listParams{Limit: domain.ListDefaultLimit},
 		},
 		{
 			name: "explicit limit and cursor",
-			req:  request{Limit: "5", Cursor: id},
+			req:  request{Limit: 5, Cursor: id},
 			want: listParams{Limit: 5, Cursor: id},
 		},
 	}

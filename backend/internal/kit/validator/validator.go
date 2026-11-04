@@ -24,6 +24,14 @@ const (
 	CodeOutOfRange     = "out_of_range"
 )
 
+// EmptyOrUUID7 accepts an empty string or a UUID7 in canonical form.
+func EmptyOrUUID7(field, val string) error {
+	if val == "" {
+		return nil
+	}
+	return UUID7(field, val)
+}
+
 // UUID7 checks that val is a UUID version 7 (RFC 9562 variant) in canonical
 // form: lowercase and hyphenated, without braces or a urn:uuid: prefix.
 func UUID7(field, val string) error {

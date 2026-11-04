@@ -45,10 +45,12 @@ LearningCard:
 CreatedLearningCard:
   type: object
   additionalProperties: false
-  required: [id]
+  required: [id, version]
   properties:
     id:
       $ref: '#/CardId'
+    version:
+      $ref: '#/LearningCard/properties/version'
 LearningCardPage:
   type: object
   additionalProperties: false
