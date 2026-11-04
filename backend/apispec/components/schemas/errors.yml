@@ -15,7 +15,6 @@ ErrorResponse:
         - payload_too_large
         - unsupported_media_type
         - unexpected_error
-        - request_error
     errors:
       type: array
       description: Per-field failures, included only for validation_error responses.

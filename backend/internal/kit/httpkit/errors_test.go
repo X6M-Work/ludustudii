@@ -6,6 +6,7 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
+	"strings"
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
@@ -29,6 +30,9 @@ func TestRequestErrorsRetainCause(t *testing.T) {
 			err := fmt.Errorf("request: %w", tt.wrap(cause))
 			if !errors.Is(err, cause) {
 				t.Fatalf("cause lost: %v", err)
+			}
+			if !strings.Contains(err.Error(), cause.Error()) {
+				t.Fatalf("cause missing from error text: %v", err)
 			}
 			typed, ok := errors.AsType[*StatusError](err)
 			if !ok || StatusCode(err) != tt.status || typed.Response.Code != tt.code {

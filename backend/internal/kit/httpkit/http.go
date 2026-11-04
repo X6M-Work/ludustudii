@@ -26,33 +26,36 @@ func Adapt(h HandlerFunc, onError ErrorHandler) http.Handler {
 	})
 }
 
-// StatusError carries a public HTTP status, an optional named response and
-// an underlying cause. The central error handler logs the cause without exposing it.
+// StatusError carries a public HTTP status and response body, plus an optional
+// underlying cause that is logged without exposing it to clients.
 type StatusError struct {
 	Code     int
 	Err      error
 	Response erresp.ErrorResponse
 }
 
-func (e *StatusError) Error() string { return http.StatusText(e.Code) }
+func (e *StatusError) Error() string {
+	if e.Err != nil {
+		return http.StatusText(e.Code) + ": " + e.Err.Error()
+	}
+	return http.StatusText(e.Code)
+}
 
 // Unwrap returns the underlying error.
 func (e *StatusError) Unwrap() error { return e.Err }
 
-// Routing and binding errors retain their named HTTP statuses.
+// Shared errors carry their HTTP statuses and response bodies.
 var (
-	ErrNotFound             = &StatusError{Code: http.StatusNotFound}
-	ErrMethodNotAllowed     = &StatusError{Code: http.StatusMethodNotAllowed}
-	ErrPayloadTooLarge      = &StatusError{Code: http.StatusRequestEntityTooLarge}
-	ErrUnsupportedMediaType = &StatusError{Code: http.StatusUnsupportedMediaType}
+	ErrNotFound             = &StatusError{Code: http.StatusNotFound, Response: erresp.NotFound()}
+	ErrMethodNotAllowed     = &StatusError{Code: http.StatusMethodNotAllowed, Response: erresp.MethodNotAllowed()}
+	ErrPayloadTooLarge      = &StatusError{Code: http.StatusRequestEntityTooLarge, Response: erresp.PayloadTooLarge()}
+	ErrUnsupportedMediaType = &StatusError{Code: http.StatusUnsupportedMediaType, Response: erresp.UnsupportedMediaType()}
+	ErrPreconditionFailed   = &StatusError{Code: http.StatusPreconditionFailed, Response: erresp.PreconditionFailed()}
+	ErrUnexpected           = &StatusError{Code: http.StatusInternalServerError, Response: erresp.Unexpected()}
 )
 
 // StatusCode returns the status carried by err, or zero for an untyped error.
-// MaxBytesReader errors carry the payload-too-large status.
 func StatusCode(err error) int {
-	if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
-		return http.StatusRequestEntityTooLarge
-	}
 	if status, ok := errors.AsType[*StatusError](err); ok {
 		return status.Code
 	}
@@ -96,7 +99,10 @@ func BindJSON(r *http.Request, target any) error {
 		err = json.Unmarshal(data, target)
 	}
 	if err != nil {
-		if StatusCode(err) != 0 {
+		if _, ok := errors.AsType[*http.MaxBytesError](err); ok {
+			return ErrPayloadTooLarge
+		}
+		if _, ok := errors.AsType[*StatusError](err); ok {
 			return err
 		}
 		return &StatusError{Code: http.StatusBadRequest, Err: err, Response: erresp.Binding()}

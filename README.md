@@ -93,9 +93,10 @@ before routing, such as a `413` for a declared body over the limit.
 Handlers return failures to the app's central error handler, which writes the
 shared JSON error shape. `httpkit` request errors retain their causes and named
 responses; `kit.ErrNotFound` and `kit.ErrVersionConflict` map to 404 and 412.
-Client failure causes are logged at debug level; unexpected errors are logged
-at error level and returned as a generic 500. Handler function fields remain
-the seams for isolating binding and validation in unit tests.
+Status errors carry their own status and response body and are logged at debug
+level. All other errors are logged at error level and returned as a generic 500.
+Handler function fields remain the seams for isolating binding and validation
+in unit tests.
 
 Production environment variables are read only in `internal/infra/env`; the
 `testkit` harness reads `DB_TEST_CONNECTION` directly. Application logging goes
@@ -148,7 +149,6 @@ is the source of truth; the notes below summarize it.
 
   | Code | Status | Meaning |
   | --- | --- | --- |
-  | `request_error` | 4xx | Other client request failure |
   | `bind_error` | 400 | Body could not be decoded |
   | `validation_error` | 400 | A body field, path parameter or query parameter failed validation |
   | `precondition_required` | 428 | Missing or malformed If-Match |

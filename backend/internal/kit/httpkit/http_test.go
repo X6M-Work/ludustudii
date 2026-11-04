@@ -28,10 +28,8 @@ func TestBodyLimit(t *testing.T) {
 			t.Parallel()
 			entered := false
 			onError := func(w http.ResponseWriter, _ *http.Request, err error) {
-				if tc.length == -1 {
-					if _, ok := errors.AsType[*http.MaxBytesError](err); !ok {
-						t.Errorf("error: %T, want MaxBytesError", err)
-					}
+				if !errors.Is(err, ErrPayloadTooLarge) {
+					t.Errorf("error: %v, want ErrPayloadTooLarge", err)
 				}
 				w.WriteHeader(StatusCode(err))
 			}

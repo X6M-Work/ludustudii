@@ -4,10 +4,14 @@ package httpkit
 
 import (
 	"errors"
+	"fmt"
+	"io"
 	"net/http"
 	"net/http/httptest"
 	"strings"
 	"testing"
+
+	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 )
 
 func TestJSONBinder(t *testing.T) {
@@ -144,3 +148,43 @@ func TestJSONBinder_UnknownLengthEmpty(t *testing.T) {
 		t.Fatalf("error: %v, want 400", err)
 	}
 }
+
+func TestJSONBinder_ReadErrors(t *testing.T) {
+	t.Parallel()
+	cause := errors.New("read failed")
+	for _, tt := range []struct {
+		name   string
+		cause  error
+		status int
+		code   string
+	}{
+		{"read failure", cause, http.StatusBadRequest, erresp.CodeBinding},
+		{"body limit", &http.MaxBytesError{Limit: 8}, http.StatusRequestEntityTooLarge, erresp.CodePayloadTooLarge},
+		{"wrapped body limit", fmt.Errorf("read: %w", &http.MaxBytesError{Limit: 8}), http.StatusRequestEntityTooLarge, erresp.CodePayloadTooLarge},
+	} {
+		t.Run(tt.name, func(t *testing.T) {
+			t.Parallel()
+			req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", nil)
+			req.ContentLength = -1
+			req.Header.Set("Content-Type", "application/json")
+			req.Body = io.NopCloser(failingReader{err: tt.cause})
+			var dst any
+			err := BindJSON(req, &dst)
+			typed, ok := errors.AsType[*StatusError](err)
+			if !ok || typed.Code != tt.status || typed.Response.Code != tt.code {
+				t.Fatalf("error: %#v, want %d %s", typed, tt.status, tt.code)
+			}
+			if tt.status == http.StatusRequestEntityTooLarge {
+				if !errors.Is(err, ErrPayloadTooLarge) {
+					t.Fatalf("error: %v, want ErrPayloadTooLarge", err)
+				}
+			} else if !errors.Is(err, tt.cause) {
+				t.Fatalf("cause lost: %v", err)
+			}
+		})
+	}
+}
+
+type failingReader struct{ err error }
+
+func (r failingReader) Read([]byte) (int, error) { return 0, r.err }
