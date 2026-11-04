@@ -103,14 +103,8 @@ func BindJSON(r *http.Request, target any) error {
 		dec := json.NewDecoder(bytes.NewReader(data))
 		dec.DisallowUnknownFields()
 		err = dec.Decode(target)
-		if err == nil {
-			if trailingErr := dec.Decode(new(any)); !errors.Is(trailingErr, io.EOF) {
-				if trailingErr != nil {
-					err = trailingErr
-				} else {
-					err = errors.New("unexpected trailing JSON value")
-				}
-			}
+		if err == nil && dec.Decode(new(any)) != io.EOF {
+			err = errors.New("unexpected data after JSON value")
 		}
 	}
 	if err != nil {
