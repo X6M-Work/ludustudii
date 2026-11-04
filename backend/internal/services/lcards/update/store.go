@@ -3,10 +3,14 @@ package update
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 	"fmt"
 
 	"github.com/apotourlyan/ludustudii/internal/kit"
 )
+
+//go:embed update.sql
+var updateSQL string
 
 type updateParams struct {
 	Version     int64
@@ -29,13 +33,9 @@ func NewStore(db *sql.DB) *Store {
 // It returns the new version, ErrNotFound for an unknown ID, or
 // ErrVersionConflict when p.Version is stale.
 func (s *Store) Update(ctx context.Context, p updateParams) (int64, error) {
-	query := `WITH upd AS (
- UPDATE learning_cards SET title = $1, description = $2, version = version + 1, updated_at = now()
- WHERE id = $3 AND version = $4 RETURNING version
- ) SELECT (SELECT version FROM upd), EXISTS (SELECT 1 FROM learning_cards WHERE id = $3)`
 	var version sql.NullInt64
 	var exists bool
-	if err := s.db.QueryRowContext(ctx, query, p.Title, p.Description, p.ID, p.Version).Scan(&version, &exists); err != nil {
+	if err := s.db.QueryRowContext(ctx, updateSQL, p.Title, p.Description, p.ID, p.Version).Scan(&version, &exists); err != nil {
 		return 0, fmt.Errorf("update: %w", err)
 	}
 	if version.Valid {

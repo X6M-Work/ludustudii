@@ -3,8 +3,15 @@ package list
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 	"fmt"
 )
+
+//go:embed list_first.sql
+var listFirstSQL string
+
+//go:embed list_after.sql
+var listAfterSQL string
 
 // Store reads pages of learning cards from the database.
 type Store struct {
@@ -43,10 +50,10 @@ func (s *Store) List(ctx context.Context, p listParams) (page, error) {
 	}
 
 	// Fetch one extra row to learn whether another page exists.
-	query := `SELECT id, title, description, version FROM learning_cards ORDER BY id DESC LIMIT $1`
+	query := listFirstSQL
 	args := []any{p.Limit + 1}
 	if p.Cursor != "" {
-		query = `SELECT id, title, description, version FROM learning_cards WHERE id < $1 ORDER BY id DESC LIMIT $2`
+		query = listAfterSQL
 		args = []any{p.Cursor, p.Limit + 1}
 	}
 

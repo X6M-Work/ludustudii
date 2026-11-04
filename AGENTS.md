@@ -28,6 +28,8 @@ the reference slice.
 3. Shared rules, limits and constants go in `<svc>/domain/`.
 4. One subpackage per endpoint with `handler.go` and `store.go`. The handler
    binds, sanitizes, validates, then calls the store through a small interface.
+   Each store query lives in `<slice>/<name>.sql` with a placeholder header comment
+   and is embedded with `//go:embed`; no inline SQL strings in stores.
 5. Register each route in `<svc>/routes.go` with
    `api.HandleFunc("METHOD path", h.Handle)` on the `*httpkit.API` it receives,
    one call per method and path. Always include the method; GET also serves

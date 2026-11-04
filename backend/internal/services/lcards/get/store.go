@@ -3,11 +3,15 @@ package get
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 	"errors"
 	"fmt"
 
 	"github.com/apotourlyan/ludustudii/internal/kit"
 )
+
+//go:embed get.sql
+var getSQL string
 
 // Store reads learning cards from the database.
 type Store struct {
@@ -28,10 +32,9 @@ type row struct {
 
 // Get returns the card with the given ID, or kit.ErrNotFound.
 func (s *Store) Get(ctx context.Context, id string) (row, error) {
-	query := `SELECT id, title, description, version FROM learning_cards WHERE id = $1`
 	var data row
 	err := s.db.
-		QueryRowContext(ctx, query, id).
+		QueryRowContext(ctx, getSQL, id).
 		Scan(&data.ID, &data.Title, &data.Description, &data.Version)
 	if errors.Is(err, sql.ErrNoRows) {
 		return data, kit.ErrNotFound

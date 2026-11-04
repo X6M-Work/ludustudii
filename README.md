@@ -47,7 +47,9 @@ backend/
 
 Each endpoint is a vertical slice with its own `Handler` and `Store`. A handler
 binds, sanitizes and validates the request, then calls its store through a
-small interface. Package boundaries are enforced by `depguard`:
+small interface. Each store query lives in its own `.sql` file beside `store.go`,
+with a header comment listing its placeholders, and is embedded with `//go:embed`.
+Stores contain no inline SQL strings. Package boundaries are enforced by `depguard`:
 
 - `kit` must not import `infra`, `services` or `app`.
 - `services` must not import `infra` or `app`.

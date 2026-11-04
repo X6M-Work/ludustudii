@@ -3,8 +3,12 @@ package create
 import (
 	"context"
 	"database/sql"
+	_ "embed"
 	"fmt"
 )
+
+//go:embed create.sql
+var createSQL string
 
 type createParams struct {
 	Title       string
@@ -28,10 +32,9 @@ func NewStore(db *sql.DB) *Store {
 
 // Create inserts a card and returns its database-generated ID and version.
 func (s *Store) Create(ctx context.Context, p createParams) (row, error) {
-	query := `INSERT INTO learning_cards (title, description, created_at, updated_at) VALUES ($1, $2, now(), now()) RETURNING id, version`
 	var data row
 	err := s.db.
-		QueryRowContext(ctx, query, p.Title, p.Description).
+		QueryRowContext(ctx, createSQL, p.Title, p.Description).
 		Scan(&data.ID, &data.Version)
 	if err != nil {
 		return row{}, fmt.Errorf("create: %w", err)
