@@ -7,8 +7,8 @@ WITH del AS (
 SELECT EXISTS (
     SELECT 1
     FROM del
-), EXISTS (
+) AS deleted, EXISTS (
     SELECT 1
     FROM learning_cards
     WHERE id = $1
-);
+) AS card_exists;

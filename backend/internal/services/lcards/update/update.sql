@@ -8,8 +8,8 @@ WITH upd AS (
 SELECT (
     SELECT version
     FROM upd
-), EXISTS (
+) AS version, EXISTS (
     SELECT 1
     FROM learning_cards
     WHERE id = $3
-);
+) AS card_exists;
