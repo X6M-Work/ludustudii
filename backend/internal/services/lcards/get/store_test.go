@@ -9,7 +9,7 @@ import (
 	"os"
 	"testing"
 
-	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
+	"github.com/apotourlyan/ludustudii/internal/kit"
 	"github.com/apotourlyan/ludustudii/internal/testkit"
 )
 
@@ -64,13 +64,13 @@ func TestStore_Get_NotFound(t *testing.T) {
 	s := NewStore(db)
 
 	_, err := s.Get(t.Context(), "01a1730e-199d-7f9f-b59d-3bcd6f84066c")
-	if !errors.Is(err, domain.ErrNotFound) {
-		t.Errorf("err: got %v, want %v", err, domain.ErrNotFound)
+	if !errors.Is(err, kit.ErrNotFound) {
+		t.Errorf("err: got %v, want %v", err, kit.ErrNotFound)
 	}
 }
 
 // TestStore_Get_RejectsNonUUID pins that learning_cards.id is a UUID column
-// rather than TEXT (which would return domain.ErrNotFound instead of 22P02).
+// rather than TEXT (which would return kit.ErrNotFound instead of 22P02).
 func TestStore_Get_RejectsNonUUID(t *testing.T) {
 	t.Parallel()
 

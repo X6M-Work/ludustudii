@@ -13,6 +13,7 @@ import (
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 )
@@ -135,8 +136,28 @@ func TestHandler_Handle(t *testing.T) {
 			// Setup handler with mock store
 			h := testHandler(t, tt.store, tt.setup)
 
-			// Call the handler and check the response
-			if err := h.Handle(rec, c); err != nil {
+			err := h.Handle(rec, c)
+			if tt.wantErrCode != "" {
+				if err == nil {
+					t.Fatal("expected returned error")
+				}
+				if rec.Body.Len() != 0 || rec.Flushed || len(rec.Header()) != 0 {
+					t.Fatalf("error response was written: %s", rec.Body.String())
+				}
+				switch tt.wantCode {
+				case http.StatusInternalServerError:
+					if httpkit.StatusCode(err) != 0 {
+						t.Fatalf("expected untyped store error, got %v", err)
+					}
+				default:
+					typed, ok := errors.AsType[*httpkit.StatusError](err)
+					if !ok || typed.Code != tt.wantCode || typed.Response.Code != tt.wantErrCode {
+						t.Fatalf("returned error: got %#v, want %d %s", err, tt.wantCode, tt.wantErrCode)
+					}
+				}
+				return
+			}
+			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
@@ -153,17 +174,6 @@ func TestHandler_Handle(t *testing.T) {
 				}
 				if !reflect.DeepEqual(got, *tt.wantResp) {
 					t.Errorf("resp: got %+v, want %+v", got, *tt.wantResp)
-				}
-			}
-
-			// Check the error message if expected error message is provided
-			if tt.wantErrCode != "" {
-				var got erresp.ErrorResponse
-				if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
-					t.Fatalf("unmarshal error response: %v", err)
-				}
-				if got.Code != tt.wantErrCode {
-					t.Errorf("err code: got %q, want %q", got.Code, tt.wantErrCode)
 				}
 			}
 		})

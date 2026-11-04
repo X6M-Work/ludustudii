@@ -4,14 +4,14 @@ package remove
 
 import (
 	"context"
-	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
 	"testing"
 
+	"github.com/apotourlyan/ludustudii/internal/kit"
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
-	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 )
 
 type mockStore struct {
@@ -85,7 +85,7 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "version conflict",
 			store: func(m *mockStore) {
-				m.deleteFn = func(_ context.Context, _ deleteParams) error { return domain.ErrVersionConflict }
+				m.deleteFn = func(_ context.Context, _ deleteParams) error { return kit.ErrVersionConflict }
 			},
 			wantCode:    http.StatusPreconditionFailed,
 			wantErrCode: erresp.CodePreconditionFailed,
@@ -94,7 +94,7 @@ func TestHandler_Handle(t *testing.T) {
 			name: "not found error",
 			store: func(m *mockStore) {
 				m.deleteFn = func(_ context.Context, _ deleteParams) error {
-					return domain.ErrNotFound
+					return kit.ErrNotFound
 				}
 			},
 			wantCode:    http.StatusNotFound,
@@ -133,25 +133,42 @@ func TestHandler_Handle(t *testing.T) {
 			// Setup handler with mock store
 			h := testHandler(t, tt.store, tt.setup)
 
-			// Call the handler and check the response
-			if err := h.Handle(rec, c); err != nil {
+			err := h.Handle(rec, c)
+			if tt.wantErrCode != "" {
+				if err == nil {
+					t.Fatal("expected returned error")
+				}
+				if rec.Body.Len() != 0 || rec.Flushed || len(rec.Header()) != 0 {
+					t.Fatalf("error response was written: %s", rec.Body.String())
+				}
+				switch tt.wantCode {
+				case http.StatusInternalServerError:
+					if httpkit.StatusCode(err) != 0 {
+						t.Fatalf("expected untyped store error, got %v", err)
+					}
+				case http.StatusNotFound:
+					if !errors.Is(err, kit.ErrNotFound) {
+						t.Fatalf("expected not found, got %v", err)
+					}
+				case http.StatusPreconditionFailed:
+					if !errors.Is(err, kit.ErrVersionConflict) {
+						t.Fatalf("expected version conflict, got %v", err)
+					}
+				default:
+					typed, ok := errors.AsType[*httpkit.StatusError](err)
+					if !ok || typed.Code != tt.wantCode || typed.Response.Code != tt.wantErrCode {
+						t.Fatalf("returned error: got %#v, want %d %s", err, tt.wantCode, tt.wantErrCode)
+					}
+				}
+				return
+			}
+			if err != nil {
 				t.Fatalf("unexpected error: %v", err)
 			}
 
 			// Check the status code first
 			if rec.Code != tt.wantCode {
 				t.Fatalf("status: got %d, want %d", rec.Code, tt.wantCode)
-			}
-
-			// Check the error message if expected error message is provided
-			if tt.wantErrCode != "" {
-				var got erresp.ErrorResponse
-				if err := json.Unmarshal(rec.Body.Bytes(), &got); err != nil {
-					t.Fatalf("unmarshal error response: %v", err)
-				}
-				if got.Code != tt.wantErrCode {
-					t.Errorf("err code: got %q, want %q", got.Code, tt.wantErrCode)
-				}
 			}
 		})
 	}

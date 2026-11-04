@@ -3,10 +3,9 @@ package update
 import (
 	"context"
 	"database/sql"
-	"errors"
 	"fmt"
 
-	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
+	"github.com/apotourlyan/ludustudii/internal/kit"
 )
 
 type updateParams struct {
@@ -30,21 +29,20 @@ func NewStore(db *sql.DB) *Store {
 // It returns the new version, ErrNotFound for an unknown ID, or
 // ErrVersionConflict when p.Version is stale.
 func (s *Store) Update(ctx context.Context, p updateParams) (int64, error) {
-	query := `UPDATE learning_cards SET title = $1, description = $2, version = version + 1, updated_at = now() WHERE id = $3 AND version = $4 RETURNING version`
-	var version int64
-	err := s.db.QueryRowContext(ctx, query, p.Title, p.Description, p.ID, p.Version).Scan(&version)
-	if err == nil {
-		return version, nil
-	}
-	if !errors.Is(err, sql.ErrNoRows) {
+	query := `WITH upd AS (
+ UPDATE learning_cards SET title = $1, description = $2, version = version + 1, updated_at = now()
+ WHERE id = $3 AND version = $4 RETURNING version
+ ) SELECT (SELECT version FROM upd), EXISTS (SELECT 1 FROM learning_cards WHERE id = $3)`
+	var version sql.NullInt64
+	var exists bool
+	if err := s.db.QueryRowContext(ctx, query, p.Title, p.Description, p.ID, p.Version).Scan(&version, &exists); err != nil {
 		return 0, fmt.Errorf("update: %w", err)
 	}
-	var exists bool
-	if err := s.db.QueryRowContext(ctx, `SELECT EXISTS (SELECT 1 FROM learning_cards WHERE id = $1)`, p.ID).Scan(&exists); err != nil {
-		return 0, fmt.Errorf("check card exists: %w", err)
+	if version.Valid {
+		return version.Int64, nil
 	}
 	if !exists {
-		return 0, domain.ErrNotFound
+		return 0, kit.ErrNotFound
 	}
-	return 0, domain.ErrVersionConflict
+	return 0, kit.ErrVersionConflict
 }

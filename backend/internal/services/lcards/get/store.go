@@ -4,8 +4,9 @@ import (
 	"context"
 	"database/sql"
 	"errors"
+	"fmt"
 
-	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
+	"github.com/apotourlyan/ludustudii/internal/kit"
 )
 
 // Store reads learning cards from the database.
@@ -25,7 +26,7 @@ type row struct {
 	Version     int64
 }
 
-// Get returns the card with the given ID, or domain.ErrNotFound.
+// Get returns the card with the given ID, or kit.ErrNotFound.
 func (s *Store) Get(ctx context.Context, id string) (row, error) {
 	query := `SELECT id, title, description, version FROM learning_cards WHERE id = $1`
 	var data row
@@ -33,7 +34,10 @@ func (s *Store) Get(ctx context.Context, id string) (row, error) {
 		QueryRowContext(ctx, query, id).
 		Scan(&data.ID, &data.Title, &data.Description, &data.Version)
 	if errors.Is(err, sql.ErrNoRows) {
-		return data, domain.ErrNotFound
+		return data, kit.ErrNotFound
 	}
-	return data, err
+	if err != nil {
+		return row{}, fmt.Errorf("get: %w", err)
+	}
+	return data, nil
 }

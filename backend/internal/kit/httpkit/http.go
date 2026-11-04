@@ -7,6 +7,8 @@ import (
 	"io"
 	"net/http"
 	"strings"
+
+	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 )
 
 // HandlerFunc handles a request and returns errors for the central error handler.
@@ -24,10 +26,12 @@ func Adapt(h HandlerFunc, onError ErrorHandler) http.Handler {
 	})
 }
 
-// StatusError carries a public HTTP status and an optional underlying error.
+// StatusError carries a public HTTP status, an optional named response and
+// an underlying cause. The central error handler logs the cause without exposing it.
 type StatusError struct {
-	Code int
-	Err  error
+	Code     int
+	Err      error
+	Response erresp.ErrorResponse
 }
 
 func (e *StatusError) Error() string { return http.StatusText(e.Code) }
@@ -95,7 +99,7 @@ func BindJSON(_ http.ResponseWriter, r *http.Request, target any) error {
 		if StatusCode(err) != 0 {
 			return err
 		}
-		return &StatusError{Code: http.StatusBadRequest, Err: err}
+		return &StatusError{Code: http.StatusBadRequest, Err: err, Response: erresp.Binding()}
 	}
 	return nil
 }

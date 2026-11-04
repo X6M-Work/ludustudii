@@ -3,16 +3,12 @@ package get
 
 import (
 	"context"
-	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 
-	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 	"github.com/apotourlyan/ludustudii/internal/kit/etag"
 	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
-	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 )
 
 type response struct {
@@ -44,18 +40,12 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 
 	id := strings.ToLower(r.PathValue("id"))
 	if err := h.validateParamID(id); err != nil {
-		slog.DebugContext(ctx, domain.TextInvalidID, "error", err)
-		return httpkit.JSON(w, http.StatusBadRequest, erresp.Param())
+		return httpkit.Param(err)
 	}
 
 	data, err := h.store.Get(ctx, id)
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			slog.DebugContext(ctx, domain.TextNotFound, "error", err)
-			return httpkit.JSON(w, http.StatusNotFound, erresp.NotFound())
-		}
-		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
-		return httpkit.JSON(w, http.StatusInternalServerError, erresp.Unexpected())
+		return err
 	}
 
 	w.Header().Set("ETag", etag.Format(data.Version))

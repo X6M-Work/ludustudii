@@ -12,6 +12,7 @@ import (
 	"time"
 	"unicode/utf8"
 
+	"github.com/apotourlyan/ludustudii/internal/kit"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
 	"github.com/apotourlyan/ludustudii/internal/testkit"
 )
@@ -124,13 +125,13 @@ func TestStore_Update_NotFound(t *testing.T) {
 		Title:       "Title",
 		Description: "Description",
 	})
-	if !errors.Is(err, domain.ErrNotFound) {
-		t.Errorf("err: got %v, want %v", err, domain.ErrNotFound)
+	if !errors.Is(err, kit.ErrNotFound) {
+		t.Errorf("err: got %v, want %v", err, kit.ErrNotFound)
 	}
 }
 
 // TestStore_Update_RejectsNonUUID pins that learning_cards.id is a UUID column
-// rather than TEXT (which would return domain.ErrNotFound instead of 22P02).
+// rather than TEXT (which would return kit.ErrNotFound instead of 22P02).
 func TestStore_Update_RejectsNonUUID(t *testing.T) {
 	t.Parallel()
 
@@ -266,7 +267,7 @@ func TestStore_Update_VersionAndTimestamps(t *testing.T) {
 			createdAfter, createdBefore, updatedAfter, updatedBefore)
 	}
 	stale := updateParams{Version: 1, ID: id, Title: "Stale", Description: "Stale description"}
-	if _, err := s.Update(t.Context(), stale); !errors.Is(err, domain.ErrVersionConflict) {
+	if _, err := s.Update(t.Context(), stale); !errors.Is(err, kit.ErrVersionConflict) {
 		t.Fatalf("stale update: %v", err)
 	}
 	if got := getCard(t, db, id); got != (cardRow{ID: p.ID, Title: p.Title, Description: p.Description}) {
@@ -283,7 +284,7 @@ func TestStore_Update_VersionAndTimestamps(t *testing.T) {
 	if storedVersion != 2 {
 		t.Fatalf("stored version: %d", storedVersion)
 	}
-	if _, err := s.Update(t.Context(), updateParams{Version: 99, ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066d"}); !errors.Is(err, domain.ErrNotFound) {
+	if _, err := s.Update(t.Context(), updateParams{Version: 99, ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066d"}); !errors.Is(err, kit.ErrNotFound) {
 		t.Fatalf("unknown card: %v", err)
 	}
 }

@@ -90,6 +90,13 @@ The request log's `route` is the matched mux pattern, for example
 the bare path), or `/` for the SPA. It is empty when middleware rejects a request
 before routing, such as a `413` for a declared body over the limit.
 
+Handlers return failures to the app's central error handler, which writes the
+shared JSON error shape. `httpkit` request errors retain their causes and named
+responses; `kit.ErrNotFound` and `kit.ErrVersionConflict` map to 404 and 412.
+Client failure causes are logged at debug level; unexpected errors are logged
+at error level and returned as a generic 500. Handler function fields remain
+the seams for isolating binding and validation in unit tests.
+
 Production environment variables are read only in `internal/infra/env`; the
 `testkit` harness reads `DB_TEST_CONNECTION` directly. Application logging goes
 through `log/slog` (`fmt.Print*` and `log.*` are forbidden by the linter).

@@ -4,11 +4,9 @@ package update
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strings"
 
-	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 	"github.com/apotourlyan/ludustudii/internal/kit/etag"
 	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/sanitizer"
@@ -57,43 +55,28 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 
 	id := strings.ToLower(r.PathValue("id"))
 	if err := h.validateParamID(id); err != nil {
-		slog.DebugContext(ctx, domain.TextInvalidID, "error", err)
-		return httpkit.JSON(w, http.StatusBadRequest, erresp.Param())
+		return httpkit.Param(err)
 	}
 
 	version, err := h.parseVersion(strings.Join(r.Header.Values("If-Match"), ","))
 	if err != nil {
-		return httpkit.JSON(w, http.StatusPreconditionRequired, erresp.PreconditionRequired())
+		return httpkit.PreconditionRequired(err)
 	}
 
 	var req request
 	if err := h.bind(w, r, &req); err != nil {
-		slog.DebugContext(ctx, domain.TextBinding, "error", err)
-		switch httpkit.StatusCode(err) {
-		case http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType:
-			return err
-		}
-		return httpkit.JSON(w, http.StatusBadRequest, erresp.Binding())
+		return err
 	}
 
 	sanitize(&req)
 
 	if err := h.validate(req); err != nil {
-		slog.DebugContext(ctx, domain.TextValidation, "error", err)
-		return httpkit.JSON(w, http.StatusBadRequest, erresp.Validation(err))
+		return httpkit.Validation(err)
 	}
 
 	newVersion, err := h.store.Update(ctx, toParams(req, id, version))
 	if err != nil {
-		if errors.Is(err, domain.ErrNotFound) {
-			slog.DebugContext(ctx, domain.TextNotFound, "error", err)
-			return httpkit.JSON(w, http.StatusNotFound, erresp.NotFound())
-		}
-		if errors.Is(err, domain.ErrVersionConflict) {
-			return httpkit.JSON(w, http.StatusPreconditionFailed, erresp.PreconditionFailed())
-		}
-		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
-		return httpkit.JSON(w, http.StatusInternalServerError, erresp.Unexpected())
+		return err
 	}
 
 	w.Header().Set("ETag", etag.Format(newVersion))

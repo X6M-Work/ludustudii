@@ -4,12 +4,10 @@ package list
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 	"strconv"
 	"strings"
 
-	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/domain"
@@ -67,14 +65,12 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 	sanitize(&req)
 
 	if err := h.validate(req); err != nil {
-		slog.DebugContext(ctx, domain.TextValidation, "error", err)
-		return httpkit.JSON(w, http.StatusBadRequest, erresp.Validation(err))
+		return httpkit.Validation(err)
 	}
 
 	data, err := h.store.List(ctx, toParams(req))
 	if err != nil {
-		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
-		return httpkit.JSON(w, http.StatusInternalServerError, erresp.Unexpected())
+		return err
 	}
 
 	return httpkit.JSON(w, http.StatusOK, toResp(data))

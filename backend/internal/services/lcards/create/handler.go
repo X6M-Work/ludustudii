@@ -4,10 +4,8 @@ package create
 import (
 	"context"
 	"errors"
-	"log/slog"
 	"net/http"
 
-	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 	"github.com/apotourlyan/ludustudii/internal/kit/etag"
 	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/sanitizer"
@@ -52,25 +50,18 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 
 	var req request
 	if err := h.bind(w, r, &req); err != nil {
-		slog.DebugContext(ctx, domain.TextBinding, "error", err)
-		switch httpkit.StatusCode(err) {
-		case http.StatusRequestEntityTooLarge, http.StatusUnsupportedMediaType:
-			return err
-		}
-		return httpkit.JSON(w, http.StatusBadRequest, erresp.Binding())
+		return err
 	}
 
 	sanitize(&req)
 
 	if err := h.validate(req); err != nil {
-		slog.DebugContext(ctx, domain.TextValidation, "error", err)
-		return httpkit.JSON(w, http.StatusBadRequest, erresp.Validation(err))
+		return httpkit.Validation(err)
 	}
 
 	data, err := h.store.Create(ctx, toParams(req))
 	if err != nil {
-		slog.ErrorContext(ctx, domain.TextUnexpected, "error", err)
-		return httpkit.JSON(w, http.StatusInternalServerError, erresp.Unexpected())
+		return err
 	}
 
 	w.Header().Set("ETag", etag.Format(data.Version))

@@ -3,6 +3,7 @@ package create
 import (
 	"context"
 	"database/sql"
+	"fmt"
 )
 
 type createParams struct {
@@ -32,5 +33,8 @@ func (s *Store) Create(ctx context.Context, p createParams) (row, error) {
 	err := s.db.
 		QueryRowContext(ctx, query, p.Title, p.Description).
 		Scan(&data.ID, &data.Version)
-	return data, err
+	if err != nil {
+		return row{}, fmt.Errorf("create: %w", err)
+	}
+	return data, nil
 }
