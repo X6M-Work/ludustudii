@@ -20,7 +20,6 @@ func TestRequestErrorsRetainCause(t *testing.T) {
 		status int
 		code   string
 	}{
-		{"parameter", Param, http.StatusBadRequest, erresp.CodeParam},
 		{"validation", Validation, http.StatusBadRequest, erresp.CodeValidation},
 		{"precondition", PreconditionRequired, http.StatusPreconditionRequired, erresp.CodePreconditionRequired},
 	}

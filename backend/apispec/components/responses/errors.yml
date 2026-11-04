@@ -1,5 +1,5 @@
 InvalidQuery:
-  description: Invalid query parameters (validation_error), or query binding failure (bind_error).
+  description: Invalid query parameters return validation_error with field errors. Malformed or overflowing limits report invalid_integer; out-of-range limits report out_of_range.
   headers:
     X-Request-Id:
       $ref: '../headers.yml#/RequestId'
@@ -37,7 +37,7 @@ InvalidCreateInput:
                 code: max_length
 InvalidReplaceInput:
   description: |
-    An invalid path ID returns param_error before If-Match parsing and body binding. Malformed
+    An invalid path ID returns validation_error with id/invalid_uuid7 before If-Match parsing and body binding. Malformed
     JSON or incompatible JSON types return bind_error. Empty bodies and
     invalid field values return validation_error.
   headers:
@@ -50,7 +50,10 @@ InvalidReplaceInput:
       examples:
         invalidId:
           value:
-            code: param_error
+            code: validation_error
+            errors:
+              - field: id
+                code: invalid_uuid7
         binding:
           value:
             code: bind_error
@@ -72,7 +75,10 @@ InvalidCardId:
       schema:
         $ref: '../schemas/errors.yml#/ErrorResponse'
       example:
-        code: param_error
+        code: validation_error
+        errors:
+          - field: id
+            code: invalid_uuid7
 NotFound:
   description: No card exists with this ID.
   headers:

@@ -73,7 +73,7 @@ func TestHandler_Handle(t *testing.T) {
 			name: "parse error",
 			setup: func(h *Handler) {
 				h.parse = func(*http.Request) (request, error) {
-					return request{}, &httpkit.StatusError{Code: http.StatusBadRequest, Response: erresp.Binding()}
+					return request{}, httpkit.Validation(validator.NewFieldError("limit", validator.CodeInvalidInteger, errors.New("invalid integer")))
 				}
 				h.validate = func(request) error {
 					t.Fatal("unexpected validation after parse failure")
@@ -81,7 +81,7 @@ func TestHandler_Handle(t *testing.T) {
 				}
 			},
 			wantCode:    http.StatusBadRequest,
-			wantErrCode: erresp.CodeBinding,
+			wantErrCode: erresp.CodeValidation,
 		},
 		{
 			name: "validation error",
@@ -280,8 +280,8 @@ func TestParse(t *testing.T) {
 			got, err := parse(r)
 			if tt.wantErr {
 				typed, ok := errors.AsType[*httpkit.StatusError](err)
-				if !ok || typed.Code != http.StatusBadRequest || typed.Response.Code != erresp.CodeBinding || typed.Err == nil {
-					t.Fatalf("expected binding error retaining cause, got %v", err)
+				if !ok || typed.Code != http.StatusBadRequest || typed.Response.Code != erresp.CodeValidation || typed.Err == nil {
+					t.Fatalf("expected validation error retaining cause, got %v", err)
 				}
 				return
 			}

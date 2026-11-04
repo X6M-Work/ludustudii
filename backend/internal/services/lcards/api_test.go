@@ -315,12 +315,17 @@ func TestList(t *testing.T) {
 		{
 			name:  "limit not an integer",
 			query: "?limit=abc",
-			want:  `{"code":"bind_error"}`,
+			want:  `{"code":"validation_error","errors":[{"field":"limit","code":"invalid_integer"}]}`,
 		},
 		{
 			name:  "limit not canonical",
 			query: "?limit=05",
-			want:  `{"code":"bind_error"}`,
+			want:  `{"code":"validation_error","errors":[{"field":"limit","code":"invalid_integer"}]}`,
+		},
+		{
+			name:  "limit overflow",
+			query: "?limit=99999999999999999999999999999",
+			want:  `{"code":"validation_error","errors":[{"field":"limit","code":"invalid_integer"}]}`,
 		},
 		{
 			name:  "limit below min",
@@ -428,7 +433,7 @@ func TestGet(t *testing.T) {
 			Path:   "/api/lcards/urn:uuid:01a1730e-199d-7f9f-b59d-3bcd6f84066c",
 		})
 		testkit.AssertStatus(t, resp, http.StatusBadRequest)
-		testkit.AssertJSON(t, resp.Body, `{"code":"param_error"}`)
+		testkit.AssertJSON(t, resp.Body, `{"code":"validation_error","errors":[{"field":"id","code":"invalid_uuid7"}]}`)
 	})
 }
 
@@ -630,7 +635,7 @@ func TestUpdate(t *testing.T) {
 			Body:        `{"title":"Title","description":"Description"}`,
 		})
 		testkit.AssertStatus(t, resp, http.StatusBadRequest)
-		testkit.AssertJSON(t, resp.Body, `{"code":"param_error"}`)
+		testkit.AssertJSON(t, resp.Body, `{"code":"validation_error","errors":[{"field":"id","code":"invalid_uuid7"}]}`)
 	})
 
 	t.Run("XML body", func(t *testing.T) {
@@ -760,7 +765,7 @@ func TestDelete(t *testing.T) {
 			Path:    "/api/lcards/urn:uuid:01a1730e-199d-7f9f-b59d-3bcd6f84066c",
 		})
 		testkit.AssertStatus(t, resp, http.StatusBadRequest)
-		testkit.AssertJSON(t, resp.Body, `{"code":"param_error"}`)
+		testkit.AssertJSON(t, resp.Body, `{"code":"validation_error","errors":[{"field":"id","code":"invalid_uuid7"}]}`)
 	})
 }
 

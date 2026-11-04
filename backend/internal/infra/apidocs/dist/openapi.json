@@ -53,7 +53,7 @@
         }
       },
       "Limit": {
-        "description": "Page size in canonical decimal form, without leading zeros, a plus sign, or whitespace. Omitted or empty values use 20. Malformed or overflowing integers return bind_error.",
+        "description": "Page size in canonical decimal form, without leading zeros, a plus sign, or whitespace. Omitted or empty values use 20. Malformed or overflowing integers return validation_error with limit/invalid_integer.",
         "in": "query",
         "name": "limit",
         "schema": {
@@ -145,7 +145,13 @@
         "content": {
           "application/json": {
             "example": {
-              "code": "param_error"
+              "code": "validation_error",
+              "errors": [
+                {
+                  "code": "invalid_uuid7",
+                  "field": "id"
+                }
+              ]
             },
             "schema": {
               "$ref": "#/components/schemas/ErrorResponse"
@@ -213,7 +219,7 @@
             }
           }
         },
-        "description": "Invalid query parameters (validation_error), or query binding failure (bind_error).",
+        "description": "Invalid query parameters return validation_error with field errors. Malformed or overflowing limits report invalid_integer; out-of-range limits report out_of_range.",
         "headers": {
           "X-Request-Id": {
             "$ref": "#/components/headers/RequestId"
@@ -231,7 +237,13 @@
               },
               "invalidId": {
                 "value": {
-                  "code": "param_error"
+                  "code": "validation_error",
+                  "errors": [
+                    {
+                      "code": "invalid_uuid7",
+                      "field": "id"
+                    }
+                  ]
                 }
               },
               "validation": {
@@ -255,7 +267,7 @@
             }
           }
         },
-        "description": "An invalid path ID returns param_error before If-Match parsing and body binding. Malformed\nJSON or incompatible JSON types return bind_error. Empty bodies and\ninvalid field values return validation_error.\n",
+        "description": "An invalid path ID returns validation_error with id/invalid_uuid7 before If-Match parsing and body binding. Malformed\nJSON or incompatible JSON types return bind_error. Empty bodies and\ninvalid field values return validation_error.\n",
         "headers": {
           "X-Request-Id": {
             "$ref": "#/components/headers/RequestId"
@@ -398,7 +410,6 @@
             "enum": [
               "bind_error",
               "validation_error",
-              "param_error",
               "precondition_required",
               "precondition_failed",
               "not_found",
@@ -428,13 +439,14 @@
         "additionalProperties": false,
         "properties": {
           "code": {
-            "description": "Card fields (title, description) report required or max_length.\nQuery parameters report out_of_range (limit) and\ninvalid_uuid7 (cursor). untrimmed and not_normalized are reserved:\ncard fields are trimmed and NFC-normalized before validation, so\nthese codes are not currently returned.\n",
+            "description": "Card fields (title, description) report required or max_length.\nQuery parameters report invalid_integer or out_of_range (limit) and\ninvalid_uuid7 (cursor). Path IDs report invalid_uuid7 (id). untrimmed and not_normalized are reserved:\ncard fields are trimmed and NFC-normalized before validation, so\nthese codes are not currently returned.\n",
             "enum": [
               "invalid_uuid7",
               "required",
               "max_length",
               "untrimmed",
               "not_normalized",
+              "invalid_integer",
               "out_of_range"
             ],
             "type": "string"

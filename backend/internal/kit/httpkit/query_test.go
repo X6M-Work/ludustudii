@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
+	"github.com/apotourlyan/ludustudii/internal/kit/validator"
 )
 
 func TestBindQueryInt(t *testing.T) {
@@ -51,8 +52,12 @@ func TestBindQueryInt(t *testing.T) {
 			got, err := BindQueryInt(r, "size", tt.defaultValue)
 			if tt.wantErr != nil || tt.wantErrText != "" {
 				typed, ok := errors.AsType[*StatusError](err)
-				if !ok || typed.Code != http.StatusBadRequest || typed.Response.Code != erresp.CodeBinding || typed.Err == nil {
-					t.Fatalf("expected 400 bind_error, got %v", err)
+				if !ok || typed.Code != http.StatusBadRequest || typed.Response.Code != erresp.CodeValidation || typed.Err == nil {
+					t.Fatalf("expected 400 validation_error, got %v", err)
+				}
+				fields := typed.Response.Errors
+				if len(fields) != 1 || fields[0].Field != "size" || fields[0].Code != validator.CodeInvalidInteger {
+					t.Fatalf("expected size/invalid_integer, got %+v", fields)
 				}
 			}
 			if tt.wantErrText != "" {

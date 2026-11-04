@@ -14,12 +14,13 @@ import (
 
 // Machine-readable codes sent in FieldError.Code.
 const (
-	CodeInvalidUUID7 = "invalid_uuid7"
-	CodeRequired     = "required"
-	CodeMaxLength    = "max_length"
-	CodeUntrimmed    = "untrimmed"
-	CodeNormalized   = "not_normalized"
-	CodeOutOfRange   = "out_of_range"
+	CodeInvalidUUID7   = "invalid_uuid7"
+	CodeRequired       = "required"
+	CodeMaxLength      = "max_length"
+	CodeUntrimmed      = "untrimmed"
+	CodeNormalized     = "not_normalized"
+	CodeOutOfRange     = "out_of_range"
+	CodeInvalidInteger = "invalid_integer"
 )
 
 // EmptyOrUUID7 accepts an empty string or a UUID7 in canonical form.

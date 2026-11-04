@@ -131,13 +131,13 @@ is the source of truth; the notes below summarize it.
   the version atomically; clients must reload after a conflict.
 - **Pagination**: `limit` (1–100, default 20) and `cursor` (the previous
   page's `next_cursor`). `next_cursor` is `null` on the last page. Malformed
-  or overflowing limits return `bind_error`; integer limits outside 1–100
+  or overflowing limits return `validation_error` with `invalid_integer`; integer limits outside 1–100
   return `validation_error` with `out_of_range`.
 - **Request IDs**: every response carries `X-Request-Id`. A client-supplied
   value is reused, otherwise one is generated; it is attached to every log
   record for that request.
 - **Errors** share one JSON shape. `errors` is present only for validation
-  failures:
+  failures in body fields, path parameters or query parameters:
 
   ```json
   {
@@ -149,9 +149,8 @@ is the source of truth; the notes below summarize it.
   | Code | Status | Meaning |
   | --- | --- | --- |
   | `request_error` | 4xx | Other client request failure |
-  | `bind_error` | 400 | Body or query could not be decoded |
-  | `validation_error` | 400 | One or more fields failed validation |
-  | `param_error` | 400 | Invalid path parameter (e.g. card ID) |
+  | `bind_error` | 400 | Body could not be decoded |
+  | `validation_error` | 400 | A body field, path parameter or query parameter failed validation |
   | `precondition_required` | 428 | Missing or malformed If-Match |
   | `precondition_failed` | 412 | Stale resource version |
   | `not_found` | 404 | Unknown card or unknown `/api` path |
@@ -161,7 +160,7 @@ is the source of truth; the notes below summarize it.
   | `unexpected_error` | 500 | Server-side failure; details are only logged |
 
   Field error codes: `required`, `max_length`, `untrimmed`, `not_normalized`,
-  `out_of_range`, `invalid_uuid7` (invalid pagination cursor).
+  `invalid_integer`, `out_of_range`, `invalid_uuid7` (invalid path ID or pagination cursor).
 
 ### Configuration
 

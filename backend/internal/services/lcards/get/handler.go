@@ -40,7 +40,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 
 	id := strings.ToLower(r.PathValue("id"))
 	if err := h.validateParamID(id); err != nil {
-		return httpkit.Param(err)
+		return httpkit.Validation(err)
 	}
 
 	data, err := h.store.Get(ctx, id)

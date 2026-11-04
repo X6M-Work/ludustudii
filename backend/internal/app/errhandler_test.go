@@ -80,7 +80,7 @@ func TestHTTPErrorHandler(t *testing.T) {
 		},
 		{name: "storage not found", method: http.MethodGet, err: kit.ErrNotFound, wantStatus: http.StatusNotFound, wantJSON: `{"code":"not_found"}`},
 		{name: "wrapped storage conflict", method: http.MethodPut, err: fmt.Errorf("update: %w", kit.ErrVersionConflict), wantStatus: http.StatusPreconditionFailed, wantJSON: `{"code":"precondition_failed"}`},
-		{name: "parameter cause", method: http.MethodGet, err: httpkit.Param(errors.New("invalid UUID")), wantStatus: http.StatusBadRequest, wantJSON: `{"code":"param_error"}`},
+		{name: "parameter cause", method: http.MethodGet, err: httpkit.Validation(validator.UUID7("id", "bad")), wantStatus: http.StatusBadRequest, wantJSON: `{"code":"validation_error","errors":[{"field":"id","code":"invalid_uuid7"}]}`},
 		{name: "precondition cause", method: http.MethodPut, err: httpkit.PreconditionRequired(errors.New("invalid ETag")), wantStatus: http.StatusPreconditionRequired, wantJSON: `{"code":"precondition_required"}`},
 		{name: "wrapped validation fields", method: http.MethodPost, err: fmt.Errorf("request: %w", httpkit.Validation(errors.Join(validator.Required("title", ""), validator.Required("description", "")))), wantStatus: http.StatusBadRequest, wantJSON: `{"code":"validation_error","errors":[{"field":"title","code":"required"},{"field":"description","code":"required"}]}`},
 		{name: "binding cause", method: http.MethodPost, err: bindingError(t), wantStatus: http.StatusBadRequest, wantJSON: `{"code":"bind_error"}`},

@@ -6,11 +6,6 @@ import (
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
 )
 
-// Param reports an invalid path parameter, retaining its cause for logging.
-func Param(err error) error {
-	return &StatusError{Code: http.StatusBadRequest, Err: err, Response: erresp.Param()}
-}
-
 // Validation reports field validation failures, retaining their causes.
 func Validation(err error) error {
 	return &StatusError{Code: http.StatusBadRequest, Err: err, Response: erresp.Validation(err)}

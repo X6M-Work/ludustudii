@@ -29,7 +29,7 @@ func TestRouter_PathSpellingAndReference(t *testing.T) {
 	}{
 		{"GET", "/api/lcards/.", 307, "<a href=\"/api/lcards\">Temporary Redirect</a>.\n\n", "", "/api/lcards"},
 		{"GET", "/api/lcards/..", 307, "<a href=\"/api\">Temporary Redirect</a>.\n\n", "", "/api"},
-		{"GET", "/api/lcards/bad%2fx", 400, "{\"code\":\"param_error\"}\n", "", ""},
+		{"GET", "/api/lcards/bad%2fx", 400, "{\"code\":\"validation_error\",\"errors\":[{\"field\":\"id\",\"code\":\"invalid_uuid7\"}]}\n", "", ""},
 		{"GET", "/api//unknown", 307, "<a href=\"/api/unknown\">Temporary Redirect</a>.\n\n", "", "/api/unknown"},
 		{"GET", "/%61pi/nope", 404, "{\"code\":\"not_found\"}\n", "", ""},
 		{"GET", "/docs//", 307, "<a href=\"/docs/\">Temporary Redirect</a>.\n\n", "", "/docs/"},

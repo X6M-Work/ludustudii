@@ -73,14 +73,14 @@ func TestHandler_Handle(t *testing.T) {
 		wantErrCode string
 	}{
 		{
-			name: "param error",
+			name: "path validation error",
 			setup: func(h *Handler) {
 				h.validateParamID = func(id string) error {
 					return errors.New("")
 				}
 			},
 			wantCode:    http.StatusBadRequest,
-			wantErrCode: erresp.CodeParam,
+			wantErrCode: erresp.CodeValidation,
 		},
 		{
 			name: "binding error",

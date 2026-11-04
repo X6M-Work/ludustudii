@@ -15,7 +15,6 @@ const (
 	CodePayloadTooLarge      = "payload_too_large"
 	CodeUnexpected           = "unexpected_error"
 	CodeValidation           = "validation_error"
-	CodeParam                = "param_error"
 	CodeUnsupportedMediaType = "unsupported_media_type"
 )
 
@@ -103,13 +102,6 @@ func Validation(err error) ErrorResponse {
 	return ErrorResponse{
 		Code:   CodeValidation,
 		Errors: errs,
-	}
-}
-
-// Param returns the response for an invalid path parameter.
-func Param() ErrorResponse {
-	return ErrorResponse{
-		Code: CodeParam,
 	}
 }
 

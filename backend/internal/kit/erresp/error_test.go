@@ -27,7 +27,6 @@ func TestConstructors(t *testing.T) {
 		{name: "PayloadTooLarge", new: PayloadTooLarge, code: "payload_too_large"},
 		{name: "UnsupportedMediaType", new: UnsupportedMediaType, code: "unsupported_media_type"},
 		{name: "Unexpected", new: Unexpected, code: "unexpected_error"},
-		{name: "Param", new: Param, code: "param_error"},
 	}
 
 	for _, tt := range tests {
