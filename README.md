@@ -193,6 +193,9 @@ logged at startup with its password redacted.
 
 ## Development
 
+Architecture decisions and their rationale are recorded in
+[`docs/adr/`](docs/adr/README.md).
+
 ### Getting started
 
 The repository ships a devcontainer (`.devcontainer/`) with Go, Node, the Go

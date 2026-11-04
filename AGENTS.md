@@ -67,6 +67,13 @@ the reference slice.
 - Keep the shared lint rules in `backend/.golangci.yml` intact. Follow
   `README.md` (Linting → Exclusion policy) for one-off exceptions.
 
+## Decisions
+
+Architecture decisions are recorded in `docs/adr/` (index:
+`docs/adr/README.md`). Before changing an area, check whether a decision
+record covers it. Follow accepted decisions. If one seems wrong, stop and
+propose a superseding record instead of changing the code to contradict it.
+
 ## Checks handled by tooling
 
 Package boundaries (depguard), env access only in `internal/infra/env`, `slog`
