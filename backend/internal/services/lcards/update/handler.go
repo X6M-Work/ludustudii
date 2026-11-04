@@ -26,7 +26,7 @@ type updater interface {
 // Handler serves the PUT /api/lcards/{id} endpoint.
 type Handler struct {
 	store           updater
-	bind            func(w http.ResponseWriter, r *http.Request, i any) error
+	bind            func(r *http.Request, i any) error
 	validate        func(req request) error
 	validateParamID func(id string) error
 	parseVersion    func(string) (int64, error)
@@ -64,7 +64,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 	}
 
 	var req request
-	if err := h.bind(w, r, &req); err != nil {
+	if err := h.bind(r, &req); err != nil {
 		return err
 	}
 
@@ -83,8 +83,8 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 	return httpkit.NoContent(w, http.StatusNoContent)
 }
 
-func bind(w http.ResponseWriter, r *http.Request, i any) error {
-	return httpkit.BindJSON(w, r, i)
+func bind(r *http.Request, i any) error {
+	return httpkit.BindJSON(r, i)
 }
 
 func validate(req request) error {

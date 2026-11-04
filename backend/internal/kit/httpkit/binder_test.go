@@ -82,10 +82,9 @@ func TestJSONBinder(t *testing.T) {
 			if tt.contentType != "" {
 				req.Header.Set("Content-Type", tt.contentType)
 			}
-			rec := httptest.NewRecorder()
 
 			var got payload
-			err := BindJSON(rec, req, &got)
+			err := BindJSON(req, &got)
 			if tt.wantErr != nil || tt.wantStatus != 0 {
 				if err == nil {
 					t.Fatal("expected error, got nil")
@@ -116,7 +115,7 @@ func TestJSONBinder_ChunkedWithoutContentType(t *testing.T) {
 	var dst struct {
 		Title string `json:"title"`
 	}
-	if err := BindJSON(httptest.NewRecorder(), req, &dst); !errors.Is(err, ErrUnsupportedMediaType) {
+	if err := BindJSON(req, &dst); !errors.Is(err, ErrUnsupportedMediaType) {
 		t.Errorf("err: got %v, want %v", err, ErrUnsupportedMediaType)
 	}
 }
@@ -127,7 +126,7 @@ func TestJSONBinder_EmptyPreservesTarget(t *testing.T) {
 	dst := struct {
 		Title string `json:"title"`
 	}{Title: "original"}
-	if err := BindJSON(httptest.NewRecorder(), r, &dst); err != nil {
+	if err := BindJSON(r, &dst); err != nil {
 		t.Fatal(err)
 	}
 	if dst.Title != "original" {
@@ -141,7 +140,7 @@ func TestJSONBinder_UnknownLengthEmpty(t *testing.T) {
 	req.ContentLength = -1
 	req.Header.Set("Content-Type", "application/json")
 	var dst any
-	if err := BindJSON(httptest.NewRecorder(), req, &dst); StatusCode(err) != http.StatusBadRequest {
+	if err := BindJSON(req, &dst); StatusCode(err) != http.StatusBadRequest {
 		t.Fatalf("error: %v, want 400", err)
 	}
 }

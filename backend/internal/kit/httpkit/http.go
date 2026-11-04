@@ -83,7 +83,7 @@ func Text(w http.ResponseWriter, status int, value string) error {
 // BindJSON binds only the JSON body, ignoring query and path values. A known
 // empty body leaves target unchanged; other bodies require application/json
 // (parameters ignored). Malformed JSON returns 400 and oversized input 413.
-func BindJSON(_ http.ResponseWriter, r *http.Request, target any) error {
+func BindJSON(r *http.Request, target any) error {
 	if r.ContentLength == 0 {
 		return nil
 	}

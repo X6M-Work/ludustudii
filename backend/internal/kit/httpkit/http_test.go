@@ -38,7 +38,7 @@ func TestBodyLimit(t *testing.T) {
 			next := Adapt(func(w http.ResponseWriter, r *http.Request) error {
 				entered = true
 				var target string
-				return BindJSON(w, r, &target)
+				return BindJSON(r, &target)
 			}, onError)
 			r := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/", strings.NewReader(tc.body))
 			r.ContentLength = tc.length

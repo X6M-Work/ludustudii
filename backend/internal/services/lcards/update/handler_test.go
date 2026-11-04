@@ -51,7 +51,7 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 	h := &Handler{
 		store:           m,
 		parseVersion:    func(string) (int64, error) { return 1, nil },
-		bind:            func(http.ResponseWriter, *http.Request, any) error { return nil },
+		bind:            func(*http.Request, any) error { return nil },
 		validate:        func(request) error { return nil },
 		validateParamID: func(id string) error { return nil },
 	}
@@ -85,7 +85,7 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "binding error",
 			setup: func(h *Handler) {
-				h.bind = func(w http.ResponseWriter, r *http.Request, i any) error {
+				h.bind = func(r *http.Request, i any) error {
 					return &httpkit.StatusError{Code: http.StatusBadRequest, Response: erresp.Binding(), Err: errors.New("decode failed")}
 				}
 			},
@@ -228,7 +228,7 @@ func TestHandler_HandleBindStatusError(t *testing.T) {
 
 			c, rec := testContext(t, id, body)
 			h := testHandler(t, nil, func(h *Handler) {
-				h.bind = func(http.ResponseWriter, *http.Request, any) error { return tt.err }
+				h.bind = func(*http.Request, any) error { return tt.err }
 			})
 
 			err := h.Handle(rec, c)

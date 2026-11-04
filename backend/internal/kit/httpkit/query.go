@@ -18,7 +18,7 @@ func BindQueryInt(r *http.Request, name string, defaultValue int) (int, error) {
 	}
 	n, err := strconv.Atoi(val)
 	if err == nil && strconv.Itoa(n) != val {
-		err = &strconv.NumError{Func: "BindQueryInt", Num: val, Err: strconv.ErrSyntax}
+		err = fmt.Errorf("not canonical: %q", val)
 	}
 	if err != nil {
 		return 0, &StatusError{

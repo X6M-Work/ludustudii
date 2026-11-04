@@ -5,7 +5,6 @@ package validator
 
 import (
 	"fmt"
-	"strconv"
 	"strings"
 	"unicode/utf8"
 
@@ -15,13 +14,12 @@ import (
 
 // Machine-readable codes sent in FieldError.Code.
 const (
-	CodeInvalidUUID7   = "invalid_uuid7"
-	CodeRequired       = "required"
-	CodeMaxLength      = "max_length"
-	CodeUntrimmed      = "untrimmed"
-	CodeNormalized     = "not_normalized"
-	CodeInvalidInteger = "invalid_integer"
-	CodeOutOfRange     = "out_of_range"
+	CodeInvalidUUID7 = "invalid_uuid7"
+	CodeRequired     = "required"
+	CodeMaxLength    = "max_length"
+	CodeUntrimmed    = "untrimmed"
+	CodeNormalized   = "not_normalized"
+	CodeOutOfRange   = "out_of_range"
 )
 
 // EmptyOrUUID7 accepts an empty string or a UUID7 in canonical form.
@@ -79,17 +77,6 @@ func MaxLength(field, val string, max int) error {
 	if curr > max {
 		return NewFieldError(field, CodeMaxLength,
 			fmt.Errorf("%q %d/%d: %w", field, curr, max, ErrMaxLength))
-	}
-	return nil
-}
-
-// Integer checks that val is an int in canonical base-10 form, so "+5", "05"
-// and " 5" fail.
-func Integer(field, val string) error {
-	n, err := strconv.Atoi(val)
-	if err != nil || strconv.Itoa(n) != val {
-		return NewFieldError(field, CodeInvalidInteger,
-			fmt.Errorf("%q: %w", field, ErrInvalidInteger))
 	}
 	return nil
 }

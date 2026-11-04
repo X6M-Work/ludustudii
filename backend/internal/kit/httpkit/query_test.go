@@ -7,6 +7,7 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/erresp"
@@ -21,6 +22,7 @@ func TestBindQueryInt(t *testing.T) {
 		defaultValue int
 		want         int
 		wantErr      error
+		wantErrText  string
 	}{
 		{name: "missing", defaultValue: 20, want: 20},
 		{name: "empty", query: "?size=", defaultValue: 20, want: 20},
@@ -32,10 +34,10 @@ func TestBindQueryInt(t *testing.T) {
 		{name: "unrelated parameter", query: "?limit=5", defaultValue: 20, want: 20},
 		{name: "letters", query: "?size=abc", wantErr: strconv.ErrSyntax},
 		{name: "fraction", query: "?size=1.5", wantErr: strconv.ErrSyntax},
-		{name: "leading zero", query: "?size=05", wantErr: strconv.ErrSyntax},
-		{name: "negative leading zero", query: "?size=-05", wantErr: strconv.ErrSyntax},
-		{name: "negative zero", query: "?size=-0", wantErr: strconv.ErrSyntax},
-		{name: "plus sign", query: "?size=%2B5", wantErr: strconv.ErrSyntax},
+		{name: "leading zero", query: "?size=05", wantErrText: "not canonical:"},
+		{name: "negative leading zero", query: "?size=-05", wantErrText: "not canonical:"},
+		{name: "negative zero", query: "?size=-0", wantErrText: "not canonical:"},
+		{name: "plus sign", query: "?size=%2B5", wantErrText: "not canonical:"},
 		{name: "leading whitespace", query: "?size=%205", wantErr: strconv.ErrSyntax},
 		{name: "trailing whitespace", query: "?size=5%20", wantErr: strconv.ErrSyntax},
 		{name: "overflow", query: "?size=99999999999999999999999999999", wantErr: strconv.ErrRange},
@@ -47,13 +49,17 @@ func TestBindQueryInt(t *testing.T) {
 
 			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/"+tt.query, nil)
 			got, err := BindQueryInt(r, "size", tt.defaultValue)
-			if tt.wantErr != nil {
+			if tt.wantErr != nil || tt.wantErrText != "" {
 				typed, ok := errors.AsType[*StatusError](err)
-				if !ok || typed.Code != http.StatusBadRequest || typed.Response.Code != erresp.CodeBinding {
+				if !ok || typed.Code != http.StatusBadRequest || typed.Response.Code != erresp.CodeBinding || typed.Err == nil {
 					t.Fatalf("expected 400 bind_error, got %v", err)
 				}
 			}
-			if !errors.Is(err, tt.wantErr) {
+			if tt.wantErrText != "" {
+				if !strings.Contains(errors.Unwrap(err).Error(), tt.wantErrText) {
+					t.Fatalf("error: got %v, want %s", err, tt.wantErrText)
+				}
+			} else if !errors.Is(err, tt.wantErr) {
 				t.Fatalf("error: got %v, want %v", err, tt.wantErr)
 			}
 			if got != tt.want {

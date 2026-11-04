@@ -4,13 +4,12 @@ import "errors"
 
 // Sentinel errors wrapped by FieldError, one per check.
 var (
-	ErrInvalidUUID7   = errors.New("is invalid uuid v7")
-	ErrUntrimmed      = errors.New("contains leading or trailing whitespace")
-	ErrNormalized     = errors.New("is not normalized")
-	ErrRequired       = errors.New("is required")
-	ErrMaxLength      = errors.New("exceeds maximum length")
-	ErrInvalidInteger = errors.New("is invalid integer")
-	ErrOutOfRange     = errors.New("is out of range")
+	ErrInvalidUUID7 = errors.New("is invalid uuid v7")
+	ErrUntrimmed    = errors.New("contains leading or trailing whitespace")
+	ErrNormalized   = errors.New("is not normalized")
+	ErrRequired     = errors.New("is required")
+	ErrMaxLength    = errors.New("exceeds maximum length")
+	ErrOutOfRange   = errors.New("is out of range")
 )
 
 // FieldError reports a failed check on one input field. Field and Code are

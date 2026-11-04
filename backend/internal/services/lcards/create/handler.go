@@ -18,8 +18,7 @@ type request struct {
 }
 
 type response struct {
-	ID      string `json:"id"`
-	Version int64  `json:"version"`
+	ID string `json:"id"`
 }
 
 type creator interface {
@@ -29,7 +28,7 @@ type creator interface {
 // Handler serves the POST /api/lcards endpoint.
 type Handler struct {
 	store    creator
-	bind     func(w http.ResponseWriter, r *http.Request, i any) error
+	bind     func(r *http.Request, i any) error
 	validate func(req request) error
 }
 
@@ -50,7 +49,7 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 	ctx := r.Context()
 
 	var req request
-	if err := h.bind(w, r, &req); err != nil {
+	if err := h.bind(r, &req); err != nil {
 		return err
 	}
 
@@ -70,8 +69,8 @@ func (h *Handler) Handle(w http.ResponseWriter, r *http.Request) error {
 	return httpkit.JSON(w, http.StatusCreated, toResp(data))
 }
 
-func bind(w http.ResponseWriter, r *http.Request, i any) error {
-	return httpkit.BindJSON(w, r, i)
+func bind(r *http.Request, i any) error {
+	return httpkit.BindJSON(r, i)
 }
 
 func validate(req request) error {
@@ -91,5 +90,5 @@ func toParams(req request) createParams {
 }
 
 func toResp(data row) response {
-	return response(data)
+	return response{ID: data.ID}
 }

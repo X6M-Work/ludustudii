@@ -161,7 +161,7 @@ is the source of truth; the notes below summarize it.
   | `unexpected_error` | 500 | Server-side failure; details are only logged |
 
   Field error codes: `required`, `max_length`, `untrimmed`, `not_normalized`,
-  `invalid_integer`, `out_of_range`, `invalid_uuid7` (invalid pagination cursor).
+  `out_of_range`, `invalid_uuid7` (invalid pagination cursor).
 
 ### Configuration
 

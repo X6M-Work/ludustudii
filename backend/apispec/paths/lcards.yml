@@ -60,7 +60,7 @@ post:
     $ref: '../components/requestBodies.yml#/LearningCardInput'
   responses:
     '201':
-      description: Card created. The body contains its ID and version, and Location contains its relative URL.
+      description: Card created. The body contains its ID and Location contains its relative URL.
       headers:
         X-Request-Id:
           $ref: '../components/headers.yml#/RequestId'

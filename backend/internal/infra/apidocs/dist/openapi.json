@@ -384,14 +384,10 @@
         "properties": {
           "id": {
             "$ref": "#/components/schemas/CardId"
-          },
-          "version": {
-            "$ref": "#/components/schemas/LearningCard/properties/version"
           }
         },
         "required": [
-          "id",
-          "version"
+          "id"
         ],
         "type": "object"
       },
@@ -439,7 +435,6 @@
               "max_length",
               "untrimmed",
               "not_normalized",
-              "invalid_integer",
               "out_of_range"
             ],
             "type": "string"
@@ -645,7 +640,7 @@
                 }
               }
             },
-            "description": "Card created. The body contains its ID and version, and Location contains its relative URL.",
+            "description": "Card created. The body contains its ID and Location contains its relative URL.",
             "headers": {
               "ETag": {
                 "$ref": "#/components/headers/ETag"

@@ -161,5 +161,5 @@ func bindingError(t *testing.T) error {
 	req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, "/api/lcards", strings.NewReader("{"))
 	req.Header.Set("Content-Type", "application/json")
 	var target any
-	return httpkit.BindJSON(httptest.NewRecorder(), req, &target)
+	return httpkit.BindJSON(req, &target)
 }

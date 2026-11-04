@@ -47,7 +47,7 @@ func testHandler(t *testing.T, store func(*mockStore), setup func(*Handler)) *Ha
 
 	h := &Handler{
 		store:    m,
-		bind:     func(http.ResponseWriter, *http.Request, any) error { return nil },
+		bind:     func(*http.Request, any) error { return nil },
 		validate: func(request) error { return nil },
 	}
 	if setup != nil {
@@ -72,7 +72,7 @@ func TestHandler_Handle(t *testing.T) {
 		{
 			name: "binding error",
 			setup: func(h *Handler) {
-				h.bind = func(w http.ResponseWriter, r *http.Request, i any) error {
+				h.bind = func(r *http.Request, i any) error {
 					return &httpkit.StatusError{Code: http.StatusBadRequest, Response: erresp.Binding(), Err: errors.New("decode failed")}
 				}
 			},
@@ -107,7 +107,7 @@ func TestHandler_Handle(t *testing.T) {
 				}
 			},
 			wantCode:     http.StatusCreated,
-			wantResp:     &response{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", Version: 1},
+			wantResp:     &response{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"},
 			wantLocation: "/api/lcards/01a1730e-199d-7f9f-b59d-3bcd6f84066c",
 		},
 	}
@@ -198,7 +198,7 @@ func TestHandler_HandleBindStatusError(t *testing.T) {
 
 			c, rec := testContext(t, body)
 			h := testHandler(t, nil, func(h *Handler) {
-				h.bind = func(http.ResponseWriter, *http.Request, any) error { return tt.err }
+				h.bind = func(*http.Request, any) error { return tt.err }
 			})
 
 			err := h.Handle(rec, c)
@@ -250,7 +250,7 @@ func TestHandler_Wiring(t *testing.T) {
 		t.Fatalf("unmarshal response: %v", err)
 	}
 
-	wantResp := response{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", Version: 1}
+	wantResp := response{ID: "01a1730e-199d-7f9f-b59d-3bcd6f84066c"}
 	if gotResp != wantResp {
 		t.Errorf("resp: got %+v, want %+v", gotResp, wantResp)
 	}
@@ -326,7 +326,7 @@ func TestToResp(t *testing.T) {
 
 	const id = "01a1730e-199d-7f9f-b59d-3bcd6f84066c"
 	got := toResp(row{ID: id, Version: 1})
-	want := response{ID: id, Version: 1}
+	want := response{ID: id}
 	if got != want {
 		t.Errorf("resp: got %+v, want %+v", got, want)
 	}
