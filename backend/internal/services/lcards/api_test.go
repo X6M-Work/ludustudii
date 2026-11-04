@@ -150,8 +150,8 @@ func TestRouting(t *testing.T) {
 			Path:   "/api/lcards/01a1730e-199d-7f9f-b59d-3bcd6f84066c",
 		})
 		testkit.AssertStatus(t, resp, http.StatusMethodNotAllowed)
-		if got := resp.Header.Get("Allow"); got != "GET, HEAD, PUT, DELETE" {
-			t.Errorf("Allow: got %q, want %q", got, "GET, HEAD, PUT, DELETE")
+		if got := resp.Header.Get("Allow"); got != "DELETE, GET, HEAD, PUT" {
+			t.Errorf("Allow: got %q, want %q", got, "DELETE, GET, HEAD, PUT")
 		}
 		testkit.AssertJSON(t, resp.Body, `{"code":"method_not_allowed"}`)
 	})

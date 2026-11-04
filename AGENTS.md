@@ -28,11 +28,11 @@ the reference slice.
 3. Shared rules, limits and constants go in `<svc>/domain/`.
 4. One subpackage per endpoint with `handler.go` and `store.go`. The handler
    binds, sanitizes, validates, then calls the store through a small interface.
-5. Register the route in `<svc>/routes.go` with `httpkit.Router.Resource`,
-   one call per path, mapping each method to its handler. `Resource` adds the
-   JSON 405 with `Allow`, and GET also serves HEAD. Never call `mux.Handle` (or
-   `Router.Handle`) with a method pattern directly from a service. A new
-   service registers in `internal/app/router.go`.
+5. Register each route in `<svc>/routes.go` with
+   `api.HandleFunc("METHOD path", h.Handle)` on the `*httpkit.API` it receives,
+   one call per method and path. Always include the method; GET also serves
+   HEAD. The API turns the mux's 404 and 405 (with its `Allow`) into the JSON
+   error shape. A new service registers in `internal/app/router.go`.
 6. Test each layer using the existing patterns:
    - `handler_test.go` (`//go:build unit`): isolate binding, validation and store
      behavior using the existing function fields and interfaces.

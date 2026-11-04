@@ -25,31 +25,24 @@ func TestRouter_FinalResponseLogging(t *testing.T) {
 	}{
 		{"panic", "/api/panic", 500, "ERROR", "GET /api/panic"},
 		// BodyLimit rejects a known oversized body before the mux matches a route.
-		{"body limit", "/api/lcards", 413, "WARN", ""},
+		{"body limit", "/api/committed", 413, "WARN", ""},
 		{"committed error", "/api/committed", 202, "INFO", "GET /api/committed"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			clientApp, err := spa.Load()
-			if err != nil {
-				t.Fatal(err)
-			}
 			var logs bytes.Buffer
 			log, err := logging.New(logging.Options{Format: logging.FormatJSON, Output: &logs})
 			if err != nil {
 				t.Fatal(err)
 			}
-			handler := newRouter(log, clientApp, nil, nil, func(rt *httpkit.Router) {
-				rt.Resource("/api/panic", map[string]httpkit.HandlerFunc{
-					http.MethodGet: func(http.ResponseWriter, *http.Request) error { panic("boom") },
-				})
-				rt.Resource("/api/committed", map[string]httpkit.HandlerFunc{
-					http.MethodGet: func(w http.ResponseWriter, _ *http.Request) error {
-						w.WriteHeader(http.StatusAccepted)
-						return errors.New("after commit")
-					},
-				})
+			onError := errorHandler(log)
+			api := httpkit.NewAPI(onError)
+			api.HandleFunc("GET /api/panic", func(http.ResponseWriter, *http.Request) error { panic("boom") })
+			api.HandleFunc("GET /api/committed", func(w http.ResponseWriter, _ *http.Request) error {
+				w.WriteHeader(http.StatusAccepted)
+				return errors.New("after commit")
 			})
+			handler := withMiddleware(log, onError, api)
 			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.path, nil)
 			if tc.name == "body limit" {
 				r.Method = http.MethodPost
@@ -99,7 +92,7 @@ func TestRouter_LoggedRouteIsMatchedPattern(t *testing.T) {
 	}{
 		// The ID is invalid, so the handler responds without the database.
 		{http.MethodGet, "/api/lcards/not-an-id", 400, "GET /api/lcards/{id}"},
-		{http.MethodPatch, "/api/lcards/not-an-id", 405, "/api/lcards/{id}"},
+		{http.MethodPatch, "/api/lcards/not-an-id", 405, "/api/"},
 		{http.MethodGet, "/api/lcards/not-an-id/x", 404, "/api/"},
 	} {
 		t.Run(tc.method+" "+tc.path, func(t *testing.T) {

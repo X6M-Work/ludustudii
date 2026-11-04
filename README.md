@@ -55,27 +55,28 @@ small interface. Package boundaries are enforced by `depguard`:
 
 #### Routing
 
-All routes live on one `http.ServeMux`, wrapped once by the middleware chain
-in `internal/app/router.go`. The mux serves every request itself, so it sets
-`Request.Pattern` and wildcard path values (`r.PathValue("id")`).
+The app routes through an outer `http.ServeMux`, wrapped once by the
+middleware chain in `internal/app/router.go`. It sends `/api` and `/api/` to an
+`httpkit.API`, which has its own mux for the API routes. Both muxes serve
+requests themselves, so they set `Request.Pattern` and wildcard path values
+(`r.PathValue("id")`).
 
-- **API endpoints** register through `httpkit.Router.Resource`, one call per
+- **API endpoints** register with `api.HandleFunc`, one call per method and
   path, in each service's `routes.go`:
 
   ```go
-  rt.Resource(domain.CardsPath+"/{id}", map[string]httpkit.HandlerFunc{
-  	http.MethodGet:    g.Handle,
-  	http.MethodPut:    u.Handle,
-  	http.MethodDelete: d.Handle,
-  })
+  api.HandleFunc("GET "+domain.CardsPath+"/{id}", g.Handle)
+  api.HandleFunc("PUT "+domain.CardsPath+"/{id}", u.Handle)
+  api.HandleFunc("DELETE "+domain.CardsPath+"/{id}", d.Handle)
   ```
 
-  `Resource` registers `"METHOD path"` for each handler plus a method-less
-  pattern on the same path that returns the JSON `405` with an `Allow` header
-  (ordered GET, HEAD, POST, PUT, PATCH, DELETE). GET also serves HEAD. Services
-  never call `mux.Handle` or `Router.Handle` with a method pattern directly.
-- **Unknown `/api` paths** (`/api` and `/api/`) return the JSON `404`, never
-  the SPA.
+  Patterns always include the method, and GET also serves HEAD. Literal
+  segments such as `/api/lcards/due` can sit next to `/api/lcards/{id}`.
+- **Unknown API paths and methods** are decided by the API mux. `httpkit.API`
+  runs the mux's own 404 or 405 handler against a probe and reports
+  `not_found`, or `method_not_allowed` with the mux's `Allow` header (methods
+  sorted alphabetically, across every pattern that matches the path). An `/api`
+  path never reaches the SPA.
 - **`/docs`** routes are `GET` patterns, registered only when the reference is
   enabled; other methods fall through to the SPA.
 - **The SPA** is the method-less `/` catch-all and answers non-GET/HEAD
@@ -85,8 +86,8 @@ in `internal/app/router.go`. The mux serves every request itself, so it sets
   cleaned path.
 
 The request log's `route` is the matched mux pattern, for example
-`GET /api/lcards/{id}`, `/api/lcards/{id}` for a 405, `/api/` for an unknown
-API path, or `/` for the SPA. It is empty when middleware rejects a request
+`GET /api/lcards/{id}`, `/api/` for an unknown API path or method (`/api` for
+the bare path), or `/` for the SPA. It is empty when middleware rejects a request
 before routing, such as a `413` for a declared body over the limit.
 
 Production environment variables are read only in `internal/infra/env`; the

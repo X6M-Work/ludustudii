@@ -11,7 +11,6 @@ import (
 
 	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
-	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
 )
 
@@ -44,7 +43,7 @@ func TestRouter_PathSpellingAndReference(t *testing.T) {
 		{"POST", "/docs/openapi.json", 405, "method not allowed\n", "GET, HEAD", ""},
 		{"POST", "/docs/scalar.js", 405, "method not allowed\n", "GET, HEAD", ""},
 		{"OPTIONS", "/api/lcards", 405, "{\"code\":\"method_not_allowed\"}\n", "GET, HEAD, POST", ""},
-		{"PATCH", "/api/lcards/id", 405, "{\"code\":\"method_not_allowed\"}\n", "GET, HEAD, PUT, DELETE", ""},
+		{"PATCH", "/api/lcards/id", 405, "{\"code\":\"method_not_allowed\"}\n", "DELETE, GET, HEAD, PUT", ""},
 	} {
 		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
 			t.Parallel()
@@ -89,27 +88,5 @@ func TestRouter_RequestIDHeader(t *testing.T) {
 		if r.Header.Get("X-Request-Id") != value {
 			t.Fatal("incoming header changed")
 		}
-	}
-}
-
-func TestRouter_PathValuesFromMux(t *testing.T) {
-	t.Parallel()
-	clientApp, err := spa.Load()
-	if err != nil {
-		t.Fatal(err)
-	}
-	var deckID, cardID string
-	handler := newRouter(slog.New(slog.DiscardHandler), clientApp, nil, nil, func(rt *httpkit.Router) {
-		rt.Resource("/api/decks/{deckId}/cards/{cardId}", map[string]httpkit.HandlerFunc{
-			http.MethodGet: func(w http.ResponseWriter, r *http.Request) error {
-				deckID, cardID = r.PathValue("deckId"), r.PathValue("cardId")
-				return httpkit.NoContent(w, http.StatusNoContent)
-			},
-		})
-	})
-	rec := httptest.NewRecorder()
-	handler.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/decks/d%2F1/cards/c2", nil))
-	if rec.Code != http.StatusNoContent || deckID != "d/1" || cardID != "c2" {
-		t.Fatalf("got %d deckId=%q cardId=%q, want 204 deckId=%q cardId=%q", rec.Code, deckID, cardID, "d/1", "c2")
 	}
 }

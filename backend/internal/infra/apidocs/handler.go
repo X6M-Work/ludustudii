@@ -1,10 +1,6 @@
 package apidocs
 
-import (
-	"net/http"
-
-	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
-)
+import "net/http"
 
 // Path is where the reference page is served. The specification and the
 // Scalar script are served below it, and the page loads them by URLs relative
@@ -23,14 +19,14 @@ func NewHandler(docs *Docs) *Handler {
 	return &Handler{docs: docs}
 }
 
-// RegisterRoutes registers the reference routes for GET and HEAD. Other
-// methods fall through to the router's catch-all route. The trailing slash
+// RegisterRoutes registers the reference routes on mux for GET and HEAD.
+// Other methods fall through to the mux's catch-all route. The trailing slash
 // redirects only at the exact /docs/ path.
-func (h *Handler) RegisterRoutes(rt *httpkit.Router) {
-	rt.Handle("GET "+Path, http.HandlerFunc(h.docs.Page.Serve))
-	rt.Handle("GET "+Path+"/{$}", http.HandlerFunc(redirectToPath))
-	rt.Handle("GET "+Path+"/openapi.json", http.HandlerFunc(h.docs.Spec.Serve))
-	rt.Handle("GET "+Path+"/scalar.js", http.HandlerFunc(h.docs.Script.Serve))
+func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+	mux.Handle("GET "+Path, http.HandlerFunc(h.docs.Page.Serve))
+	mux.Handle("GET "+Path+"/{$}", http.HandlerFunc(redirectToPath))
+	mux.Handle("GET "+Path+"/openapi.json", http.HandlerFunc(h.docs.Spec.Serve))
+	mux.Handle("GET "+Path+"/scalar.js", http.HandlerFunc(h.docs.Script.Serve))
 }
 
 // redirectToPath redirects Path+"/" to Path, keeping the query. The redirect

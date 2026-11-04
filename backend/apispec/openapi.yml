@@ -22,7 +22,7 @@ info:
     provided or generating an ID otherwise. /api and unknown /api/* paths return 404
     with code not_found. Unsupported methods on the collection return 405
     with code method_not_allowed and Allow: GET, HEAD, POST; unsupported methods
-    on an individual card return 405 with Allow: GET, HEAD, PUT, DELETE.
+    on an individual card return 405 with Allow: DELETE, GET, HEAD, PUT.
     Deeper paths below a card return 404.
 servers:
   - url: /

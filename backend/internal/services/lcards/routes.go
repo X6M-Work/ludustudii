@@ -4,7 +4,6 @@ package lcards
 
 import (
 	"database/sql"
-	"net/http"
 
 	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/services/lcards/create"
@@ -23,22 +22,18 @@ import (
 //	PUT    /api/lcards/{id}  replace a card's title and description (update)
 //	DELETE /api/lcards/{id}  delete a card (remove)
 //
-// Other methods on these paths get 405 with an Allow header, and deeper paths
-// get 404.
-func RegisterRoutes(rt *httpkit.Router, db *sql.DB) {
+// GET also serves HEAD. The API answers other methods on these paths with 405
+// and an Allow header, and deeper paths with 404.
+func RegisterRoutes(api *httpkit.API, db *sql.DB) {
 	l := list.NewHandler(list.NewStore(db))
 	g := get.NewHandler(get.NewStore(db))
 	c := create.NewHandler(create.NewStore(db))
 	u := update.NewHandler(update.NewStore(db))
 	d := remove.NewHandler(remove.NewStore(db))
 
-	rt.Resource(domain.CardsPath, map[string]httpkit.HandlerFunc{
-		http.MethodGet:  l.Handle,
-		http.MethodPost: c.Handle,
-	})
-	rt.Resource(domain.CardsPath+"/{id}", map[string]httpkit.HandlerFunc{
-		http.MethodGet:    g.Handle,
-		http.MethodPut:    u.Handle,
-		http.MethodDelete: d.Handle,
-	})
+	api.HandleFunc("GET "+domain.CardsPath, l.Handle)
+	api.HandleFunc("POST "+domain.CardsPath, c.Handle)
+	api.HandleFunc("GET "+domain.CardsPath+"/{id}", g.Handle)
+	api.HandleFunc("PUT "+domain.CardsPath+"/{id}", u.Handle)
+	api.HandleFunc("DELETE "+domain.CardsPath+"/{id}", d.Handle)
 }

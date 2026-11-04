@@ -71,17 +71,11 @@ func TestNewRouter(t *testing.T) {
 
 	t.Run("panic in handler returns 500 unexpected_error", func(t *testing.T) {
 		t.Parallel()
-		clientApp, err := spa.Load()
-		if err != nil {
-			t.Fatal(err)
-		}
 		// keep the stack trace out of test output
-		e := newRouter(discardLogger(), clientApp, nil, nil, func(rt *httpkit.Router) {
-			rt.Resource("/api/panic", map[string]httpkit.HandlerFunc{
-				http.MethodGet: func(http.ResponseWriter, *http.Request) error { panic("boom") },
-			})
-		})
-		srv := httptest.NewServer(e)
+		onError := errorHandler(discardLogger())
+		api := httpkit.NewAPI(onError)
+		api.HandleFunc("GET /api/panic", func(http.ResponseWriter, *http.Request) error { panic("boom") })
+		srv := httptest.NewServer(withMiddleware(discardLogger(), onError, api))
 		t.Cleanup(srv.Close)
 
 		resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/api/panic"})

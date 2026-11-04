@@ -1,72 +1,64 @@
 package httpkit
 
-import (
-	"net/http"
-	"slices"
-	"strings"
-)
+import "net/http"
 
-// resourceMethods lists the methods Resource accepts, in Allow header order.
-var resourceMethods = []string{
-	http.MethodGet, http.MethodHead, http.MethodPost,
-	http.MethodPut, http.MethodPatch, http.MethodDelete,
-}
-
-// Router registers routes on one http.ServeMux and reports handler errors
-// through a shared ErrorHandler. It serves requests through the mux, so the
-// matched pattern and path values are set on each request.
-type Router struct {
+// API serves the API routes from its own http.ServeMux and reports handler
+// errors through a shared ErrorHandler. The mux still decides 404 and 405, so
+// method patterns like "GET /items/due" and "GET /items/{id}" coexist and the
+// Allow header lists the methods the mux knows for the path; API only replaces
+// the mux's plain-text bodies with ErrNotFound and ErrMethodNotAllowed.
+type API struct {
 	mux     *http.ServeMux
 	onError ErrorHandler
 }
 
-// NewRouter returns a Router with an empty mux that reports errors to onError.
-func NewRouter(onError ErrorHandler) *Router {
-	return &Router{mux: http.NewServeMux(), onError: onError}
-}
-
-// ServeHTTP dispatches the request through the mux.
-func (rt *Router) ServeHTTP(w http.ResponseWriter, r *http.Request) {
-	rt.mux.ServeHTTP(w, r)
-}
-
-// Handle registers h for an http.ServeMux pattern. Services register their
-// endpoints with Resource instead.
-func (rt *Router) Handle(pattern string, h http.Handler) {
-	rt.mux.Handle(pattern, h)
+// NewAPI returns an API with an empty mux that reports errors to onError.
+func NewAPI(onError ErrorHandler) *API {
+	return &API{mux: http.NewServeMux(), onError: onError}
 }
 
 // HandleFunc registers h for an http.ServeMux pattern, routing its errors to
-// the Router's ErrorHandler.
-func (rt *Router) HandleFunc(pattern string, h HandlerFunc) {
-	rt.mux.Handle(pattern, Adapt(h, rt.onError))
+// the API's ErrorHandler. A GET pattern also serves HEAD.
+func (a *API) HandleFunc(pattern string, h HandlerFunc) {
+	a.mux.Handle(pattern, Adapt(h, a.onError))
 }
 
-// Resource registers each handler under "METHOD path" and a method-less
-// pattern on path that returns the JSON 405 with an Allow header. A GET
-// handler also serves HEAD. Methods other than GET, HEAD, POST, PUT, PATCH and
-// DELETE panic, as does an empty map.
-func (rt *Router) Resource(path string, handlers map[string]HandlerFunc) {
-	if len(handlers) == 0 {
-		panic("httpkit: Resource " + path + " has no handlers")
-	}
-	for method, h := range handlers {
-		if !slices.Contains(resourceMethods, method) {
-			panic("httpkit: Resource " + path + " has unsupported method " + method)
+// ServeHTTP dispatches the request through the mux, which sets the matched
+// pattern and path values. When no pattern matches, it runs the mux's own
+// 404 or 405 handler against a probe to read the status and Allow header,
+// then reports the matching error instead of the mux's text body.
+func (a *API) ServeHTTP(w http.ResponseWriter, r *http.Request) {
+	if h, pattern := a.mux.Handler(r); pattern == "" {
+		p := &probe{header: http.Header{}}
+		h.ServeHTTP(p, r)
+		if p.status == http.StatusMethodNotAllowed {
+			w.Header().Set("Allow", p.header.Get("Allow"))
+			a.onError(w, r, ErrMethodNotAllowed)
+			return
 		}
-		rt.HandleFunc(method+" "+path, h)
+		a.onError(w, r, ErrNotFound)
+		return
 	}
-	allowed := make([]string, 0, len(resourceMethods))
-	for _, method := range resourceMethods {
-		_, ok := handlers[method]
-		_, get := handlers[http.MethodGet]
-		if ok || method == http.MethodHead && get {
-			allowed = append(allowed, method)
-		}
+	a.mux.ServeHTTP(w, r)
+}
+
+// probe records the status and headers a handler writes and discards its body.
+type probe struct {
+	header http.Header
+	status int
+}
+
+func (p *probe) Header() http.Header { return p.header }
+
+func (p *probe) Write(b []byte) (int, error) {
+	if p.status == 0 {
+		p.status = http.StatusOK
 	}
-	allow := strings.Join(allowed, ", ")
-	rt.HandleFunc(path, func(w http.ResponseWriter, _ *http.Request) error {
-		w.Header().Set("Allow", allow)
-		return ErrMethodNotAllowed
-	})
+	return len(b), nil
+}
+
+func (p *probe) WriteHeader(status int) {
+	if p.status == 0 {
+		p.status = status
+	}
 }
