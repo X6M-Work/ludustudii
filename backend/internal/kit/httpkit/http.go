@@ -102,11 +102,7 @@ func BindJSON(r *http.Request, target any) error {
 	}
 	if err != nil {
 		if mbe, ok := errors.AsType[*http.MaxBytesError](err); ok {
-			return &StatusError{
-				Code:     http.StatusRequestEntityTooLarge,
-				Err:      fmt.Errorf("body exceeds %d-byte limit: %w", mbe.Limit, err),
-				Response: erresp.PayloadTooLarge(),
-			}
+			return fmt.Errorf("body exceeds %d-byte limit: %w: %w", mbe.Limit, ErrPayloadTooLarge, err)
 		}
 		return &StatusError{Code: http.StatusBadRequest, Err: err, Response: erresp.Binding()}
 	}

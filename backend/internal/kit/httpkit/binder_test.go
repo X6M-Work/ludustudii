@@ -178,8 +178,11 @@ func TestJSONBinder_ReadErrors(t *testing.T) {
 				t.Fatalf("cause lost: %v", err)
 			}
 			if tt.status == http.StatusRequestEntityTooLarge {
+				if !errors.Is(err, ErrPayloadTooLarge) {
+					t.Fatalf("sentinel lost: %v", err)
+				}
 				limitErr, ok := errors.AsType[*http.MaxBytesError](err)
-				if !ok || limitErr.Limit != 8 || !strings.Contains(err.Error(), "8-byte limit") {
+				if !ok || limitErr.Limit != 8 {
 					t.Fatalf("body limit lost: %v", err)
 				}
 			}

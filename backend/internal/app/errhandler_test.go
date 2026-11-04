@@ -165,7 +165,8 @@ func bodyLimitError(t *testing.T) error {
 	req.Body = http.MaxBytesReader(nil, req.Body, 8)
 	var target any
 	err := httpkit.BindJSON(req, &target)
-	if err == nil || !strings.Contains(err.Error(), "8-byte limit") {
+	limitErr, ok := errors.AsType[*http.MaxBytesError](err)
+	if !ok || limitErr.Limit != 8 {
 		t.Fatalf("expected body limit in binding error, got %v", err)
 	}
 	return err
