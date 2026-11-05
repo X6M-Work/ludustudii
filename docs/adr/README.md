@@ -49,3 +49,4 @@ records explain *why*.
 | [0016](0016-row-metadata-set-in-store-sql.md) | Row metadata set in store SQL | Proposed | back-end, database |
 | [0017](0017-migration-policy.md) | Migration policy | Proposed | back-end, database |
 | [0018](0018-confgiration-from-environment-variables.md) | Configuration from environment variables | Proposed | back-end, configuration |
+| [0019](0019-structured-logging-with.slog.md) | Structured logging with slog | Proposed | back-end, observability |
