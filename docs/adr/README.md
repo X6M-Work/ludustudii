@@ -22,3 +22,4 @@ records explain *why*.
 | [0001](0001-single-binary-services-as-packages.md) | Single binary now, services as packages | Proposed | back-end, architecture |
 | [0002](0002-standard-library-first-minimal-dependencies.md) | Standard library first, minimal dependencies | Proposed | back-end, dependencies |
 | [0003](0003-self-contained-server-binary.md) | Self-contained server binary | Proposed | back-end, front-end, architecture |
+| [0004](0004-spec-first-open-api-contract.md) | Spec-first OpenAPI contract | Proposed | back-end, api |
