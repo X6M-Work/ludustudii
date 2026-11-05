@@ -168,9 +168,12 @@ func TestNewRouter_RequestLogging(t *testing.T) {
 		wantStatus int
 		wantLevel  string
 		wantRoute  string
+		requestID  string
 	}{
 		{name: "200 logs INFO", path: "/", wantStatus: http.StatusOK, wantLevel: "INFO", wantRoute: "/"},
 		{name: "404 logs WARN", path: "/api/nope", wantStatus: http.StatusNotFound, wantLevel: "WARN", wantRoute: "/api/"},
+		{name: "oversized request ID replaced", path: "/api/nope", wantStatus: http.StatusNotFound, wantLevel: "WARN", wantRoute: "/api/", requestID: strings.Repeat("a", 129)},
+		{name: "invalid request ID replaced", path: "/api/nope", wantStatus: http.StatusNotFound, wantLevel: "WARN", wantRoute: "/api/", requestID: "client/id"},
 	}
 
 	for _, tt := range tests {
@@ -188,12 +191,16 @@ func TestNewRouter_RequestLogging(t *testing.T) {
 			srv := httptest.NewServer(NewRouter(log, clientApp, nil, nil))
 			t.Cleanup(srv.Close)
 
-			resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: tt.path})
+			resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: tt.path, Headers: http.Header{"X-Request-Id": {tt.requestID}}})
 			testkit.AssertStatus(t, resp, tt.wantStatus)
 
 			id := resp.Header.Get("X-Request-Id")
 			if id == "" {
 				t.Fatalf("missing %s header", "X-Request-Id")
+			}
+
+			if len(id) > 128 || (tt.requestID != "" && id == tt.requestID) {
+				t.Fatalf("invalid generated request ID: %q", id)
 			}
 
 			// Close waits for the handler to return, so the record is written.
@@ -286,14 +293,14 @@ func TestNewRouter_UnpinnedContract(t *testing.T) {
 			}
 		}
 	}
-	for _, headers := range []http.Header{{"X-Request-Id": {"first", "second"}}, {"X-Request-Id": {"", "second"}}} {
+	for _, headers := range []http.Header{{"X-Request-Id": {"first", "second"}}, {"X-Request-Id": {"", "second"}}, {"X-Request-Id": {"invalid/id", "second"}}} {
 		resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/api/nope", Headers: headers})
 		id := resp.Header.Get("X-Request-Id")
-		if headers.Get("X-Request-Id") != "" {
+		if headers.Get("X-Request-Id") == "first" {
 			if id != "first" {
 				t.Fatalf("request ID: %q", id)
 			}
-		} else if id == "" {
+		} else if id == "" || id == headers.Get("X-Request-Id") || id == "second" {
 			t.Fatalf("generated ID: %q", id)
 		}
 	}

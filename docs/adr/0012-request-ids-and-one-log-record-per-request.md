@@ -1,6 +1,6 @@
 # 0012. Request IDs and one log record per request
 
-- Status: Accepted
+- Status: Superseded by 0021
 - Date: 2026-11-05
 - Tags: back-end, api, observability
 

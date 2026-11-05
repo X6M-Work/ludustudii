@@ -11,9 +11,12 @@
         }
       },
       "RequestId": {
-        "description": "Incoming X-Request-Id value, or a generated request ID when none was supplied.",
+        "description": "Valid first incoming X-Request-Id value, or a random base32 ID when missing, empty or invalid.",
         "required": true,
         "schema": {
+          "maxLength": 128,
+          "minLength": 1,
+          "pattern": "^[A-Za-z0-9._-]+$",
           "type": "string"
         }
       }
@@ -64,7 +67,7 @@
         }
       },
       "RequestId": {
-        "description": "Optional client-supplied request ID, echoed back in the X-Request-Id response header and included in server logs. A new ID is generated when omitted.",
+        "description": "Optional client-supplied request ID. The first value is reused unchanged only\nif it contains 1–128 ASCII letters, digits, dots, underscores or hyphens.\nMissing, empty or invalid values are replaced with a random base32 ID without\nrejecting the request. The selected ID is echoed in the X-Request-Id response\nheader and included in server logs.\n",
         "in": "header",
         "name": "X-Request-Id",
         "schema": {

@@ -137,8 +137,10 @@ is the source of truth; the notes below summarize it.
   page's `next_cursor`). `next_cursor` is `null` on the last page. Malformed
   or overflowing limits return `validation_error` with `invalid_integer`; integer limits outside 1–100
   return `validation_error` with `out_of_range`.
-- **Request IDs**: every response carries `X-Request-Id`. A client-supplied
-  value is reused, otherwise one is generated; it is attached to every log
+- **Request IDs**: every response carries `X-Request-Id`. The first client-supplied
+  value is reused only if it contains 1–128 ASCII letters, digits, `.`, `_` or
+  `-`. Missing, empty or invalid values are replaced with a random base32 ID,
+  without rejecting the request. The selected ID is attached to every log
   record for that request.
 - **Errors** share one JSON shape. `errors` is present only for validation
   failures in body fields, path parameters or query parameters:

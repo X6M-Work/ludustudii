@@ -46,21 +46,39 @@ func Recover(onError ErrorHandler) Middleware {
 	}
 }
 
-// RequestID reuses the first incoming X-Request-Id, or generates a random
-// base32 string when it is empty. It sets the response header and passes next a
+// RequestID reuses the first incoming X-Request-Id when it contains 1–128
+// ASCII letters, digits, dots, underscores or hyphens. Otherwise it generates a
+// random base32 string. It sets the response header and passes next a
 // request whose context is enriched. Because next receives a new request,
 // RequestID must run outside RequestLogger, which reads the routed request.
 func RequestID(withID func(context.Context, string) context.Context) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			id := r.Header.Get("X-Request-Id")
-			if id == "" {
+			if !validRequestID(id) {
 				id = rand.Text()
 			}
 			w.Header().Set("X-Request-Id", id)
 			next.ServeHTTP(w, r.WithContext(withID(r.Context(), id)))
 		})
 	}
+}
+
+const requestIDMaxLength = 128
+
+func validRequestID(id string) bool {
+	if len(id) == 0 || len(id) > requestIDMaxLength {
+		return false
+	}
+	for i := range len(id) {
+		ch := id[i]
+		if (ch >= 'a' && ch <= 'z') || (ch >= 'A' && ch <= 'Z') ||
+			(ch >= '0' && ch <= '9') || ch == '.' || ch == '_' || ch == '-' {
+			continue
+		}
+		return false
+	}
+	return true
 }
 
 // RequestLogger logs one request record after the final response, including

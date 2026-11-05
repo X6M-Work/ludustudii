@@ -11,7 +11,12 @@ CardId:
 RequestId:
   name: X-Request-Id
   in: header
-  description: Optional client-supplied request ID, echoed back in the X-Request-Id response header and included in server logs. A new ID is generated when omitted.
+  description: |
+    Optional client-supplied request ID. The first value is reused unchanged only
+    if it contains 1–128 ASCII letters, digits, dots, underscores or hyphens.
+    Missing, empty or invalid values are replaced with a random base32 ID without
+    rejecting the request. The selected ID is echoed in the X-Request-Id response
+    header and included in server logs.
   schema:
     type: string
 Limit:

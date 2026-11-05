@@ -70,23 +70,49 @@ func TestRouter_RequestIDHeader(t *testing.T) {
 		t.Fatal(err)
 	}
 	handler := NewRouter(slog.New(slog.DiscardHandler), clientApp, nil, nil)
-	for _, value := range []string{"", "  client id  "} {
-		r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/nope", nil)
-		r.Header.Set("X-Request-Id", value)
-		rec := httptest.NewRecorder()
-		handler.ServeHTTP(rec, r)
-		id := rec.Header().Get("X-Request-Id")
-		if value != "" {
-			if id != value {
-				t.Fatalf("ID: %q, want %q", id, value)
+	for _, tc := range []struct {
+		name  string
+		value string
+		reuse bool
+	}{
+		{name: "missing"},
+		{name: "one character", value: "a", reuse: true},
+		{name: "allowed characters", value: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-", reuse: true},
+		{name: "maximum length", value: strings.Repeat("a", 128), reuse: true},
+		{name: "over maximum length", value: strings.Repeat("a", 129)},
+		{name: "spaces", value: "  client id  "},
+		{name: "tab", value: "client\tid"},
+		{name: "newline", value: "client\nid"},
+		{name: "carriage return", value: "client\rid"},
+		{name: "null", value: "client\x00id"},
+		{name: "DEL", value: "client\x7fid"},
+		{name: "non-ASCII", value: "client-é"},
+		{name: "punctuation", value: "client/id"},
+		{name: "comma separated", value: "first,second"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			value := tc.value
+			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/nope", nil)
+			r.Header.Set("X-Request-Id", value)
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, r)
+			if rec.Code != http.StatusNotFound {
+				t.Fatalf("status: %d, want 404", rec.Code)
 			}
-		} else {
-			if len(id) < 26 || strings.ContainsFunc(id, func(ch rune) bool { return (ch < 'A' || ch > 'Z') && (ch < '2' || ch > '7') }) {
-				t.Fatalf("generated ID: %q", id)
+			id := rec.Header().Get("X-Request-Id")
+			if tc.reuse {
+				if id != value {
+					t.Fatalf("ID: %q, want %q", id, value)
+				}
+			} else {
+				if len(id) < 26 || len(id) > 128 || strings.ContainsFunc(id, func(ch rune) bool { return (ch < 'A' || ch > 'Z') && (ch < '2' || ch > '7') }) {
+					t.Fatalf("generated ID: %q", id)
+				}
 			}
-		}
-		if r.Header.Get("X-Request-Id") != value {
-			t.Fatal("incoming header changed")
-		}
+			if r.Header.Get("X-Request-Id") != value {
+				t.Fatal("incoming header changed")
+			}
+		})
 	}
 }

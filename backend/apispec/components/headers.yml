@@ -1,8 +1,11 @@
 RequestId:
-  description: Incoming X-Request-Id value, or a generated request ID when none was supplied.
+  description: Valid first incoming X-Request-Id value, or a random base32 ID when missing, empty or invalid.
   required: true
   schema:
     type: string
+    minLength: 1
+    maxLength: 128
+    pattern: '^[A-Za-z0-9._-]+$'
 ETag:
   description: Strong entity tag containing the card's decimal version.
   required: true
