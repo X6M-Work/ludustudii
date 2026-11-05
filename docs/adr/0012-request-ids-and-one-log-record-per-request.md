@@ -1,8 +1,12 @@
 # 0012. Request IDs and one log record per request
 
-- Status: Accepted, Amended by [0021](0021-bounded-client-request-ids.md)
+- Status: Accepted, Amended by [0021](0021-bounded-client-request-ids.md), [0023](0023-liveness-and-readiness-probes.md)
 - Date: 2026-11-05
 - Tags: back-end, api, observability
+
+Amended by [0023](0023-liveness-and-readiness-probes.md) only for the log
+level of quiet probe paths: their request summaries use debug at every status.
+All other paths retain the status-based log level rules below.
 
 ## Context
 

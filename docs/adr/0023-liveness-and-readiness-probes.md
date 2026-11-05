@@ -1,6 +1,6 @@
 # 0023. Liveness and readiness probes
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-05
 - Tags: back-end, operations, observability
 
