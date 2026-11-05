@@ -66,4 +66,7 @@ LearningCardPage:
       format: uuid
       nullable: true
       pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
-      description: Last returned card's ID when more cards follow; null on the final page.
+      description: |
+        Opaque pagination token; null on the final page. Pass this value unchanged
+        as the cursor query parameter to fetch the next page. Clients must not
+        parse, construct, or rely on the token's format.

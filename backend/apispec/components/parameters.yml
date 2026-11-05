@@ -26,7 +26,7 @@ Limit:
 Cursor:
   name: cursor
   in: query
-  description: Hyphenated UUIDv7 from a previous page's next_cursor. Hexadecimal letters are case-insensitive. Omit or send an empty value for the first page.
+  description: Opaque pagination token from a previous page's next_cursor. Pass the value unchanged. Omit or send an empty value for the first page.
   schema:
     type: string
     format: uuid
