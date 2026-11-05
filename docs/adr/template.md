@@ -2,6 +2,7 @@
 
 - Status: Proposed | Accepted | Superseded by NNNN | Deprecated
 - Date: YYYY-MM-DD
+- Tags: tag-1, tag-2
 
 ## Context
 

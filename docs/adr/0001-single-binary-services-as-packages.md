@@ -2,6 +2,7 @@
 
 - Status: Proposed
 - Date: 2026-11-04
+- Tags: back-end, architecture
 
 ## Context
 

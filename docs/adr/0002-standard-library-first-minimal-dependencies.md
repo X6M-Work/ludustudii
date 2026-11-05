@@ -2,6 +2,7 @@
 
 - Status: Proposed
 - Date: 2026-11-05
+- Tags: back-end, dependencies
 
 ## Context
 
