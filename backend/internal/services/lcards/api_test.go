@@ -482,6 +482,19 @@ func TestCreate(t *testing.T) {
 		}
 	})
 
+	t.Run("mixed case JSON media type", func(t *testing.T) {
+		t.Parallel()
+		srv, _ := newServer(t)
+
+		resp := testkit.Do(t, srv, testkit.DoOpts{
+			Method:      http.MethodPost,
+			Path:        "/api/lcards",
+			ContentType: "Application/JSON; Charset=UTF-8",
+			Body:        `{"title":"Title","description":"Description"}`,
+		})
+		testkit.AssertStatus(t, resp, http.StatusCreated)
+	})
+
 	t.Run("no Content-Type with a body", func(t *testing.T) {
 		t.Parallel()
 		srv, _ := newServer(t)

@@ -78,7 +78,10 @@ func TestJSONBinder(t *testing.T) {
 		{name: "trailing garbage rejected", contentType: "application/json", body: `{"title":"Hello"} invalid`, wantStatus: http.StatusBadRequest},
 		{name: "trailing null rejected", contentType: "application/json", body: `{"title":"Hello"} null`, wantStatus: http.StatusBadRequest},
 		{name: "trailing JSON rejected", contentType: "application/json", body: `{"title":"one"}{"title":"two"}`, wantStatus: http.StatusBadRequest},
-		{name: "media type is case sensitive", contentType: "Application/JSON", body: `{}`, wantErr: ErrUnsupportedMediaType, wantStatus: http.StatusUnsupportedMediaType},
+		{name: "mixed case media type accepted", contentType: "Application/JSON", body: `{"title":"Hello"}`, want: payload{Title: "Hello"}},
+		{name: "uppercase media type with parameters accepted", contentType: "APPLICATION/JSON; Charset=UTF-8", body: `{"title":"Hello"}`, want: payload{Title: "Hello"}},
+		{name: "mixed case non-JSON media type rejected", contentType: "Application/XML", body: `{}`, wantErr: ErrUnsupportedMediaType, wantStatus: http.StatusUnsupportedMediaType},
+		{name: "JSON suffix media type rejected", contentType: "Application/Problem+JSON", body: `{}`, wantErr: ErrUnsupportedMediaType, wantStatus: http.StatusUnsupportedMediaType},
 		{name: "null accepted", contentType: "application/json", body: `null`, want: payload{}},
 	}
 

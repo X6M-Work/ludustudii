@@ -9,7 +9,8 @@ info:
     Backend API for managing learning cards. No authentication is required.
 
     Requests with JSON bodies must use Content-Type: application/json
-    (media-type parameters are accepted); other or missing Content-Types on a
+    (type and subtype are case-insensitive; media-type parameters are accepted).
+    Other or missing Content-Types on a
     nonempty body return 415 with code unsupported_media_type. Titles and descriptions are normalized
     to Unicode NFC and trimmed before validation and storage. Length limits
     count Unicode code points after this sanitization.

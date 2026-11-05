@@ -88,14 +88,14 @@ func Text(w http.ResponseWriter, status int, value string) error {
 
 // BindJSON binds only the JSON body, ignoring query and path values. A known
 // empty body leaves target unchanged; other bodies require application/json
-// (parameters ignored). Malformed JSON, unknown fields and trailing JSON
+// (case-insensitive, parameters ignored). Malformed JSON, unknown fields and trailing JSON
 // return 400; oversized input returns 413.
 func BindJSON(r *http.Request, target any) error {
 	if r.ContentLength == 0 {
 		return nil
 	}
 	base, _, _ := strings.Cut(r.Header.Get("Content-Type"), ";")
-	if strings.TrimSpace(base) != "application/json" {
+	if !strings.EqualFold(strings.TrimSpace(base), "application/json") {
 		return ErrUnsupportedMediaType
 	}
 	data, err := io.ReadAll(r.Body)
