@@ -32,3 +32,4 @@ records explain *why*.
 | [0011](0011-canonical-ids-and-keyset-pagination.md) | Canonical IDs and keyset pagination | Proposed | back-end, api |
 | [0012](0012-request-ids-and-one-log-record-per-request.md) | Request IDs and one log record per request | Proposed | back-end, api, observability |
 | [0013](0013-postgresql-with-handwritten-sql.md) | PostgreSQL with hand-written SQL | Proposed | back-end, database |
+| [0014](0014-sql-in-embedded-query-fiels.md) | SQL in embedded query files | Proposed | back-end, database |
