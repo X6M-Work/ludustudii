@@ -242,9 +242,9 @@ The standalone linter is pinned separately by `GOLANGCI_VERSION` in
 
 ### Database migrations
 
-Migrations live in `backend/migrations` as goose SQL files and are embedded in
-the binary (integration tests apply them through `migrations.Up`). From the
-repository root, with `DB_CONNECTION` set:
+Migrations live in `backend/migrations` as goose SQL files. Only tests use
+embedded migrations, applying them through `migrations.Up`. From the repository
+root, with `DB_CONNECTION` set:
 
 | Command | Purpose |
 | --- | --- |
@@ -355,9 +355,9 @@ make build API_DOCS=1   # also embed the API reference (dev, test and staging bu
 make clean              # remove build outputs and embedded assets
 ```
 
-The binary is built with `CGO_ENABLED=0` and embeds the client app, the
-migrations and the OpenAPI spec. `make build-backend` refuses to build without
-a real frontend bundle. A binary built without `API_DOCS=1` fails to start if
+The binary is built with `CGO_ENABLED=0` and embeds the client app and the
+OpenAPI spec. `make build-backend` refuses to build without a real frontend
+bundle. A binary built without `API_DOCS=1` fails to start if
 `APP_API_DOCS=true`, since that is a deployment mistake.
 
 ### Linting
