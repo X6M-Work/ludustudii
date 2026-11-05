@@ -18,15 +18,20 @@ import (
 const MaxBodyBytes = 1 << 20
 
 // NewRouter builds the production handler with recovery, request IDs, request
-// logging, body limits, API routes, optional reference routes and the SPA.
+// logging, probes, body limits, API routes, optional reference routes and the SPA.
 // Each request's logging context includes its request_id attribute.
 func NewRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Handler, db *sql.DB) http.Handler {
+	return newRouter(log, clientApp, apiDocs, db, newReadiness(log, db))
+}
+
+func newRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Handler, db *sql.DB, state *readiness) http.Handler {
 	onError := errorHandler(log)
 
 	api := httpkit.NewAPI(onError)
 	lcards.RegisterRoutes(api, db)
 
 	mux := http.NewServeMux()
+	registerProbes(mux, state)
 	// Every /api path goes to api, which answers unknown paths and methods
 	// with JSON rather than the SPA. Both patterns are needed, or the mux
 	// redirects /api to /api/.
@@ -55,13 +60,29 @@ func withMiddleware(log *slog.Logger, onError httpkit.ErrorHandler, h http.Handl
 		}),
 		// RequestLogger reads the pattern the muxes set on the request, so no
 		// middleware after it may replace the request.
-		httpkit.RequestLogger(log),
+		httpkit.RequestLogger(log, httpkit.RequestLoggerOptions{
+			QuietPaths: map[string]struct{}{livenessPath: {}, readinessPath: {}},
+		}),
 		// Handle panics before the logger records the final response.
 		httpkit.Recover(onError),
-		httpkit.BodyLimit(MaxBodyBytes, onError),
+		limitRequestBody(onError),
 	)(h)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handler.ServeHTTP(httpkit.NewResponseWriter(w, r), r)
 	})
+}
+
+// limitRequestBody leaves operational probes independent of API input rules.
+func limitRequestBody(onError httpkit.ErrorHandler) httpkit.Middleware {
+	return func(next http.Handler) http.Handler {
+		limited := httpkit.BodyLimit(MaxBodyBytes, onError)(next)
+		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if r.URL.Path == livenessPath || r.URL.Path == readinessPath {
+				next.ServeHTTP(w, r)
+				return
+			}
+			limited.ServeHTTP(w, r)
+		})
+	}
 }

@@ -1,0 +1,40 @@
+ProbeOK:
+  description: The probe succeeded.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+    Cache-Control:
+      $ref: '../headers.yml#/CacheControlNoStore'
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/probe.yml#/ProbeStatus'
+      example:
+        status: ok
+ProbeUnavailable:
+  description: The instance should not receive traffic. No internal details are exposed.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+    Cache-Control:
+      $ref: '../headers.yml#/CacheControlNoStore'
+  content:
+    application/json:
+      schema:
+        $ref: '../schemas/probe.yml#/ProbeStatus'
+      example:
+        status: unavailable
+HeadProbeOK:
+  description: The probe succeeded. No response body.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+    Cache-Control:
+      $ref: '../headers.yml#/CacheControlNoStore'
+HeadProbeUnavailable:
+  description: The instance should not receive traffic. No response body.
+  headers:
+    X-Request-Id:
+      $ref: '../headers.yml#/RequestId'
+    Cache-Control:
+      $ref: '../headers.yml#/CacheControlNoStore'

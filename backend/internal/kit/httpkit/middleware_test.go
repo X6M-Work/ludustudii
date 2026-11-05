@@ -3,9 +3,13 @@
 package httpkit
 
 import (
+	"bytes"
+	"encoding/json"
+	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"slices"
+	"strconv"
 	"testing"
 )
 
@@ -47,6 +51,41 @@ func TestChain(t *testing.T) {
 				if !slices.Equal(calls, tc.want) {
 					t.Fatalf("calls: %v, want %v", calls, tc.want)
 				}
+			}
+		})
+	}
+}
+
+func TestRequestLogger_QuietPaths(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		path   string
+		status int
+		level  string
+	}{
+		{"/operational", 200, "DEBUG"},
+		{"/operational", 301, "DEBUG"},
+		{"/operational", 405, "DEBUG"},
+		{"/operational", 503, "DEBUG"},
+		{"/ordinary", 200, "INFO"},
+		{"/ordinary", 405, "WARN"},
+		{"/ordinary", 503, "ERROR"},
+		{"/operational/child", 503, "ERROR"},
+	} {
+		t.Run(tc.path+"/"+strconv.Itoa(tc.status), func(t *testing.T) {
+			t.Parallel()
+			var logs bytes.Buffer
+			log := slog.New(slog.NewJSONHandler(&logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
+			handler := RequestLogger(log, RequestLoggerOptions{QuietPaths: map[string]struct{}{"/operational": {}}})(
+				http.HandlerFunc(func(w http.ResponseWriter, _ *http.Request) { w.WriteHeader(tc.status) }))
+			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.path, nil)
+			handler.ServeHTTP(NewResponseWriter(httptest.NewRecorder(), r), r)
+			var record map[string]any
+			if err := json.Unmarshal(logs.Bytes(), &record); err != nil {
+				t.Fatalf("expected one JSON log record: %v", err)
+			}
+			if record["msg"] != "request" || record["level"] != tc.level || record["status"] != float64(tc.status) {
+				t.Fatalf("record: %v, want status %d level %s", record, tc.status, tc.level)
 			}
 		})
 	}

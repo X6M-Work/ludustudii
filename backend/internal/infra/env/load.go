@@ -15,52 +15,55 @@ import (
 
 // Names of the environment variables read by Load.
 const (
-	EnvDBConnectionString = "DB_CONNECTION"
-	EnvDBMaxOpenConns     = "DB_MAX_OPEN_CONNS"
-	EnvDBMaxIdleConns     = "DB_MAX_IDLE_CONNS"
-	EnvDBConnMaxLifetime  = "DB_CONN_MAX_LIFETIME"
-	EnvDBConnMaxIdleTime  = "DB_CONN_MAX_IDLE_TIME"
-	EnvAppPort            = "APP_PORT"
-	EnvAppReadTimeout     = "APP_READ_TIMEOUT"
-	EnvAppWriteTimeout    = "APP_WRITE_TIMEOUT" // #nosec G101 -- Environment variable name, not a credential.
-	EnvAppIdleTimeout     = "APP_IDLE_TIMEOUT"
-	EnvAppShutdownTimeout = "APP_SHUTDOWN_TIMEOUT"
-	EnvAppAPIDocs         = "APP_API_DOCS"
-	EnvLogLevel           = "LOG_LEVEL"
-	EnvLogFormat          = "LOG_FORMAT"
+	EnvDBConnectionString    = "DB_CONNECTION"
+	EnvDBMaxOpenConns        = "DB_MAX_OPEN_CONNS"
+	EnvDBMaxIdleConns        = "DB_MAX_IDLE_CONNS"
+	EnvDBConnMaxLifetime     = "DB_CONN_MAX_LIFETIME"
+	EnvDBConnMaxIdleTime     = "DB_CONN_MAX_IDLE_TIME"
+	EnvAppPort               = "APP_PORT"
+	EnvAppReadTimeout        = "APP_READ_TIMEOUT"
+	EnvAppWriteTimeout       = "APP_WRITE_TIMEOUT" // #nosec G101 -- Environment variable name, not a credential.
+	EnvAppIdleTimeout        = "APP_IDLE_TIMEOUT"
+	EnvAppShutdownTimeout    = "APP_SHUTDOWN_TIMEOUT"
+	EnvAppShutdownDrainDelay = "APP_SHUTDOWN_DRAIN_DELAY"
+	EnvAppAPIDocs            = "APP_API_DOCS"
+	EnvLogLevel              = "LOG_LEVEL"
+	EnvLogFormat             = "LOG_FORMAT"
 )
 
 // Values Load uses for optional variables that are unset or empty.
 const (
-	DefaultDBMaxOpenConns     = 10
-	DefaultDBMaxIdleConns     = 5
-	DefaultDBConnMaxLifetime  = 30 * time.Minute
-	DefaultDBConnMaxIdleTime  = 10 * time.Minute
-	DefaultAppReadTimeout     = 5 * time.Second
-	DefaultAppWriteTimeout    = 10 * time.Second
-	DefaultAppIdleTimeout     = 90 * time.Second
-	DefaultAppShutdownTimeout = 15 * time.Second
-	DefaultAppAPIDocs         = false
-	DefaultLogLevel           = slog.LevelInfo
-	DefaultLogFormat          = logging.FormatJSON
+	DefaultDBMaxOpenConns        = 10
+	DefaultDBMaxIdleConns        = 5
+	DefaultDBConnMaxLifetime     = 30 * time.Minute
+	DefaultDBConnMaxIdleTime     = 10 * time.Minute
+	DefaultAppReadTimeout        = 5 * time.Second
+	DefaultAppWriteTimeout       = 10 * time.Second
+	DefaultAppIdleTimeout        = 90 * time.Second
+	DefaultAppShutdownTimeout    = 15 * time.Second
+	DefaultAppShutdownDrainDelay = 0 * time.Second
+	DefaultAppAPIDocs            = false
+	DefaultLogLevel              = slog.LevelInfo
+	DefaultLogFormat             = logging.FormatJSON
 )
 
 // Vars holds the configuration read by Load. Field names mirror the Env
 // constants.
 type Vars struct {
-	DBConnectionString string
-	DBMaxOpenConns     int
-	DBMaxIdleConns     int
-	DBConnMaxLifetime  time.Duration
-	DBConnMaxIdleTime  time.Duration
-	AppPort            string
-	AppReadTimeout     time.Duration
-	AppWriteTimeout    time.Duration
-	AppIdleTimeout     time.Duration
-	AppShutdownTimeout time.Duration
-	AppAPIDocs         bool
-	LogLevel           *slog.LevelVar
-	LogFormat          logging.Format
+	DBConnectionString    string
+	DBMaxOpenConns        int
+	DBMaxIdleConns        int
+	DBConnMaxLifetime     time.Duration
+	DBConnMaxIdleTime     time.Duration
+	AppPort               string
+	AppReadTimeout        time.Duration
+	AppWriteTimeout       time.Duration
+	AppIdleTimeout        time.Duration
+	AppShutdownTimeout    time.Duration
+	AppShutdownDrainDelay time.Duration
+	AppAPIDocs            bool
+	LogLevel              *slog.LevelVar
+	LogFormat             logging.Format
 }
 
 // Load reads the configuration from the environment. DB_CONNECTION and
@@ -114,6 +117,9 @@ func Load() (*Vars, error) {
 	appShutdownTimeout, err := getEnvDuration(EnvAppShutdownTimeout, DefaultAppShutdownTimeout)
 	errs = append(errs, err)
 
+	appShutdownDrainDelay, err := getEnvDuration(EnvAppShutdownDrainDelay, DefaultAppShutdownDrainDelay)
+	errs = append(errs, err)
+
 	appAPIDocs, err := getEnvBool(EnvAppAPIDocs, DefaultAppAPIDocs)
 	errs = append(errs, err)
 
@@ -128,19 +134,20 @@ func Load() (*Vars, error) {
 	}
 
 	return &Vars{
-		DBConnectionString: dbConnectionString,
-		DBMaxOpenConns:     dbMaxOpenConns,
-		DBMaxIdleConns:     dbMaxIdleConns,
-		DBConnMaxLifetime:  dbConnMaxLifetime,
-		DBConnMaxIdleTime:  dbConnMaxIdleTime,
-		AppPort:            appPort,
-		AppReadTimeout:     appReadTimeout,
-		AppWriteTimeout:    appWriteTimeout,
-		AppIdleTimeout:     appIdleTimeout,
-		AppShutdownTimeout: appShutdownTimeout,
-		AppAPIDocs:         appAPIDocs,
-		LogLevel:           logLevel,
-		LogFormat:          logFormat,
+		DBConnectionString:    dbConnectionString,
+		DBMaxOpenConns:        dbMaxOpenConns,
+		DBMaxIdleConns:        dbMaxIdleConns,
+		DBConnMaxLifetime:     dbConnMaxLifetime,
+		DBConnMaxIdleTime:     dbConnMaxIdleTime,
+		AppPort:               appPort,
+		AppReadTimeout:        appReadTimeout,
+		AppWriteTimeout:       appWriteTimeout,
+		AppIdleTimeout:        appIdleTimeout,
+		AppShutdownTimeout:    appShutdownTimeout,
+		AppShutdownDrainDelay: appShutdownDrainDelay,
+		AppAPIDocs:            appAPIDocs,
+		LogLevel:              logLevel,
+		LogFormat:             logFormat,
 	}, nil
 }
 
@@ -169,6 +176,7 @@ func (v *Vars) LogAttrs() []slog.Attr {
 		slog.Duration(EnvAppWriteTimeout, v.AppWriteTimeout),
 		slog.Duration(EnvAppIdleTimeout, v.AppIdleTimeout),
 		slog.Duration(EnvAppShutdownTimeout, v.AppShutdownTimeout),
+		slog.Duration(EnvAppShutdownDrainDelay, v.AppShutdownDrainDelay),
 		slog.Bool(EnvAppAPIDocs, v.AppAPIDocs),
 		slog.String(EnvLogLevel, v.LogLevel.Level().String()),
 		slog.String(EnvLogFormat, v.LogFormat.String()),

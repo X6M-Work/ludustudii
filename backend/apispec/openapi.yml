@@ -32,7 +32,13 @@ security: []
 tags:
   - name: Learning cards
     description: Create, read, replace, and delete learning cards.
+  - name: Operations
+    description: Process liveness and instance readiness outside the JSON API.
 paths:
+  /livez:
+    $ref: './paths/livez.yml'
+  /readyz:
+    $ref: './paths/readyz.yml'
   /api/lcards:
     $ref: './paths/lcards.yml'
   /api/lcards/{id}:
@@ -50,6 +56,8 @@ components:
     Cursor:
       $ref: './components/parameters.yml#/Cursor'
   headers:
+    CacheControlNoStore:
+      $ref: './components/headers.yml#/CacheControlNoStore'
     ETag:
       $ref: './components/headers.yml#/ETag'
     RequestId:
@@ -58,6 +66,8 @@ components:
     LearningCardInput:
       $ref: './components/requestBodies.yml#/LearningCardInput'
   schemas:
+    ProbeStatus:
+      $ref: './components/schemas/probe.yml#/ProbeStatus'
     CardId:
       $ref: './components/schemas/lcard.yml#/CardId'
     LearningCardInput:
@@ -73,6 +83,14 @@ components:
     FieldError:
       $ref: './components/schemas/errors.yml#/FieldError'
   responses:
+    ProbeOK:
+      $ref: './components/responses/probes.yml#/ProbeOK'
+    ProbeUnavailable:
+      $ref: './components/responses/probes.yml#/ProbeUnavailable'
+    HeadProbeOK:
+      $ref: './components/responses/probes.yml#/HeadProbeOK'
+    HeadProbeUnavailable:
+      $ref: './components/responses/probes.yml#/HeadProbeUnavailable'
     PreconditionFailed:
       $ref: './components/responses/errors.yml#/PreconditionFailed'
     PreconditionRequired:

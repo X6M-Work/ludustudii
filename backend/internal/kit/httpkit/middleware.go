@@ -81,11 +81,18 @@ func validRequestID(id string) bool {
 	return true
 }
 
+// RequestLoggerOptions configures request summary logging.
+type RequestLoggerOptions struct {
+	// QuietPaths is a set of exact URL paths whose summaries use debug at
+	// every status. All other paths keep the normal status-based levels.
+	QuietPaths map[string]struct{}
+}
+
 // RequestLogger logs one request record after the final response, including
 // errors and panics handled by next. The route is taken from Request.Pattern,
 // which http.ServeMux sets on the request it receives, so middleware between
 // RequestLogger and the mux must pass the same request on.
-func RequestLogger(log *slog.Logger) Middleware {
+func RequestLogger(log *slog.Logger, options RequestLoggerOptions) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 			start := time.Now()
@@ -94,8 +101,11 @@ func RequestLogger(log *slog.Logger) Middleware {
 			if tracked, ok := w.(*ResponseWriter); ok {
 				status = tracked.Status
 			}
+			_, quiet := options.QuietPaths[r.URL.Path]
 			level := slog.LevelInfo
 			switch {
+			case quiet:
+				level = slog.LevelDebug
 			case status >= http.StatusInternalServerError:
 				level = slog.LevelError
 			case status >= http.StatusBadRequest:

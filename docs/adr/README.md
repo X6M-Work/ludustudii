@@ -58,3 +58,4 @@ records explain *why*.
 | [0020](0020-pinned-tooling-and-single-quality-gate.md) | Pinned tooling and a single quality gate | Accepted | back-end, tooling |
 | [0021](0021-bounded-client-request-ids.md) | Bounded client request IDs | Accepted | back-end, api, observability |
 | [0022](0022-opaque-pagination-cursor-contract.md) | Opaque pagination cursor contract | Accepted | back-end, api |
+| [0023](0023-liveness-and-readiness-probes.md) | Liveness and readiness probes (amends 0012 for quiet probe log levels) | Proposed | back-end, operations, observability |

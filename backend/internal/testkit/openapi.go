@@ -130,6 +130,10 @@ func checkUnmatchedRoute(
 		if resp.Header.Get("Allow") == "" {
 			return errors.New("405 response missing Allow header")
 		}
+		// Documented operational paths use the non-API mux's plain-text 405.
+		if req.URL.Path != "/api" && !strings.HasPrefix(req.URL.Path, "/api/") {
+			return nil
+		}
 	default:
 		return fmt.Errorf("route lookup: %w", routeErr)
 	}

@@ -1,6 +1,16 @@
 {
   "components": {
     "headers": {
+      "CacheControlNoStore": {
+        "description": "Probe responses must not be cached.",
+        "required": true,
+        "schema": {
+          "enum": [
+            "no-store"
+          ],
+          "type": "string"
+        }
+      },
       "ETag": {
         "description": "Strong entity tag containing the card's decimal version.",
         "required": true,
@@ -120,6 +130,28 @@
       "HeadPayloadTooLarge": {
         "description": "Request body exceeds the 1 MiB limit. No response body.",
         "headers": {
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "HeadProbeOK": {
+        "description": "The probe succeeded. No response body.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/CacheControlNoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "HeadProbeUnavailable": {
+        "description": "The instance should not receive traffic. No response body.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/CacheControlNoStore"
+          },
           "X-Request-Id": {
             "$ref": "#/components/headers/RequestId"
           }
@@ -346,6 +378,48 @@
           }
         }
       },
+      "ProbeOK": {
+        "content": {
+          "application/json": {
+            "example": {
+              "status": "ok"
+            },
+            "schema": {
+              "$ref": "#/components/schemas/ProbeStatus"
+            }
+          }
+        },
+        "description": "The probe succeeded.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/CacheControlNoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
+      "ProbeUnavailable": {
+        "content": {
+          "application/json": {
+            "example": {
+              "status": "unavailable"
+            },
+            "schema": {
+              "$ref": "#/components/schemas/ProbeStatus"
+            }
+          }
+        },
+        "description": "The instance should not receive traffic. No internal details are exposed.",
+        "headers": {
+          "Cache-Control": {
+            "$ref": "#/components/headers/CacheControlNoStore"
+          },
+          "X-Request-Id": {
+            "$ref": "#/components/headers/RequestId"
+          }
+        }
+      },
       "UnexpectedError": {
         "content": {
           "application/json": {
@@ -532,6 +606,22 @@
         "required": [
           "items",
           "next_cursor"
+        ],
+        "type": "object"
+      },
+      "ProbeStatus": {
+        "additionalProperties": false,
+        "properties": {
+          "status": {
+            "enum": [
+              "ok",
+              "unavailable"
+            ],
+            "type": "string"
+          }
+        },
+        "required": [
+          "status"
         ],
         "type": "object"
       }
@@ -851,6 +941,78 @@
           "Learning cards"
         ]
       }
+    },
+    "/livez": {
+      "get": {
+        "description": "Checks no dependencies, including the database. Succeeds whenever the process can answer HTTP, including during draining.",
+        "operationId": "getLiveness",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ProbeOK"
+          }
+        },
+        "summary": "Liveness probe",
+        "tags": [
+          "Operations"
+        ]
+      },
+      "head": {
+        "description": "Checks no dependencies, including the database. Succeeds whenever the process can answer HTTP, including during draining. HEAD sends no body.",
+        "operationId": "headLiveness",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HeadProbeOK"
+          }
+        },
+        "summary": "Liveness probe",
+        "tags": [
+          "Operations"
+        ]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/RequestId"
+        }
+      ]
+    },
+    "/readyz": {
+      "get": {
+        "description": "Pings the database with a one-second timeout. Returns 503 when the ping fails or the instance is draining for shutdown.",
+        "operationId": "getReadiness",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/ProbeOK"
+          },
+          "503": {
+            "$ref": "#/components/responses/ProbeUnavailable"
+          }
+        },
+        "summary": "Readiness probe",
+        "tags": [
+          "Operations"
+        ]
+      },
+      "head": {
+        "description": "Pings the database with a one-second timeout. Returns 503 when the ping fails or the instance is draining for shutdown. HEAD sends no body.",
+        "operationId": "headReadiness",
+        "responses": {
+          "200": {
+            "$ref": "#/components/responses/HeadProbeOK"
+          },
+          "503": {
+            "$ref": "#/components/responses/HeadProbeUnavailable"
+          }
+        },
+        "summary": "Readiness probe",
+        "tags": [
+          "Operations"
+        ]
+      },
+      "parameters": [
+        {
+          "$ref": "#/components/parameters/RequestId"
+        }
+      ]
     }
   },
   "servers": [
@@ -863,6 +1025,10 @@
     {
       "description": "Create, read, replace, and delete learning cards.",
       "name": "Learning cards"
+    },
+    {
+      "description": "Process liveness and instance readiness outside the JSON API.",
+      "name": "Operations"
     }
   ]
 }

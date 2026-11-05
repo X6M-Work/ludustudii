@@ -6,6 +6,7 @@ import (
 	"log/slog"
 	"strings"
 	"testing"
+	"time"
 
 	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 )
@@ -17,6 +18,7 @@ func setRequired(t *testing.T) {
 	t.Setenv(EnvDBConnectionString, "postgres://user:secret@localhost:5432/db")
 	t.Setenv(EnvAppPort, "8080")
 	t.Setenv(EnvAppAPIDocs, "")
+	t.Setenv(EnvAppShutdownDrainDelay, "")
 	t.Setenv(EnvLogLevel, "")
 	t.Setenv(EnvLogFormat, "")
 }
@@ -265,5 +267,51 @@ func TestVars_LogAttrs_QueryPassword(t *testing.T) {
 	}
 	if !found {
 		t.Fatal("missing DB_CONNECTION log attribute")
+	}
+}
+
+func TestLoad_ShutdownDrainDelay(t *testing.T) {
+	for _, tc := range []struct {
+		value string
+		want  time.Duration
+	}{
+		{"", 0},
+		{"0s", 0},
+		{"250ms", 250 * time.Millisecond},
+		{"5s", 5 * time.Second},
+	} {
+		t.Run(tc.value, func(t *testing.T) {
+			setRequired(t)
+			t.Setenv(EnvAppShutdownDrainDelay, tc.value)
+			v, err := Load()
+			if err != nil {
+				t.Fatal(err)
+			}
+			if v.AppShutdownDrainDelay != tc.want {
+				t.Errorf("drain delay: %v, want %v", v.AppShutdownDrainDelay, tc.want)
+			}
+			for _, attr := range v.LogAttrs() {
+				if attr.Key == EnvAppShutdownDrainDelay && attr.Value.Duration() == tc.want {
+					return
+				}
+			}
+			t.Fatal("effective drain delay not logged")
+		})
+	}
+}
+
+func TestLoad_ShutdownDrainDelayErrorsCollected(t *testing.T) {
+	setRequired(t)
+	t.Setenv(EnvAppShutdownDrainDelay, "later")
+	t.Setenv(EnvAppReadTimeout, "invalid")
+	t.Setenv(EnvAppPort, "invalid")
+	v, err := Load()
+	if v != nil || err == nil {
+		t.Fatalf("configuration: %v, error: %v", v, err)
+	}
+	for _, name := range []string{EnvAppShutdownDrainDelay, EnvAppReadTimeout, EnvAppPort} {
+		if !strings.Contains(err.Error(), name) {
+			t.Errorf("error %q does not mention %s", err, name)
+		}
 	}
 }

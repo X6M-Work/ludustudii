@@ -1,0 +1,22 @@
+parameters:
+  - $ref: '../components/parameters.yml#/RequestId'
+get:
+  tags: [Operations]
+  operationId: getReadiness
+  summary: Readiness probe
+  description: Pings the database with a one-second timeout. Returns 503 when the ping fails or the instance is draining for shutdown.
+  responses:
+    '200':
+      $ref: '../components/responses/probes.yml#/ProbeOK'
+    '503':
+      $ref: '../components/responses/probes.yml#/ProbeUnavailable'
+head:
+  tags: [Operations]
+  operationId: headReadiness
+  summary: Readiness probe
+  description: Pings the database with a one-second timeout. Returns 503 when the ping fails or the instance is draining for shutdown. HEAD sends no body.
+  responses:
+    '200':
+      $ref: '../components/responses/probes.yml#/HeadProbeOK'
+    '503':
+      $ref: '../components/responses/probes.yml#/HeadProbeUnavailable'

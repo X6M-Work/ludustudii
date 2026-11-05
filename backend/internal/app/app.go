@@ -24,8 +24,8 @@ import (
 // client app and, when APP_API_DOCS is set, the API reference, connects to
 // the database and serves HTTP until the server fails or the process receives
 // SIGINT or SIGTERM. On a signal it shuts the server down gracefully within
-// the configured shutdown timeout; a second signal during shutdown terminates
-// the process immediately. The database is closed before Run returns.
+// the configured shutdown timeout after the drain delay; a second signal
+// during draining or shutdown terminates the process immediately. The database is closed before Run returns.
 func Run() (err error) {
 	ev, err := env.Load()
 	if err != nil {
@@ -82,7 +82,8 @@ func Run() (err error) {
 		}
 	}()
 
-	router := NewRouter(log, ca, adh, db)
+	state := newReadiness(log, db)
+	router := newRouter(log, ca, adh, db, state)
 
 	server := &http.Server{
 		Addr:         net.JoinHostPort("", ev.AppPort),
@@ -111,12 +112,5 @@ func Run() (err error) {
 		slog.Info("Shutting down HTTP server...")
 	}
 
-	shutdownCtx, cancel := context.WithTimeout(context.Background(), ev.AppShutdownTimeout)
-	defer cancel()
-
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("http server shutdown: %w", err)
-	}
-
-	return nil
+	return shutdown(context.Background(), state, ev.AppShutdownDrainDelay, ev.AppShutdownTimeout, server)
 }

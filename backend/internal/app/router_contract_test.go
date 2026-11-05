@@ -3,6 +3,7 @@
 package app
 
 import (
+	"context"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
@@ -114,5 +115,48 @@ func TestRouter_RequestIDHeader(t *testing.T) {
 				t.Fatal("incoming header changed")
 			}
 		})
+	}
+}
+
+func TestRouter_ProbesReserveRootPaths(t *testing.T) {
+	t.Parallel()
+	clientApp, err := spa.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	log := slog.New(slog.DiscardHandler)
+	state := newReadiness(log, pingFunc(func(context.Context) error { return nil }))
+	handler := newRouter(log, clientApp, nil, nil, state)
+	for _, path := range []string{livenessPath, readinessPath} {
+		for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodPost, http.MethodOptions} {
+			t.Run(method+" "+path, func(t *testing.T) {
+				t.Parallel()
+				for _, size := range []int64{0, MaxBodyBytes + 1} {
+					rec := httptest.NewRecorder()
+					req := httptest.NewRequestWithContext(t.Context(), method, path, nil)
+					req.ContentLength = size
+					handler.ServeHTTP(rec, req)
+					wantStatus, wantBody, wantAllow := http.StatusOK, `{"status":"ok"}`, ""
+					if method == http.MethodHead {
+						wantBody = ""
+					} else if method != http.MethodGet {
+						wantStatus, wantBody, wantAllow = http.StatusMethodNotAllowed, "Method Not Allowed\n", "GET, HEAD"
+					}
+					if rec.Code != wantStatus || rec.Body.String() != wantBody || rec.Header().Get("Allow") != wantAllow {
+						t.Fatalf("response: %d %q, Allow %q", rec.Code, rec.Body.String(), rec.Header().Get("Allow"))
+					}
+					if rec.Header().Get("Cache-Control") != "no-store" || rec.Header().Get("X-Request-Id") == "" {
+						t.Fatalf("missing probe headers: %v", rec.Header())
+					}
+				}
+			})
+		}
+	}
+	for _, path := range []string{"/api/livez", "/api/readyz"} {
+		rec := httptest.NewRecorder()
+		handler.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), http.MethodGet, path, nil))
+		if rec.Code != http.StatusNotFound {
+			t.Fatalf("%s: status %d, want 404", path, rec.Code)
+		}
 	}
 }

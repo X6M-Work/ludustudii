@@ -1,0 +1,18 @@
+parameters:
+  - $ref: '../components/parameters.yml#/RequestId'
+get:
+  tags: [Operations]
+  operationId: getLiveness
+  summary: Liveness probe
+  description: Checks no dependencies, including the database. Succeeds whenever the process can answer HTTP, including during draining.
+  responses:
+    '200':
+      $ref: '../components/responses/probes.yml#/ProbeOK'
+head:
+  tags: [Operations]
+  operationId: headLiveness
+  summary: Liveness probe
+  description: Checks no dependencies, including the database. Succeeds whenever the process can answer HTTP, including during draining. HEAD sends no body.
+  responses:
+    '200':
+      $ref: '../components/responses/probes.yml#/HeadProbeOK'
