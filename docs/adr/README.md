@@ -24,3 +24,4 @@ records explain *why*.
 | [0003](0003-self-contained-server-binary.md) | Self-contained server binary | Proposed | back-end, front-end, architecture |
 | [0004](0004-spec-first-open-api-contract.md) | Spec-first OpenAPI contract | Proposed | back-end, api |
 | [0005](0005-vertical-slice-per-endpoint.md) | Vertical slice per endpoint | Proposed | back-end, architecture |
+| [0006](0006-central-error-handling.md) | Handlers return errors to a central error handler | Proposed | back-end, api |
