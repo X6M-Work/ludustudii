@@ -1,5 +1,5 @@
 InvalidQuery:
-  description: Invalid query parameters return validation_error with field errors. Malformed or overflowing limits report invalid_integer; out-of-range limits report out_of_range.
+  description: Invalid query parameters return validation_error with field errors. Malformed or overflowing limits report invalid_integer; out-of-range limits report out_of_range; invalid cursor tokens report invalid_cursor.
   headers:
     X-Request-Id:
       $ref: '../headers.yml#/RequestId'

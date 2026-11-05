@@ -34,7 +34,7 @@ FieldError:
       description: |
         Card fields (title, description) report required or max_length.
         Query parameters report invalid_integer or out_of_range (limit) and
-        invalid_uuid7 (cursor). Path IDs report invalid_uuid7 (id). untrimmed and not_normalized are reserved:
+        invalid_cursor (cursor). Path IDs report invalid_uuid7 (id). untrimmed and not_normalized are reserved:
         card fields are trimmed and NFC-normalized before validation, so
         these codes are not currently returned.
-      enum: [invalid_uuid7, required, max_length, untrimmed, not_normalized, invalid_integer, out_of_range]
+      enum: [invalid_uuid7, invalid_cursor, required, max_length, untrimmed, not_normalized, invalid_integer, out_of_range]

@@ -88,7 +88,7 @@ func parse(r *http.Request) (request, error) {
 func validate(req request) error {
 	return errors.Join(
 		validator.IntRange("limit", req.Limit, domain.ListMinLimit, domain.ListMaxLimit),
-		validator.EmptyOrUUID7("cursor", req.Cursor),
+		domain.ValidateCursor(req.Cursor),
 	)
 }
 

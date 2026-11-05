@@ -134,7 +134,8 @@ is the source of truth; the notes below summarize it.
   sanitization, validation, then storage. Each successful update increments
   the version atomically; clients must reload after a conflict.
 - **Pagination**: `limit` (1–100, default 20) and `cursor` (the previous
-  page's `next_cursor`). `next_cursor` is `null` on the last page. Malformed
+  page's `next_cursor`, an opaque token to pass unchanged). `next_cursor` is
+  `null` on the last page. Invalid tokens report `invalid_cursor`. Malformed
   or overflowing limits return `validation_error` with `invalid_integer`; integer limits outside 1–100
   return `validation_error` with `out_of_range`.
 - **Request IDs**: every response carries `X-Request-Id`. The first client-supplied
@@ -165,7 +166,8 @@ is the source of truth; the notes below summarize it.
   | `unexpected_error` | 500 | Server-side failure; details are only logged |
 
   Field error codes: `required`, `max_length`, `untrimmed`, `not_normalized`,
-  `invalid_integer`, `out_of_range`, `invalid_uuid7` (invalid path ID or pagination cursor).
+  `invalid_integer`, `out_of_range`, `invalid_uuid7` (invalid path ID),
+  `invalid_cursor` (invalid pagination token).
 
 ### Configuration
 

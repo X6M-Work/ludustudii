@@ -103,3 +103,41 @@ func walkObjects(where string, ref *openapi3.SchemaRef, seen map[*openapi3.Schem
 		}
 	}
 }
+
+func TestPaginationCursorsAreOpaque(t *testing.T) {
+	t.Parallel()
+	doc, err := apispec.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	list := doc.Paths.Value("/api/lcards").Get
+	page := list.Responses.Value("200").Value.Content["application/json"].Schema.Value
+	schemas := map[string]*openapi3.Schema{
+		"next_cursor": page.Properties["next_cursor"].Value,
+	}
+	for _, param := range list.Parameters {
+		if param.Value.Name == "cursor" {
+			schemas["cursor"] = param.Value.Schema.Value
+		}
+	}
+	if len(schemas) != 2 {
+		t.Fatal("missing cursor parameter")
+	}
+	for name, schema := range schemas {
+		t.Run(name, func(t *testing.T) {
+			t.Parallel()
+			if !schema.Type.Is(openapi3.TypeString) || schema.Format != "" || schema.Pattern != "" {
+				t.Fatal("cursor schema must be a string without a format or pattern")
+			}
+			if err := schema.VisitJSON("opaque:page-token"); err != nil {
+				t.Fatalf("schema rejects an opaque token: %v", err)
+			}
+			if err := schema.VisitJSON(123); err == nil {
+				t.Fatal("schema accepts a non-string token")
+			}
+		})
+	}
+	if err := schemas["next_cursor"].VisitJSON(nil); err != nil {
+		t.Fatalf("final page cursor must allow null: %v", err)
+	}
+}

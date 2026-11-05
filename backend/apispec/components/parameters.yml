@@ -31,12 +31,9 @@ Limit:
 Cursor:
   name: cursor
   in: query
-  description: Opaque pagination token from a previous page's next_cursor. Pass the value unchanged. Omit or send an empty value for the first page.
+  description: Opaque pagination token from a previous page's next_cursor. Pass the value unchanged. Omit or send an empty value for the first page. Invalid tokens return validation_error with cursor/invalid_cursor.
   schema:
     type: string
-    format: uuid
-    pattern: '^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$'
-    example: 019a0000-0000-7000-8000-000000000001
 IfMatch:
   name: If-Match
   in: header

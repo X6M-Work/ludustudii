@@ -61,11 +61,8 @@ LearningCardPage:
       items:
         $ref: '#/LearningCard'
     next_cursor:
-      # Inlined rather than $ref'd: OpenAPI 3.0 cannot make a referenced schema nullable.
       type: string
-      format: uuid
       nullable: true
-      pattern: '^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$'
       description: |
         Opaque pagination token; null on the final page. Pass this value unchanged
         as the cursor query parameter to fetch the next page. Clients must not

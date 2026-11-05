@@ -356,6 +356,14 @@ func TestCheckResponse(t *testing.T) {
 			body:    `{"items":[` + cardBody + `],"next_cursor":"019a0000-0000-7000-8000-000000000001"}`,
 		},
 		{
+			name:    "valid page with opaque cursor",
+			method:  http.MethodGet,
+			path:    "/api/lcards",
+			status:  http.StatusOK,
+			headers: jsonHeaders(),
+			body:    `{"items":[],"next_cursor":"opaque:page-token"}`,
+		},
+		{
 			name:    "page rejects extra property",
 			method:  http.MethodGet,
 			path:    "/api/lcards",
@@ -400,13 +408,12 @@ func TestCheckResponse(t *testing.T) {
 			wantErr: `minimum number of items is 1`,
 		},
 		{
-			name:    "page rejects uppercase UUIDv7 cursor",
+			name:    "page accepts uppercase UUIDv7 cursor",
 			method:  http.MethodGet,
 			path:    "/api/lcards",
 			status:  http.StatusOK,
 			headers: jsonHeaders(),
 			body:    `{"items":[],"next_cursor":"019A0000-0000-7000-8000-000000000001"}`,
-			wantErr: `string doesn't match the regular expression`,
 		},
 		{
 			name:    "page rejects uppercase UUIDv7 card ID",
@@ -418,13 +425,12 @@ func TestCheckResponse(t *testing.T) {
 			wantErr: `string doesn't match the regular expression`,
 		},
 		{
-			name:    "page rejects UUIDv4 cursor",
+			name:    "page accepts UUIDv4 cursor",
 			method:  http.MethodGet,
 			path:    "/api/lcards",
 			status:  http.StatusOK,
 			headers: jsonHeaders(),
 			body:    `{"items":[],"next_cursor":"019a0000-0000-4000-8000-000000000001"}`,
-			wantErr: `string doesn't match the regular expression`,
 		},
 		{
 			name:    "page rejects UUIDv4 card ID",

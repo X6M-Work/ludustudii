@@ -35,13 +35,10 @@
         }
       },
       "Cursor": {
-        "description": "Opaque pagination token from a previous page's next_cursor. Pass the value unchanged. Omit or send an empty value for the first page.",
+        "description": "Opaque pagination token from a previous page's next_cursor. Pass the value unchanged. Omit or send an empty value for the first page. Invalid tokens return validation_error with cursor/invalid_cursor.",
         "in": "query",
         "name": "cursor",
         "schema": {
-          "example": "019a0000-0000-7000-8000-000000000001",
-          "format": "uuid",
-          "pattern": "^[0-9a-fA-F]{8}-[0-9a-fA-F]{4}-7[0-9a-fA-F]{3}-[89aAbB][0-9a-fA-F]{3}-[0-9a-fA-F]{12}$",
           "type": "string"
         }
       },
@@ -222,7 +219,7 @@
             }
           }
         },
-        "description": "Invalid query parameters return validation_error with field errors. Malformed or overflowing limits report invalid_integer; out-of-range limits report out_of_range.",
+        "description": "Invalid query parameters return validation_error with field errors. Malformed or overflowing limits report invalid_integer; out-of-range limits report out_of_range; invalid cursor tokens report invalid_cursor.",
         "headers": {
           "X-Request-Id": {
             "$ref": "#/components/headers/RequestId"
@@ -441,9 +438,10 @@
         "additionalProperties": false,
         "properties": {
           "code": {
-            "description": "Card fields (title, description) report required or max_length.\nQuery parameters report invalid_integer or out_of_range (limit) and\ninvalid_uuid7 (cursor). Path IDs report invalid_uuid7 (id). untrimmed and not_normalized are reserved:\ncard fields are trimmed and NFC-normalized before validation, so\nthese codes are not currently returned.\n",
+            "description": "Card fields (title, description) report required or max_length.\nQuery parameters report invalid_integer or out_of_range (limit) and\ninvalid_cursor (cursor). Path IDs report invalid_uuid7 (id). untrimmed and not_normalized are reserved:\ncard fields are trimmed and NFC-normalized before validation, so\nthese codes are not currently returned.\n",
             "enum": [
               "invalid_uuid7",
+              "invalid_cursor",
               "required",
               "max_length",
               "untrimmed",
@@ -527,9 +525,7 @@
           },
           "next_cursor": {
             "description": "Opaque pagination token; null on the final page. Pass this value unchanged\nas the cursor query parameter to fetch the next page. Clients must not\nparse, construct, or rely on the token's format.\n",
-            "format": "uuid",
             "nullable": true,
-            "pattern": "^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$",
             "type": "string"
           }
         },

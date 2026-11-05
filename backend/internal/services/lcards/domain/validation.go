@@ -23,3 +23,16 @@ func ValidateTitle(val string) error {
 func ValidateDescription(val string) error {
 	return validator.MaxLengthText("description", val, DescriptionMaxLength)
 }
+
+// CodeInvalidCursor identifies an invalid opaque pagination token.
+const CodeInvalidCursor = "invalid_cursor"
+
+// ValidateCursor checks an optional pagination token in its canonical internal
+// form. UUIDv7 is the current implementation; clients receive a cursor-specific
+// error code so the public contract does not depend on that format.
+func ValidateCursor(val string) error {
+	if err := validator.EmptyOrUUID7("cursor", val); err != nil {
+		return validator.NewFieldError("cursor", CodeInvalidCursor, err)
+	}
+	return nil
+}

@@ -84,3 +84,26 @@ func checkSanitized(
 			field, in, out, fe.Code, wantCode)
 	}
 }
+
+func FuzzValidateCursor(f *testing.F) {
+	f.Add("")
+	f.Add("01a1730e-199d-7f9f-b59d-3bcd6f84066c")
+	f.Add("01A1730E-199D-7F9F-B59D-3BCD6F84066C")
+	f.Add("01a1730e-199d-4f9f-b59d-3bcd6f84066c")
+	f.Add("opaque:invalid")
+	f.Add(" cursor ")
+	f.Fuzz(func(t *testing.T, in string) {
+		out := strings.ToLower(in)
+		err := domain.ValidateCursor(out)
+		if validator.EmptyOrUUID7("cursor", out) == nil {
+			if err != nil {
+				t.Fatalf("canonical internal token rejected: %v", err)
+			}
+			return
+		}
+		fe, ok := errors.AsType[*validator.FieldError](err)
+		if !ok || fe.Field != "cursor" || fe.Code != domain.CodeInvalidCursor {
+			t.Fatalf("invalid token: got %v, want cursor/invalid_cursor", err)
+		}
+	})
+}

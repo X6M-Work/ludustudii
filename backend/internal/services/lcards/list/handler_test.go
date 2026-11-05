@@ -319,19 +319,19 @@ func TestValidate(t *testing.T) {
 		{
 			name:     "cursor invalid",
 			req:      request{Limit: domain.ListDefaultLimit, Cursor: "not-a-uuid"},
-			wantErrs: []fieldErr{{"cursor", validator.CodeInvalidUUID7}},
+			wantErrs: []fieldErr{{"cursor", domain.CodeInvalidCursor}},
 		},
 		{
 			name:     "cursor uppercase",
 			req:      request{Limit: domain.ListDefaultLimit, Cursor: "01A1730E-199D-7F9F-B59D-3BCD6F84066C"},
-			wantErrs: []fieldErr{{"cursor", validator.CodeInvalidUUID7}},
+			wantErrs: []fieldErr{{"cursor", domain.CodeInvalidCursor}},
 		},
 		{
 			name: "both invalid",
 			req:  request{Limit: 0, Cursor: "bad"},
 			wantErrs: []fieldErr{
 				{"limit", validator.CodeOutOfRange},
-				{"cursor", validator.CodeInvalidUUID7},
+				{"cursor", domain.CodeInvalidCursor},
 			},
 		},
 	}

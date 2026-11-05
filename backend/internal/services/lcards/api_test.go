@@ -340,14 +340,14 @@ func TestList(t *testing.T) {
 		{
 			name:  "cursor not a uuid",
 			query: "?cursor=not-a-uuid",
-			want:  `{"code":"validation_error","errors":[{"field":"cursor","code":"invalid_uuid7"}]}`,
+			want:  `{"code":"validation_error","errors":[{"field":"cursor","code":"invalid_cursor"}]}`,
 		},
 		{
 			name:  "limit and cursor invalid",
 			query: "?limit=0&cursor=bad",
 			want: `{"code":"validation_error","errors":[
 				{"field":"limit","code":"out_of_range"},
-				{"field":"cursor","code":"invalid_uuid7"}
+				{"field":"cursor","code":"invalid_cursor"}
 			]}`,
 		},
 	}

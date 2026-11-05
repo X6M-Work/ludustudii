@@ -91,3 +91,34 @@ func TestValidateDescription(t *testing.T) {
 		})
 	}
 }
+
+func TestValidateCursor(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		name, value string
+		valid       bool
+	}{
+		{name: "empty", valid: true},
+		{name: "current token", value: "01a1730e-199d-7f9f-b59d-3bcd6f84066c", valid: true},
+		{name: "invalid token", value: "opaque:invalid"},
+		{name: "wrong UUID version", value: "01a1730e-199d-4f9f-b59d-3bcd6f84066c"},
+		{name: "wrong UUID variant", value: "01a1730e-199d-7f9f-759d-3bcd6f84066c"},
+		{name: "not canonical", value: "01A1730E-199D-7F9F-B59D-3BCD6F84066C"},
+		{name: "whitespace", value: " 01a1730e-199d-7f9f-b59d-3bcd6f84066c "},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			t.Parallel()
+			err := ValidateCursor(tc.value)
+			if tc.valid {
+				if err != nil {
+					t.Fatalf("unexpected error: %v", err)
+				}
+				return
+			}
+			fe, ok := errors.AsType[*validator.FieldError](err)
+			if !ok || fe.Field != "cursor" || fe.Code != CodeInvalidCursor {
+				t.Fatalf("error: got %v, want cursor/invalid_cursor", err)
+			}
+		})
+	}
+}
