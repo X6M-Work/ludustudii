@@ -57,4 +57,4 @@ records explain *why*.
 | [0019](0019-structured-logging-with-slog.md) | Structured logging with slog | Accepted | back-end, observability |
 | [0020](0020-pinned-tooling-and-single-quality-gate.md) | Pinned tooling and a single quality gate | Accepted | back-end, tooling |
 | [0021](0021-bounded-client-request-ids.md) | Bounded client request IDs | Accepted | back-end, api, observability |
-| [0022](0022-opaque-pagination-cursor-contract.md) | Opaque pagination cursor contract | Proposed | back-end, api |
+| [0022](0022-opaque-pagination-cursor-contract.md) | Opaque pagination cursor contract | Accepted | back-end, api |
