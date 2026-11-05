@@ -1,6 +1,6 @@
 # 0011. Canonical IDs and keyset pagination
 
-- Status: Accepted
+- Status: Accepted, Amended by [0022](0022-opaque-pagination-cursor-contract.md)
 - Date: 2026-11-05
 - Tags: back-end, api
 
