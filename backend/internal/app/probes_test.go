@@ -65,7 +65,7 @@ func TestProbes(t *testing.T) {
 					state.markNotReady(t.Context())
 				}
 				mux := http.NewServeMux()
-				registerProbes(mux, state)
+				state.registerProbes(mux)
 				rec := httptest.NewRecorder()
 				start := time.Now()
 				mux.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), method, tc.path, nil))

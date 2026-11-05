@@ -31,7 +31,7 @@ func newRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Hand
 	lcards.RegisterRoutes(api, db)
 
 	mux := http.NewServeMux()
-	registerProbes(mux, state)
+	state.registerProbes(mux)
 	// Every /api path goes to api, which answers unknown paths and methods
 	// with JSON rather than the SPA. Both patterns are needed, or the mux
 	// redirects /api to /api/.

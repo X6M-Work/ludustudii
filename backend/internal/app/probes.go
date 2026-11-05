@@ -72,13 +72,13 @@ func (s *readiness) ready(ctx context.Context) bool {
 	return !unavailable
 }
 
-func registerProbes(mux *http.ServeMux, state *readiness) {
+func (s *readiness) registerProbes(mux *http.ServeMux) {
 	probes := http.NewServeMux()
 	probes.HandleFunc("GET "+livenessPath, func(w http.ResponseWriter, r *http.Request) {
 		writeProbe(w, r, true)
 	})
 	probes.HandleFunc("GET "+readinessPath, func(w http.ResponseWriter, r *http.Request) {
-		writeProbe(w, r, state.ready(r.Context()))
+		writeProbe(w, r, s.ready(r.Context()))
 	})
 	// Reserve these exact paths for all methods so the SPA cannot catch them.
 	// The inner mux supplies the standard non-API 405 and Allow header.
