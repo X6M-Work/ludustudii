@@ -29,3 +29,4 @@ records explain *why*.
 | [0008](0008-canonicalize-text-input-before-validating.md) | Canonicalize text input before validating | Proposed | back-end, api |
 | [0009](0009-strict-json-request-binding.md) | Strict JSON request binding | Proposed | back-end, api |
 | [0010](0010-optimistic-concurrency-with-etag-and-if-match.md) | Optimistic concurrency with ETag and If-Match | Proposed | back-end, front-end, api |
+| [0011](0011-canonical-ids-and-keyset-pagination.md) | Canonical IDs and keyset pagination | Proposed | back-end, api |
