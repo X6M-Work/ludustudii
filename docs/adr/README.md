@@ -27,3 +27,4 @@ records explain *why*.
 | [0006](0006-central-error-handling.md) | Handlers return errors to a central error handler | Proposed | back-end, api |
 | [0007](0007-one-json-error-shape-with-machine-readable-codes.md) | One JSON error shape with machine-readable codes | Proposed | back-end, front-end, api |
 | [0008](0008-canonicalize-text-input-before-validating.md) | Canonicalize text input before validating | Proposed | back-end, api |
+| [0009](0009-strict-json-request-binding.md) | Strict JSON request binding | Proposed | back-end, api |
