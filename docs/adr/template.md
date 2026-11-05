@@ -1,6 +1,6 @@
 # NNNN. Decision title as a short statement
 
-- Status: Proposed | Accepted | Superseded by NNNN | Deprecated
+- Status: Proposed | Accepted | Rejected | Superseded by NNNN | Deprecated
 - Date: YYYY-MM-DD
 - Tags: tag-1, tag-2
 

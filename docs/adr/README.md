@@ -14,6 +14,18 @@ records explain *why*.
   status to `Superseded by NNNN`.
 - Keep each record to about a page. Anything longer is a design doc.
 - Add every record to the index below.
+- New records start as Proposed. Only the maintainer moves a record to
+  Accepted or Rejected; agents may propose but never accept.
+
+## Statuses
+
+| Status | Meaning |
+| --- | --- |
+| Proposed | Written down but not yet in force. Code doesn't rely on it and nobody has to follow it yet. |
+| Accepted | In force. Code follows it; changing it means writing a superseding record. |
+| Rejected | Considered and turned down. Kept so the idea isn't proposed again without new arguments. |
+| Superseded by NNNN | Replaced by a newer record. Kept as history. |
+| Deprecated | No longer applies, and nothing replaced it (for example, the feature it governed was removed). |
 
 ## Index
 
