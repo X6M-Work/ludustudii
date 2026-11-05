@@ -63,7 +63,10 @@ the reference slice.
   that table and to the spec.
 - Regenerate `internal/infra/apidocs/dist/openapi.json` with `make spec-bundle`
   rather than editing it by hand.
-- Add a new migration when the schema changes; leave applied migrations intact.
+- Add a new migration when the schema changes. Squashing migrations belonging
+  to one feature or editing existing migrations is permitted only after asking
+  the user and receiving approval. Agents never do either on their own; they
+  add a new migration. See [ADR 0017](docs/adr/0017-migration-policy.md).
 - Keep the shared lint rules in `backend/.golangci.yml` intact. Follow
   `README.md` (Linting → Exclusion policy) for one-off exceptions.
 
