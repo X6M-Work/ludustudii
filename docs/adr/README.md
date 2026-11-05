@@ -20,3 +20,4 @@ records explain *why*.
 | No. | Decision | Status |
 | --- | --- | --- |
 | [0001](0001-single-binary-services-as-packages.md) | Single binary now, services as packages | Proposed |
+| [0002](0002-standard-library-first-minimal-dependencies.md) | Standard library first, minimal dependencies | Proposed |
