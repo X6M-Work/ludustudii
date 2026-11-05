@@ -50,3 +50,4 @@ records explain *why*.
 | [0017](0017-migration-policy.md) | Migration policy | Proposed | back-end, database |
 | [0018](0018-confgiration-from-environment-variables.md) | Configuration from environment variables | Proposed | back-end, configuration |
 | [0019](0019-structured-logging-with.slog.md) | Structured logging with slog | Proposed | back-end, observability |
+| [0020](0020-pinned-tooling-and-single-quality-gate.md) | Pinned tooling and a single quality gate | Proposed | back-end, tooling |
