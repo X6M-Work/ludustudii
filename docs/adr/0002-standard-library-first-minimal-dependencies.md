@@ -1,6 +1,6 @@
 # 0002. Standard library first, minimal dependencies
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-05
 - Tags: back-end, dependencies
 

@@ -1,6 +1,6 @@
 # 0008. Canonicalize text input before validating
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-05
 - Tags: back-end, api
 

@@ -1,6 +1,6 @@
 # 0010. Optimistic concurrency with ETag and If-Match
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-05
 - Tags: back-end, front-end, api
 

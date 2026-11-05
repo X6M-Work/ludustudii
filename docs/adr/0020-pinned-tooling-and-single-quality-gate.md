@@ -1,6 +1,6 @@
 # 0020. Pinned tooling and a single quality gate
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-05
 - Tags: back-end, tooling
 

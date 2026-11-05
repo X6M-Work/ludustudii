@@ -1,6 +1,6 @@
 # 0004. Spec-first OpenAPI contract
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-05
 - Tags: back-end, api
 

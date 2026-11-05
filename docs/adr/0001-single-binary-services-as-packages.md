@@ -1,6 +1,6 @@
 # 0001. Single binary now, services as packages
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-04
 - Tags: back-end, architecture
 

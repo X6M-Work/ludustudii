@@ -1,6 +1,6 @@
 # 0007. One JSON error shape with machine-readable codes
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-05
 - Tags: back-end, front-end, api
 

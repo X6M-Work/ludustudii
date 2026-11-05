@@ -1,6 +1,6 @@
 # 0011. Canonical IDs and keyset pagination
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-05
 - Tags: back-end, api
 

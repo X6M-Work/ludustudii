@@ -1,6 +1,6 @@
 # 0006. Handlers return errors to a central error handler
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-05
 - Tags: back-end, api
 

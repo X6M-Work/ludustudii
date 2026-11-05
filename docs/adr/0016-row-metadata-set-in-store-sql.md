@@ -1,6 +1,6 @@
 # 0016. Row metadata set in store SQL
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-05
 - Tags: back-end, database
 

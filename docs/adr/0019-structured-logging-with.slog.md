@@ -1,6 +1,6 @@
 # 0019. Structured logging with slog
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-05
 - Tags: back-end, observability
 
