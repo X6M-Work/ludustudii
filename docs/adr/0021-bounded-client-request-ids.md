@@ -13,8 +13,10 @@ one client-controlled header inflate many log records.
 
 ## Decision
 
-This record supersedes ADR 0012. Its context propagation,
-response header, single summary record and log level rules continue to apply.
+This record amends [ADR 0012](0012-request-ids-and-one-log-record-per-request.md)
+only in its acceptance of client-supplied request IDs without validation.
+ADR 0012 remains Accepted: its context propagation, response header, single
+summary record and log level rules continue to apply.
 
 - Reuse the first incoming `X-Request-Id` value only when it contains 1–128
   ASCII characters drawn from letters, digits, `.`, `_` and `-`.
