@@ -12,6 +12,7 @@ import (
 	"os"
 	"os/signal"
 	"syscall"
+	"time"
 
 	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
 	"github.com/apotourlyan/ludustudii/internal/infra/env"
@@ -113,5 +114,41 @@ func Run() (err error) {
 		slog.Info("Shutting down HTTP server...")
 	}
 
-	return shutdown(context.Background(), state, ev.AppShutdownDrainDelay, ev.AppShutdownTimeout, server)
+	shutdownCtx := context.Background()
+	if err := drain(shutdownCtx, state, ev.AppShutdownDrainDelay); err != nil {
+		return err
+	}
+	return shutdown(shutdownCtx, server, ev.AppShutdownTimeout)
+}
+
+type stopper interface {
+	MarkStopping(context.Context)
+}
+
+// drain marks the instance unready while HTTP is still serving and waits for
+// routing changes to propagate before shutdown begins.
+func drain(ctx context.Context, state stopper, delay time.Duration) error {
+	state.MarkStopping(ctx)
+	timer := time.NewTimer(delay)
+	defer timer.Stop()
+	select {
+	case <-timer.C:
+		return nil
+	case <-ctx.Done():
+		return fmt.Errorf("http server drain: %w", ctx.Err())
+	}
+}
+
+type shutter interface {
+	Shutdown(context.Context) error
+}
+
+// shutdown gives in-flight requests their configured grace period.
+func shutdown(ctx context.Context, server shutter, timeout time.Duration) error {
+	shutdownCtx, cancel := context.WithTimeout(ctx, timeout)
+	defer cancel()
+	if err := server.Shutdown(shutdownCtx); err != nil {
+		return fmt.Errorf("http server shutdown: %w", err)
+	}
+	return nil
 }
