@@ -7,6 +7,7 @@ import (
 	"net/http"
 
 	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
+	"github.com/apotourlyan/ludustudii/internal/infra/health"
 	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
@@ -21,17 +22,17 @@ const MaxBodyBytes = 1 << 20
 // logging, probes, body limits, API routes, optional reference routes and the SPA.
 // Each request's logging context includes its request_id attribute.
 func NewRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Handler, db *sql.DB) http.Handler {
-	return newRouter(log, clientApp, apiDocs, db, newReadiness(log, db))
+	return newRouter(log, clientApp, apiDocs, db, health.NewState(log, db))
 }
 
-func newRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Handler, db *sql.DB, state *readiness) http.Handler {
+func newRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Handler, db *sql.DB, state *health.State) http.Handler {
 	onError := errorHandler(log)
 
 	api := httpkit.NewAPI(onError)
 	lcards.RegisterRoutes(api, db)
 
 	mux := http.NewServeMux()
-	state.registerProbes(mux)
+	health.RegisterProbes(mux, state)
 	// Every /api path goes to api, which answers unknown paths and methods
 	// with JSON rather than the SPA. Both patterns are needed, or the mux
 	// redirects /api to /api/.
@@ -61,7 +62,7 @@ func withMiddleware(log *slog.Logger, onError httpkit.ErrorHandler, h http.Handl
 		// RequestLogger reads the pattern the muxes set on the request, so no
 		// middleware after it may replace the request.
 		httpkit.RequestLogger(log, httpkit.RequestLoggerOptions{
-			QuietPaths: map[string]struct{}{livenessPath: {}, readinessPath: {}},
+			QuietPaths: map[string]struct{}{health.LivenessPath: {}, health.ReadinessPath: {}},
 		}),
 		// Handle panics before the logger records the final response.
 		httpkit.Recover(onError),
@@ -78,7 +79,7 @@ func limitRequestBody(onError httpkit.ErrorHandler) httpkit.Middleware {
 	return func(next http.Handler) http.Handler {
 		limited := httpkit.BodyLimit(MaxBodyBytes, onError)(next)
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == livenessPath || r.URL.Path == readinessPath {
+			if r.URL.Path == health.LivenessPath || r.URL.Path == health.ReadinessPath {
 				next.ServeHTTP(w, r)
 				return
 			}

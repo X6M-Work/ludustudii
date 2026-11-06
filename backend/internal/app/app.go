@@ -15,6 +15,7 @@ import (
 
 	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
 	"github.com/apotourlyan/ludustudii/internal/infra/env"
+	"github.com/apotourlyan/ludustudii/internal/infra/health"
 	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 	"github.com/apotourlyan/ludustudii/internal/infra/rdb"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
@@ -82,7 +83,7 @@ func Run() (err error) {
 		}
 	}()
 
-	state := newReadiness(log, db)
+	state := health.NewState(log, db)
 	router := newRouter(log, ca, adh, db, state)
 
 	server := &http.Server{

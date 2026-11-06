@@ -33,7 +33,7 @@ backend/
 ├── tools/                 # separate module for pinned development tools
 └── internal/
     ├── app/               # wiring: config, logger, DB, router, error handler, graceful shutdown
-    ├── infra/             # env, logging, rdb (Postgres), spa, apidocs
+    ├── infra/             # env, health, logging, rdb (Postgres), spa, apidocs
     ├── kit/               # helpers independent of app and infra: erresp, validator, sanitizer, staticfile, httpkit
     ├── services/
     │   └── lcards/        # learning cards: one subpackage per endpoint
@@ -173,6 +173,9 @@ is the source of truth; the notes below summarize it.
   `invalid_cursor` (invalid pagination token).
 
 ### Probes
+
+`internal/infra/health` owns the probes and their shared `health.State`. The app
+wires that state into the router and shutdown handling.
 
 `GET /livez` (and HEAD) returns 200 whenever the process can answer HTTP. It
 checks no dependencies, including the database. Use it for liveness checks.

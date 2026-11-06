@@ -11,6 +11,7 @@ import (
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
+	"github.com/apotourlyan/ludustudii/internal/infra/health"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
 )
@@ -125,9 +126,9 @@ func TestRouter_ProbesReserveRootPaths(t *testing.T) {
 		t.Fatal(err)
 	}
 	log := slog.New(slog.DiscardHandler)
-	state := newReadiness(log, pingFunc(func(context.Context) error { return nil }))
+	state := health.NewState(log, pingFunc(func(context.Context) error { return nil }))
 	handler := newRouter(log, clientApp, nil, nil, state)
-	for _, path := range []string{livenessPath, readinessPath} {
+	for _, path := range []string{health.LivenessPath, health.ReadinessPath} {
 		for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodPost, http.MethodOptions} {
 			t.Run(method+" "+path, func(t *testing.T) {
 				t.Parallel()

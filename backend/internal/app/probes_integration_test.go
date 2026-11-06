@@ -8,6 +8,7 @@ import (
 	"os"
 	"testing"
 
+	"github.com/apotourlyan/ludustudii/internal/infra/health"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 	"github.com/apotourlyan/ludustudii/internal/testkit"
 )
@@ -24,7 +25,7 @@ func TestProbes_RealDatabase(t *testing.T) {
 		t.Fatal(err)
 	}
 	log := discardLogger()
-	state := newReadiness(log, db)
+	state := health.NewState(log, db)
 	srv := httptest.NewServer(newRouter(log, clientApp, nil, db, state))
 	t.Cleanup(srv.Close)
 	probe := func(path string, status int, body string) {
@@ -42,9 +43,9 @@ func TestProbes_RealDatabase(t *testing.T) {
 			}
 		}
 	}
-	probe(livenessPath, 200, `{"status":"ok"}`)
-	probe(readinessPath, 200, `{"status":"ok"}`)
-	for _, path := range []string{livenessPath, readinessPath} {
+	probe(health.LivenessPath, 200, `{"status":"ok"}`)
+	probe(health.ReadinessPath, 200, `{"status":"ok"}`)
+	for _, path := range []string{health.LivenessPath, health.ReadinessPath} {
 		resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodPost, Path: path})
 		testkit.AssertStatus(t, resp, http.StatusMethodNotAllowed)
 		if resp.Header.Get("Allow") != "GET, HEAD" {
@@ -54,9 +55,9 @@ func TestProbes_RealDatabase(t *testing.T) {
 	if err := db.Close(); err != nil {
 		t.Fatal(err)
 	}
-	probe(readinessPath, 503, `{"status":"unavailable"}`)
-	probe(livenessPath, 200, `{"status":"ok"}`)
-	state.markNotReady(t.Context())
-	probe(readinessPath, 503, `{"status":"unavailable"}`)
-	probe(livenessPath, 200, `{"status":"ok"}`)
+	probe(health.ReadinessPath, 503, `{"status":"unavailable"}`)
+	probe(health.LivenessPath, 200, `{"status":"ok"}`)
+	state.StartDraining(t.Context())
+	probe(health.ReadinessPath, 503, `{"status":"unavailable"}`)
+	probe(health.LivenessPath, 200, `{"status":"ok"}`)
 }
