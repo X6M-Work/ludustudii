@@ -66,24 +66,12 @@ func withMiddleware(log *slog.Logger, onError httpkit.ErrorHandler, h http.Handl
 		}),
 		// Handle panics before the logger records the final response.
 		httpkit.Recover(onError),
-		limitRequestBody(onError),
+		httpkit.BodyLimit(MaxBodyBytes, onError, httpkit.BodyLimitOptions{
+			ExcludedPaths: map[string]struct{}{health.LivenessPath: {}, health.ReadinessPath: {}},
+		}),
 	)(h)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		handler.ServeHTTP(httpkit.NewResponseWriter(w, r), r)
 	})
-}
-
-// limitRequestBody leaves operational probes independent of API input rules.
-func limitRequestBody(onError httpkit.ErrorHandler) httpkit.Middleware {
-	return func(next http.Handler) http.Handler {
-		limited := httpkit.BodyLimit(MaxBodyBytes, onError)(next)
-		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-			if r.URL.Path == health.LivenessPath || r.URL.Path == health.ReadinessPath {
-				next.ServeHTTP(w, r)
-				return
-			}
-			limited.ServeHTTP(w, r)
-		})
-	}
 }

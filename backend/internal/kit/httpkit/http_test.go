@@ -42,7 +42,7 @@ func TestBodyLimit(t *testing.T) {
 			r.ContentLength = tc.length
 			r.Header.Set("Content-Type", "application/json")
 			rec := httptest.NewRecorder()
-			BodyLimit(8, onError)(next).ServeHTTP(rec, r)
+			BodyLimit(8, onError, BodyLimitOptions{})(next).ServeHTTP(rec, r)
 			if rec.Code != tc.status || entered != tc.entered {
 				t.Fatalf("status/entered: %d/%v, want %d/%v", rec.Code, entered, tc.status, tc.entered)
 			}

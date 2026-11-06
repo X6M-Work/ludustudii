@@ -119,11 +119,22 @@ func RequestLogger(log *slog.Logger, options RequestLoggerOptions) Middleware {
 	}
 }
 
+// BodyLimitOptions configures request body limits.
+type BodyLimitOptions struct {
+	// ExcludedPaths is a set of exact URL paths that bypass both the declared
+	// length check and the reader limit. A nil set excludes no paths.
+	ExcludedPaths map[string]struct{}
+}
+
 // BodyLimit rejects known oversized bodies before dispatch and limits bytes
-// read from unknown-length bodies with http.MaxBytesReader.
-func BodyLimit(limit int64, onError ErrorHandler) Middleware {
+// read with http.MaxBytesReader, except for paths excluded by options.
+func BodyLimit(limit int64, onError ErrorHandler, options BodyLimitOptions) Middleware {
 	return func(next http.Handler) http.Handler {
 		return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+			if _, excluded := options.ExcludedPaths[r.URL.Path]; excluded {
+				next.ServeHTTP(w, r)
+				return
+			}
 			if r.ContentLength > limit {
 				onError(w, r, ErrPayloadTooLarge)
 				return

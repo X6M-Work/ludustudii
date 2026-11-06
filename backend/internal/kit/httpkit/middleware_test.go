@@ -5,11 +5,13 @@ package httpkit
 import (
 	"bytes"
 	"encoding/json"
+	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 )
 
@@ -88,5 +90,57 @@ func TestRequestLogger_QuietPaths(t *testing.T) {
 				t.Fatalf("record: %v, want status %d level %s", record, tc.status, tc.level)
 			}
 		})
+	}
+}
+
+func TestBodyLimit_ExcludedPaths(t *testing.T) {
+	t.Parallel()
+	for _, tc := range []struct {
+		path     string
+		excluded bool
+	}{
+		{"/operational", true},
+		{"/operational?probe=true", true},
+		{"/operational/", false},
+		{"/operational/child", false},
+		{"/ordinary", false},
+	} {
+		for _, length := range []int64{9, -1} {
+			t.Run(tc.path+"/"+strconv.FormatInt(length, 10), func(t *testing.T) {
+				t.Parallel()
+				entered := false
+				onError := func(w http.ResponseWriter, _ *http.Request, err error) {
+					if !errors.Is(err, ErrPayloadTooLarge) {
+						t.Errorf("error: %v, want ErrPayloadTooLarge", err)
+					}
+					w.WriteHeader(StatusCode(err))
+				}
+				next := Adapt(func(_ http.ResponseWriter, r *http.Request) error {
+					entered = true
+					var target string
+					err := BindJSON(r, &target)
+					if err == nil && target != "abcdefg" {
+						t.Errorf("body: %q, want abcdefg", target)
+					}
+					return err
+				}, onError)
+				handler := BodyLimit(8, onError, BodyLimitOptions{
+					ExcludedPaths: map[string]struct{}{"/operational": {}},
+				})(next)
+				req := httptest.NewRequestWithContext(t.Context(), http.MethodPost, tc.path, strings.NewReader(`"abcdefg"`))
+				req.ContentLength = length
+				req.Header.Set("Content-Type", "application/json")
+				rec := httptest.NewRecorder()
+				handler.ServeHTTP(rec, req)
+				status := http.StatusRequestEntityTooLarge
+				if tc.excluded {
+					status = http.StatusOK
+				}
+				wantEntered := tc.excluded || length < 0
+				if rec.Code != status || entered != wantEntered {
+					t.Fatalf("status/entered: %d/%v, want %d/%v", rec.Code, entered, status, wantEntered)
+				}
+			})
+		}
 	}
 }
