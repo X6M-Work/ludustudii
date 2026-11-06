@@ -14,7 +14,7 @@ import (
 
 func TestRouter_HealthEndpoints(t *testing.T) {
 	t.Parallel()
-	for _, scenario := range []string{"database unavailable", "draining with healthy database"} {
+	for _, scenario := range []string{"database unavailable", "stopping with healthy database"} {
 		t.Run(scenario, func(t *testing.T) {
 			t.Parallel()
 			db := testkit.NewDB(t)
@@ -59,9 +59,9 @@ func TestRouter_HealthEndpoints(t *testing.T) {
 					t.Fatal(err)
 				}
 			} else {
-				state.StartDraining(t.Context())
+				state.MarkStopping(t.Context())
 				if err := db.PingContext(t.Context()); err != nil {
-					t.Fatalf("database must stay healthy while draining: %v", err)
+					t.Fatalf("database must stay healthy while stopping: %v", err)
 				}
 			}
 			probe(health.ReadinessPath, 503, `{"status":"unavailable"}`)

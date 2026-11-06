@@ -19,11 +19,11 @@ type state uint8
 const (
 	available state = iota
 	unavailable
-	draining
+	stopping
 )
 
-// State tracks availability: available, unavailable, or draining. Database pings
-// can move between available and unavailable; draining is permanent. The mutex
+// State tracks availability: available, unavailable, or stopping. Database pings
+// can move between available and unavailable; stopping is permanent. The mutex
 // protects state changes and their logs; database pings run without holding it.
 type State struct {
 	db    databasePinger
@@ -37,16 +37,16 @@ func NewState(log *slog.Logger, db databasePinger) *State {
 	return &State{db: db, log: log, state: available}
 }
 
-// StartDraining permanently marks the instance unavailable before HTTP shutdown.
-func (s *State) StartDraining(ctx context.Context) {
-	s.transition(ctx, draining, nil)
+// MarkStopping permanently marks the instance unavailable before HTTP shutdown.
+func (s *State) MarkStopping(ctx context.Context) {
+	s.transition(ctx, stopping, nil)
 }
 
 // Check pings the database within one second and reports whether the instance
-// can receive traffic. Once draining starts, Check returns false without pinging.
+// can receive traffic. Once stopping starts, Check returns false without pinging.
 // A canceled request returns false without changing availability or logging.
 func (s *State) Check(ctx context.Context) bool {
-	if s.currentState() == draining {
+	if s.currentState() == stopping {
 		return false
 	}
 
@@ -75,12 +75,12 @@ func (s *State) currentState() state {
 }
 
 // transition is the only place that changes health state and logs state changes.
-// Repeated states are silent. Draining rejects all subsequent transitions,
+// Repeated states are silent. Stopping rejects all subsequent transitions,
 // including results of pings that were in flight when shutdown started.
 func (s *State) transition(ctx context.Context, next state, reason error) state {
 	s.mu.Lock()
 	defer s.mu.Unlock()
-	if s.state == draining || s.state == next {
+	if s.state == stopping || s.state == next {
 		return s.state
 	}
 
@@ -90,8 +90,8 @@ func (s *State) transition(ctx context.Context, next state, reason error) state 
 		s.log.InfoContext(ctx, "Readiness recovered")
 	case unavailable:
 		s.log.WarnContext(ctx, "Readiness unavailable", "error", reason)
-	case draining:
-		s.log.InfoContext(ctx, "Readiness draining started")
+	case stopping:
+		s.log.InfoContext(ctx, "Readiness stopping")
 	}
 	return s.state
 }

@@ -24,17 +24,17 @@ func TestProbes(t *testing.T) {
 		name     string
 		path     string
 		ping     string
-		draining bool
+		stopping bool
 		status   int
 		body     string
 		calls    int
 	}{
 		{"liveness ignores database failure", LivenessPath, "fail", false, 200, `{"status":"ok"}`, 0},
-		{"liveness during drain", LivenessPath, "fail", true, 200, `{"status":"ok"}`, 0},
+		{"liveness while stopping", LivenessPath, "fail", true, 200, `{"status":"ok"}`, 0},
 		{"available", ReadinessPath, "ok", false, 200, `{"status":"ok"}`, 1},
 		{"ping failed", ReadinessPath, "fail", false, 503, `{"status":"unavailable"}`, 1},
 		{"ping timed out", ReadinessPath, "timeout", false, 503, `{"status":"unavailable"}`, 1},
-		{"draining", ReadinessPath, "ok", true, 503, `{"status":"unavailable"}`, 0},
+		{"stopping", ReadinessPath, "ok", true, 503, `{"status":"unavailable"}`, 0},
 	} {
 		for _, method := range []string{http.MethodGet, http.MethodHead} {
 			t.Run(tc.name+"/"+method, func(t *testing.T) {
@@ -56,8 +56,8 @@ func TestProbes(t *testing.T) {
 						return nil
 					}
 				}))
-				if tc.draining {
-					state.StartDraining(t.Context())
+				if tc.stopping {
+					state.MarkStopping(t.Context())
 				}
 				mux := http.NewServeMux()
 				RegisterProbes(mux, state, func(_ http.ResponseWriter, _ *http.Request, err error) {

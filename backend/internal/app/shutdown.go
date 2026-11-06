@@ -6,8 +6,8 @@ import (
 	"time"
 )
 
-type healthDrainer interface {
-	StartDraining(context.Context)
+type healthStopper interface {
+	MarkStopping(context.Context)
 }
 
 type shutdownServer interface {
@@ -17,8 +17,8 @@ type shutdownServer interface {
 // shutdown marks the instance unready while HTTP is still serving, allows
 // routing changes to propagate, then gives in-flight requests their full grace
 // period. Signal handling stays with Run so this sequence is testable directly.
-func shutdown(ctx context.Context, state healthDrainer, delay, timeout time.Duration, server shutdownServer) error {
-	state.StartDraining(ctx)
+func shutdown(ctx context.Context, state healthStopper, delay, timeout time.Duration, server shutdownServer) error {
+	state.MarkStopping(ctx)
 	timer := time.NewTimer(delay)
 	defer timer.Stop()
 	select {

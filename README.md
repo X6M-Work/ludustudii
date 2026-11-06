@@ -397,7 +397,7 @@ Each request produces one `request` record with method, route, path, status
 and latency, logged at `ERROR` for 5xx, `WARN` for 4xx and `INFO` otherwise.
 The quiet probe paths `/livez` and `/readyz` log their summaries at `DEBUG`
 regardless of status. Readiness logs state transitions once: `WARN` with the
-reason when becoming unavailable, `INFO` on recovery, and `INFO` when draining
+reason when becoming unavailable, `INFO` on recovery, and `INFO` when stopping
 starts. Repeated failed probes do not repeat the warning.
 
 ### Building

@@ -44,7 +44,7 @@ func TestState_RequestCanceledDuringPing(t *testing.T) {
 	}
 }
 
-func TestState_DrainingDuringPing(t *testing.T) {
+func TestState_StoppingDuringPing(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
 		name      string
@@ -65,13 +65,13 @@ func TestState_DrainingDuringPing(t *testing.T) {
 			result := make(chan bool, 1)
 			go func() { result <- state.Check(t.Context()) }()
 			<-started
-			state.StartDraining(t.Context())
+			state.MarkStopping(t.Context())
 			close(release)
 			if <-result || state.Check(t.Context()) {
-				t.Fatal("a completed ping restored readiness during drain")
+				t.Fatal("a completed ping restored readiness while stopping")
 			}
 			if strings.Contains(logs.String(), "Readiness unavailable") || strings.Contains(logs.String(), "Readiness recovered") {
-				t.Fatalf("late ping logged a transition after draining started: %s", logs.String())
+				t.Fatalf("late ping logged a transition after stopping started: %s", logs.String())
 			}
 		})
 	}
@@ -122,8 +122,8 @@ func TestState_LoggingTransitions(t *testing.T) {
 	for range 3 {
 		check(true)
 	}
-	state.StartDraining(t.Context())
-	state.StartDraining(t.Context())
+	state.MarkStopping(t.Context())
+	state.MarkStopping(t.Context())
 	for range 3 {
 		check(false)
 	}
@@ -146,7 +146,7 @@ func TestState_LoggingTransitions(t *testing.T) {
 			t.Errorf("record: %v, want level %s", record, level)
 		}
 	}
-	for _, msg := range []string{"Readiness unavailable", "Readiness recovered", "Readiness draining started"} {
+	for _, msg := range []string{"Readiness unavailable", "Readiness recovered", "Readiness stopping"} {
 		if counts[msg] != 1 {
 			t.Errorf("%s records: %d, want 1", msg, counts[msg])
 		}

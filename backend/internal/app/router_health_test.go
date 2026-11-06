@@ -80,15 +80,15 @@ func TestRouter_HealthRequestLogging(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
 		name, path     string
-		fail, draining bool
+		fail, stopping bool
 		status         int
 	}{
 		{"liveness", health.LivenessPath, false, false, http.StatusOK},
 		{"liveness during database outage", health.LivenessPath, true, false, http.StatusOK},
-		{"liveness during drain", health.LivenessPath, false, true, http.StatusOK},
+		{"liveness while stopping", health.LivenessPath, false, true, http.StatusOK},
 		{"available", health.ReadinessPath, false, false, http.StatusOK},
 		{"database unavailable", health.ReadinessPath, true, false, http.StatusServiceUnavailable},
-		{"draining", health.ReadinessPath, false, true, http.StatusServiceUnavailable},
+		{"stopping", health.ReadinessPath, false, true, http.StatusServiceUnavailable},
 	} {
 		for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodPost} {
 			t.Run(tc.name+"/"+method, func(t *testing.T) {
@@ -101,8 +101,8 @@ func TestRouter_HealthRequestLogging(t *testing.T) {
 					}
 					return nil
 				}))
-				if tc.draining {
-					state.StartDraining(t.Context())
+				if tc.stopping {
+					state.MarkStopping(t.Context())
 				}
 				clientApp, err := spa.Load()
 				if err != nil {

@@ -12,9 +12,9 @@ import (
 	"github.com/apotourlyan/ludustudii/internal/infra/health"
 )
 
-type drainFunc func(context.Context)
+type stopFunc func(context.Context)
 
-func (f drainFunc) StartDraining(ctx context.Context) { f(ctx) }
+func (f stopFunc) MarkStopping(ctx context.Context) { f(ctx) }
 
 type shutdownFunc func(context.Context) error
 
@@ -27,8 +27,8 @@ func TestShutdown_DrainsBeforeShutdown(t *testing.T) {
 	state := health.NewState(slog.New(slog.DiscardHandler), pingFunc(func(context.Context) error { return nil }))
 	marked := make(chan struct{})
 	var markedAt time.Time
-	switcher := drainFunc(func(ctx context.Context) {
-		state.StartDraining(ctx)
+	switcher := stopFunc(func(ctx context.Context) {
+		state.MarkStopping(ctx)
 		markedAt = time.Now()
 		close(marked)
 	})
@@ -57,7 +57,7 @@ func TestShutdown_ServerError(t *testing.T) {
 	t.Parallel()
 	want := errors.New("shutdown failed")
 	marked := false
-	err := shutdown(t.Context(), drainFunc(func(context.Context) { marked = true }), 0, time.Second,
+	err := shutdown(t.Context(), stopFunc(func(context.Context) { marked = true }), 0, time.Second,
 		shutdownFunc(func(context.Context) error {
 			if !marked {
 				t.Error("server shutdown before instance marked unready")
