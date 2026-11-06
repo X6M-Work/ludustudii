@@ -81,7 +81,8 @@ requests themselves, so they set `Request.Pattern` and wildcard path values
   sorted alphabetically, across every pattern that matches the path). An `/api`
   path never reaches the SPA.
 - **Probes** reserve `/livez` and `/readyz` outside the API and the SPA. GET
-  also serves HEAD; other methods receive plain-text 405 with `Allow: GET, HEAD`.
+  also serves HEAD; other methods receive JSON `405 method_not_allowed` with
+  `Allow: GET, HEAD`.
 - **`/docs`** routes are `GET` patterns, registered only when the reference is
   enabled; other methods fall through to the SPA.
 - **The SPA** is the method-less `/` catch-all and answers non-GET/HEAD
@@ -186,7 +187,8 @@ Use readiness to decide whether to send traffic to an instance.
 Both paths live outside `/api`, require no authentication, and send
 `Cache-Control: no-store` and `X-Request-Id`. GET bodies are
 `{"status":"ok"}` or `{"status":"unavailable"}`; HEAD sends no body.
-Unsupported methods receive a plain-text 405 with `Allow: GET, HEAD`.
+Unsupported methods receive 405 with the shared JSON error body
+`{"code":"method_not_allowed"}` and `Allow: GET, HEAD`.
 
 On SIGINT or SIGTERM, readiness becomes unavailable immediately. HTTP keeps
 serving during `APP_SHUTDOWN_DRAIN_DELAY`, allowing load balancers to remove

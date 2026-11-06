@@ -1,3 +1,7 @@
+description: |
+  GET and HEAD are supported. Other methods return 405 with the shared JSON
+  error body (code method_not_allowed), Allow: GET, HEAD, Cache-Control:
+  no-store and X-Request-Id.
 parameters:
   - $ref: '../components/parameters.yml#/RequestId'
 get:

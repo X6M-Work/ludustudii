@@ -943,6 +943,7 @@
       }
     },
     "/livez": {
+      "description": "GET and HEAD are supported. Other methods return 405 with the shared JSON\nerror body (code method_not_allowed), Allow: GET, HEAD, Cache-Control:\nno-store and X-Request-Id.\n",
       "get": {
         "description": "Checks no dependencies, including the database. Succeeds whenever the process can answer HTTP, including during draining.",
         "operationId": "getLiveness",
@@ -976,6 +977,7 @@
       ]
     },
     "/readyz": {
+      "description": "GET and HEAD are supported. Other methods return 405 with the shared JSON\nerror body (code method_not_allowed), Allow: GET, HEAD, Cache-Control:\nno-store and X-Request-Id.\n",
       "get": {
         "description": "Pings the database with a one-second timeout. Returns 503 when the ping fails or the instance is draining for shutdown.",
         "operationId": "getReadiness",

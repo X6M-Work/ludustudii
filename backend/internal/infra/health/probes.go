@@ -1,6 +1,10 @@
 package health
 
-import "net/http"
+import (
+	"net/http"
+
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
+)
 
 const (
 	// LivenessPath is the dependency-free process liveness endpoint.
@@ -10,24 +14,24 @@ const (
 )
 
 // RegisterProbes reserves the probe paths for GET and HEAD, returning 405 for
-// other methods rather than letting them reach a catch-all handler.
-func RegisterProbes(mux *http.ServeMux, state *State) {
+// other methods through onError rather than reaching a catch-all handler.
+func RegisterProbes(mux *http.ServeMux, state *State, onError httpkit.ErrorHandler) {
 	// Reserve these exact paths for all methods so the SPA cannot catch them.
 	mux.HandleFunc(LivenessPath, probeHandler(func(w http.ResponseWriter, r *http.Request) {
 		writeProbe(w, r, true)
-	}))
+	}, onError))
 	mux.HandleFunc(ReadinessPath, probeHandler(func(w http.ResponseWriter, r *http.Request) {
 		writeProbe(w, r, state.Check(r.Context()))
-	}))
+	}, onError))
 }
 
 // probeHandler applies the common HTTP headers and method restrictions.
-func probeHandler(next http.HandlerFunc) http.HandlerFunc {
+func probeHandler(next http.HandlerFunc, onError httpkit.ErrorHandler) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Cache-Control", "no-store")
 		if r.Method != http.MethodGet && r.Method != http.MethodHead {
 			w.Header().Set("Allow", "GET, HEAD")
-			http.Error(w, http.StatusText(http.StatusMethodNotAllowed), http.StatusMethodNotAllowed)
+			onError(w, r, httpkit.ErrMethodNotAllowed)
 			return
 		}
 		next(w, r)

@@ -55,12 +55,12 @@ func TestRouter_HealthEndpointsReserveRootPaths(t *testing.T) {
 					if method == http.MethodHead {
 						wantBody = ""
 					} else if method != http.MethodGet {
-						wantStatus, wantBody, wantAllow = http.StatusMethodNotAllowed, "Method Not Allowed\n", "GET, HEAD"
+						wantStatus, wantBody, wantAllow = http.StatusMethodNotAllowed, "{\"code\":\"method_not_allowed\"}\n", "GET, HEAD"
 					}
 					if rec.Code != wantStatus || rec.Body.String() != wantBody || rec.Header().Get("Allow") != wantAllow {
 						t.Fatalf("response: %d %q, Allow %q", rec.Code, rec.Body.String(), rec.Header().Get("Allow"))
 					}
-					if rec.Header().Get("Cache-Control") != "no-store" || rec.Header().Get("X-Request-Id") == "" {
+					if rec.Header().Get("Cache-Control") != "no-store" || rec.Header().Get("X-Request-Id") == "" || rec.Header().Get("Content-Type") != "application/json" {
 						t.Fatalf("missing probe headers: %v", rec.Header())
 					}
 				}

@@ -130,17 +130,13 @@ func checkUnmatchedRoute(
 		if resp.Header.Get("Allow") == "" {
 			return errors.New("405 response missing Allow header")
 		}
-		// Documented operational paths use the non-API mux's plain-text 405.
-		if req.URL.Path != "/api" && !strings.HasPrefix(req.URL.Path, "/api/") {
-			return nil
-		}
 	default:
 		return fmt.Errorf("route lookup: %w", routeErr)
 	}
 
 	// Like documented errors, fallbacks share ErrorResponse without coupling
 	// status to code. Handler integration tests pin codes and exact Allow values.
-	// Fallback API errors (404, 405, 500) must still carry X-Request-Id and
+	// Fallback API errors and unsupported probe methods must carry X-Request-Id and
 	// conform to the ErrorResponse schema (or have an empty body for HEAD).
 	notFoundRef := doc.Components.Responses["NotFound"]
 	op := openapi3.NewOperation()

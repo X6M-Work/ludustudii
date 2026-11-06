@@ -10,6 +10,8 @@ import (
 	"net/http/httptest"
 	"testing"
 	"time"
+
+	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 )
 
 type pingFunc func(context.Context) error
@@ -58,7 +60,9 @@ func TestProbes(t *testing.T) {
 					state.StartDraining(t.Context())
 				}
 				mux := http.NewServeMux()
-				RegisterProbes(mux, state)
+				RegisterProbes(mux, state, func(_ http.ResponseWriter, _ *http.Request, err error) {
+					t.Errorf("unexpected probe error: %v", err)
+				})
 				rec := httptest.NewRecorder()
 				start := time.Now()
 				mux.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), method, tc.path, nil))
@@ -76,6 +80,38 @@ func TestProbes(t *testing.T) {
 					t.Errorf("ping calls: %d, want %d", calls, tc.calls)
 				}
 				if rec.Header().Get("Cache-Control") != "no-store" || rec.Header().Get("Content-Type") != "application/json" {
+					t.Fatalf("headers: %v", rec.Header())
+				}
+			})
+		}
+	}
+}
+
+func TestProbes_UnsupportedMethods(t *testing.T) {
+	t.Parallel()
+	for _, path := range []string{LivenessPath, ReadinessPath} {
+		for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions} {
+			t.Run(method+" "+path, func(t *testing.T) {
+				t.Parallel()
+				state := NewState(slog.New(slog.DiscardHandler), pingFunc(func(context.Context) error {
+					t.Error("unsupported method pinged the database")
+					return nil
+				}))
+				mux := http.NewServeMux()
+				calls := 0
+				RegisterProbes(mux, state, func(w http.ResponseWriter, _ *http.Request, err error) {
+					calls++
+					if !errors.Is(err, httpkit.ErrMethodNotAllowed) {
+						t.Errorf("error: %v, want ErrMethodNotAllowed", err)
+					}
+					w.WriteHeader(http.StatusMethodNotAllowed)
+				})
+				rec := httptest.NewRecorder()
+				mux.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), method, path, nil))
+				if rec.Code != http.StatusMethodNotAllowed || calls != 1 {
+					t.Fatalf("status/error handler calls: %d/%d, want 405/1", rec.Code, calls)
+				}
+				if rec.Header().Get("Allow") != "GET, HEAD" || rec.Header().Get("Cache-Control") != "no-store" {
 					t.Fatalf("headers: %v", rec.Header())
 				}
 			})

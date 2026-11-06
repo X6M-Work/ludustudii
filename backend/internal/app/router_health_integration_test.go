@@ -45,10 +45,13 @@ func TestRouter_HealthEndpoints(t *testing.T) {
 			probe(health.LivenessPath, 200, `{"status":"ok"}`)
 			probe(health.ReadinessPath, 200, `{"status":"ok"}`)
 			for _, path := range []string{health.LivenessPath, health.ReadinessPath} {
-				resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodPost, Path: path})
-				testkit.AssertStatus(t, resp, http.StatusMethodNotAllowed)
-				if resp.Header.Get("Allow") != "GET, HEAD" {
-					t.Fatalf("Allow: %q", resp.Header.Get("Allow"))
+				for _, method := range []string{http.MethodPost, http.MethodPut, http.MethodPatch, http.MethodDelete, http.MethodOptions} {
+					resp := testkit.Do(t, srv, testkit.DoOpts{Method: method, Path: path})
+					testkit.AssertStatus(t, resp, http.StatusMethodNotAllowed)
+					testkit.AssertJSON(t, resp.Body, `{"code":"method_not_allowed"}`)
+					if resp.Header.Get("Allow") != "GET, HEAD" || resp.Header.Get("Cache-Control") != "no-store" || resp.Header.Get("X-Request-Id") == "" {
+						t.Fatalf("method error headers: %v", resp.Header)
+					}
 				}
 			}
 			if scenario == "database unavailable" {
