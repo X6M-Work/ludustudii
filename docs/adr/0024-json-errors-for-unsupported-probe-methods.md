@@ -1,6 +1,6 @@
 # 0024. JSON errors for unsupported probe methods
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-06
 - Tags: back-end, api, operations
 

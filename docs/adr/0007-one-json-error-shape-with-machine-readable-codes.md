@@ -1,8 +1,13 @@
 # 0007. One JSON error shape with machine-readable codes
 
-- Status: Accepted
+- Status: Accepted, Amended by [0024](0024-json-errors-for-unsupported-probe-methods.md)
 - Date: 2026-11-05
 - Tags: back-end, front-end, api
+
+Amended by [0024](0024-json-errors-for-unsupported-probe-methods.md) only in
+the API-only scope of the shared JSON error shape: method errors and shared
+middleware errors on the non-API paths `/livez` and `/readyz` also use it.
+All other rules below continue to apply.
 
 ## Context
 

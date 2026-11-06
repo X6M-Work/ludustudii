@@ -1,8 +1,13 @@
 # 0023. Liveness and readiness probes
 
-- Status: Accepted
+- Status: Accepted, Amended by [0024](0024-json-errors-for-unsupported-probe-methods.md)
 - Date: 2026-11-05
 - Tags: back-end, operations, observability
+
+Amended by [0024](0024-json-errors-for-unsupported-probe-methods.md) only for
+unsupported probe methods: their 405 responses use the shared JSON error
+shape instead of plain text. GET and HEAD probe status responses and all
+other rules below continue to apply.
 
 ## Context
 

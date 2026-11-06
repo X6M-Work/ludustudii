@@ -42,7 +42,7 @@ records explain *why*.
 | [0004](0004-spec-first-open-api-contract.md) | Spec-first OpenAPI contract | Accepted | back-end, api |
 | [0005](0005-vertical-slice-per-endpoint.md) | Vertical slice per endpoint | Accepted | back-end, architecture |
 | [0006](0006-central-error-handling.md) | Handlers return errors to a central error handler | Accepted | back-end, api |
-| [0007](0007-one-json-error-shape-with-machine-readable-codes.md) | One JSON error shape with machine-readable codes | Accepted | back-end, front-end, api |
+| [0007](0007-one-json-error-shape-with-machine-readable-codes.md) | One JSON error shape with machine-readable codes | Accepted, Amended by [0024](0024-json-errors-for-unsupported-probe-methods.md) | back-end, front-end, api |
 | [0008](0008-canonicalize-text-input-before-validating.md) | Canonicalize text input before validating | Accepted | back-end, api |
 | [0009](0009-strict-json-request-binding.md) | Strict JSON request binding | Accepted | back-end, api |
 | [0010](0010-optimistic-concurrency-with-etag-and-if-match.md) | Optimistic concurrency with ETag and If-Match | Accepted | back-end, front-end, api |
@@ -58,5 +58,5 @@ records explain *why*.
 | [0020](0020-pinned-tooling-and-single-quality-gate.md) | Pinned tooling and a single quality gate | Accepted | back-end, tooling |
 | [0021](0021-bounded-client-request-ids.md) | Bounded client request IDs | Accepted | back-end, api, observability |
 | [0022](0022-opaque-pagination-cursor-contract.md) | Opaque pagination cursor contract | Accepted | back-end, api |
-| [0023](0023-liveness-and-readiness-probes.md) | Liveness and readiness probes (amends 0012 for quiet probe log levels) | Accepted | back-end, operations, observability |
-| [0024](0024-json-errors-for-unsupported-probe-methods.md) | JSON errors for unsupported probe methods (proposes amending 0007 and 0023) | Proposed | back-end, api, operations |
+| [0023](0023-liveness-and-readiness-probes.md) | Liveness and readiness probes (amends 0012 for quiet probe log levels) | Accepted, Amended by [0024](0024-json-errors-for-unsupported-probe-methods.md) | back-end, operations, observability |
+| [0024](0024-json-errors-for-unsupported-probe-methods.md) | JSON errors for unsupported probe methods (amends 0007 and 0023) | Accepted | back-end, api, operations |
