@@ -195,6 +195,46 @@ func TestRouter_SPAErrors(t *testing.T) {
 	}
 }
 
+// Shared middleware errors use the JSON error shape on client-app paths too,
+// unlike errors from the client app's own handler.
+func TestRouter_SPABodyLimit(t *testing.T) {
+	t.Parallel()
+	srv := newRouterServer(t)
+	for _, tc := range []struct{ method, path string }{
+		{http.MethodPost, "/"},
+		{http.MethodGet, "/client"},
+	} {
+		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
+			t.Parallel()
+			resp := testkit.Do(t, srv, testkit.DoOpts{
+				Method: tc.method,
+				Path:   tc.path,
+				Body:   strings.Repeat("a", MaxBodyBytes+1),
+			})
+			testkit.AssertStatus(t, resp, http.StatusRequestEntityTooLarge)
+			if ct := resp.Header.Get("Content-Type"); ct != "application/json" {
+				t.Errorf("Content-Type: got %q, want application/json", ct)
+			}
+			testkit.AssertJSON(t, resp.Body, `{"code":"payload_too_large"}`)
+		})
+	}
+}
+
+func TestMiddleware_ClientAppPanicResponse(t *testing.T) {
+	t.Parallel()
+	log := discardLogger()
+	mux := http.NewServeMux()
+	mux.HandleFunc("/", func(http.ResponseWriter, *http.Request) { panic("boom") })
+	srv := httptest.NewServer(withMiddleware(log, errorHandler(log), mux))
+	t.Cleanup(srv.Close)
+	resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/client"})
+	testkit.AssertStatus(t, resp, http.StatusInternalServerError)
+	if ct := resp.Header.Get("Content-Type"); ct != "application/json" {
+		t.Errorf("Content-Type: got %q, want application/json", ct)
+	}
+	testkit.AssertJSON(t, resp.Body, `{"code":"unexpected_error"}`)
+}
+
 func TestRouter_HealthBodyLimit(t *testing.T) {
 	t.Parallel()
 	srv := newRouterServer(t)
