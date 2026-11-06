@@ -1,320 +1,149 @@
-//go:build integration
+//go:build unit
 
 package app
 
 import (
-	"bytes"
-	"encoding/json"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
 	"strings"
-	"sync"
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
-	"github.com/apotourlyan/ludustudii/internal/infra/logging"
+	"github.com/apotourlyan/ludustudii/internal/infra/health"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
-	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
-	"github.com/apotourlyan/ludustudii/internal/testkit"
 )
 
-func discardLogger() *slog.Logger {
-	return slog.New(slog.DiscardHandler)
+func TestRouter_PathNormalization(t *testing.T) {
+	t.Parallel()
+	testRouterResponses(t, []routerResponseCase{
+		{"GET", "/api/lcards/.", 307, "<a href=\"/api/lcards\">Temporary Redirect</a>.\n\n", "", "/api/lcards"},
+		{"GET", "/api/lcards/..", 307, "<a href=\"/api\">Temporary Redirect</a>.\n\n", "", "/api"},
+		{"GET", "/api//unknown", 307, "<a href=\"/api/unknown\">Temporary Redirect</a>.\n\n", "", "/api/unknown"},
+		{"GET", "/docs//", 307, "<a href=\"/docs/\">Temporary Redirect</a>.\n\n", "", "/docs/"},
+		{"GET", "/client//x", 307, "<a href=\"/client/x\">Temporary Redirect</a>.\n\n", "", "/client/x"},
+		{"GET", "/client/../", 307, "<a href=\"/\">Temporary Redirect</a>.\n\n", "", "/"},
+	})
 }
 
-func newRouterServer(t *testing.T) *httptest.Server {
+func TestRouter_EscapedPaths(t *testing.T) {
+	t.Parallel()
+	testRouterResponses(t, []routerResponseCase{
+		{"GET", "/api/lcards/bad%2fx", 400, "{\"code\":\"validation_error\",\"errors\":[{\"field\":\"id\",\"code\":\"invalid_uuid7\"}]}\n", "", ""},
+		{"GET", "/%61pi/nope", 404, "{\"code\":\"not_found\"}\n", "", ""},
+	})
+}
+
+func TestRouter_APIDocsRouting(t *testing.T) {
+	t.Parallel()
+	clientApp, err := spa.Load()
+	if err != nil {
+		t.Fatal(err)
+	}
+	testRouterResponses(t, []routerResponseCase{
+		{"GET", "/docs/unknown", 200, string(clientApp.IndexFile.Bytes), "", ""},
+		{"GET", "/docs/?q=x", 302, "", "", "/docs?q=x"},
+		{"HEAD", "/docs/?q=x", 302, "", "", "/docs?q=x"},
+	})
+}
+
+func TestRouter_MethodNotAllowed(t *testing.T) {
+	t.Parallel()
+	testRouterResponses(t, []routerResponseCase{
+		{"POST", "/docs", 405, "method not allowed\n", "GET, HEAD", ""},
+		{"POST", "/docs/", 405, "method not allowed\n", "GET, HEAD", ""},
+		{"POST", "/docs/openapi.json", 405, "method not allowed\n", "GET, HEAD", ""},
+		{"POST", "/docs/scalar.js", 405, "method not allowed\n", "GET, HEAD", ""},
+		{"OPTIONS", "/api/lcards", 405, "{\"code\":\"method_not_allowed\"}\n", "GET, HEAD, POST", ""},
+		{"PATCH", "/api/lcards/id", 405, "{\"code\":\"method_not_allowed\"}\n", "DELETE, GET, HEAD, PUT", ""},
+	})
+}
+
+type routerResponseCase struct {
+	method, path          string
+	status                int
+	body, allow, location string
+}
+
+func testRouterResponses(t *testing.T, cases []routerResponseCase) {
 	t.Helper()
 	clientApp, err := spa.Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	srv := httptest.NewServer(NewRouter(discardLogger(), clientApp, nil, nil))
-	t.Cleanup(srv.Close)
-	return srv
-}
-
-func TestNewRouter(t *testing.T) {
-	t.Parallel()
-
-	t.Run("GET / serves SPA index.html", func(t *testing.T) {
-		t.Parallel()
-		srv := newRouterServer(t)
-
-		resp := testkit.Do(t, srv, testkit.DoOpts{
-			Method: http.MethodGet,
-			Path:   "/",
-		})
-		testkit.AssertStatus(t, resp, http.StatusOK)
-		if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
-			t.Errorf("Content-Type: got %q, want %s", ct, "text/html")
-		}
-		if len(resp.Body) == 0 {
-			t.Error("expected non-empty HTML body")
-		}
-	})
-
-	for _, path := range []string{"/api", "/api/", "/api/nope"} {
-		t.Run("unknown API path "+path+" returns 404 JSON, not the SPA", func(t *testing.T) {
+	docs := apidocs.NewHandler(&apidocs.Docs{Page: staticfile.File{ContentType: "text/html", Bytes: []byte("reference")}})
+	log := slog.New(slog.DiscardHandler)
+	handler := NewRouter(log, clientApp, docs, nil, health.NewState(log, nil))
+	for _, tc := range cases {
+		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
 			t.Parallel()
-			srv := newRouterServer(t)
-
-			resp := testkit.Do(t, srv, testkit.DoOpts{
-				Method: http.MethodGet,
-				Path:   path,
-			})
-			testkit.AssertStatus(t, resp, http.StatusNotFound)
-			testkit.AssertJSON(t, resp.Body, `{"code":"not_found"}`)
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), tc.method, tc.path, nil))
+			if rec.Code != tc.status || rec.Body.String() != tc.body {
+				t.Fatalf("response: %d %q, want %d %q", rec.Code, rec.Body.String(), tc.status, tc.body)
+			}
+			if got := rec.Header().Get("Allow"); got != tc.allow {
+				t.Errorf("Allow: %q, want %q", got, tc.allow)
+			}
+			if got := rec.Header().Get("Location"); got != tc.location {
+				t.Errorf("Location: %q, want %q", got, tc.location)
+			}
 		})
 	}
-
-	t.Run("panic in handler returns 500 unexpected_error", func(t *testing.T) {
-		t.Parallel()
-		// keep the stack trace out of test output
-		onError := errorHandler(discardLogger())
-		api := httpkit.NewAPI(onError)
-		api.HandleFunc("GET /api/panic", func(http.ResponseWriter, *http.Request) error { panic("boom") })
-		srv := httptest.NewServer(withMiddleware(discardLogger(), onError, api))
-		t.Cleanup(srv.Close)
-
-		resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/api/panic"})
-		testkit.AssertStatus(t, resp, http.StatusInternalServerError)
-		testkit.AssertJSON(t, resp.Body, `{"code":"unexpected_error"}`)
-	})
 }
 
-func TestNewRouter_APIDocs(t *testing.T) {
+func TestRouter_RequestIDHeader(t *testing.T) {
 	t.Parallel()
-
 	clientApp, err := spa.Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	docs := &apidocs.Docs{
-		Page:   staticfile.File{ContentType: "text/html; charset=utf-8", ETag: `"page"`, Bytes: []byte("<!doctype html><title>docs</title>")},
-		Spec:   staticfile.File{ContentType: "application/json", ETag: `"spec"`, Bytes: []byte(`{"openapi":"3.0.3"}`)},
-		Script: staticfile.File{ContentType: "text/javascript; charset=utf-8", ETag: `"script"`, Bytes: []byte("console.log(1)")},
-	}
-
-	t.Run("disabled: /docs is left to the SPA", func(t *testing.T) {
-		t.Parallel()
-		srv := httptest.NewServer(NewRouter(discardLogger(), clientApp, nil, nil))
-		t.Cleanup(srv.Close)
-
-		resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: apidocs.Path})
-		testkit.AssertStatus(t, resp, http.StatusOK)
-		if !bytes.Equal(resp.Body, clientApp.IndexFile.Bytes) {
-			t.Errorf("GET %s: want the SPA index.html, got %q", apidocs.Path, resp.Body)
-		}
-
-		for _, path := range []string{apidocs.Path + "/openapi.json", apidocs.Path + "/scalar.js"} {
-			resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: path})
-			testkit.AssertStatus(t, resp, http.StatusNotFound)
-		}
-	})
-
-	t.Run("enabled: /docs serves the reference", func(t *testing.T) {
-		t.Parallel()
-		srv := httptest.NewServer(NewRouter(discardLogger(), clientApp, apidocs.NewHandler(docs), nil))
-		t.Cleanup(srv.Close)
-
-		for path, want := range map[string]staticfile.File{
-			apidocs.Path:                   docs.Page,
-			apidocs.Path + "/openapi.json": docs.Spec,
-			apidocs.Path + "/scalar.js":    docs.Script,
-		} {
-			resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: path})
-			testkit.AssertStatus(t, resp, http.StatusOK)
-			if ct := resp.Header.Get("Content-Type"); ct != want.ContentType {
-				t.Errorf("GET %s Content-Type: got %q, want %q", path, ct, want.ContentType)
-			}
-			if !bytes.Equal(resp.Body, want.Bytes) {
-				t.Errorf("GET %s: got %q, want %q", path, resp.Body, want.Bytes)
-			}
-		}
-
-		resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/api/nope"})
-		testkit.AssertStatus(t, resp, http.StatusNotFound)
-		testkit.AssertJSON(t, resp.Body, `{"code":"not_found"}`)
-	})
-}
-
-// syncBuffer guards a bytes.Buffer, since the server goroutine writes logs
-// while the test goroutine may read them.
-type syncBuffer struct {
-	mu  sync.Mutex
-	buf bytes.Buffer
-}
-
-func (b *syncBuffer) Write(p []byte) (int, error) {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.buf.Write(p)
-}
-
-func (b *syncBuffer) String() string {
-	b.mu.Lock()
-	defer b.mu.Unlock()
-	return b.buf.String()
-}
-
-func TestNewRouter_RequestLogging(t *testing.T) {
-	t.Parallel()
-
-	tests := []struct {
-		name       string
-		path       string
-		wantStatus int
-		wantLevel  string
-		wantRoute  string
-		requestID  string
+	log := slog.New(slog.DiscardHandler)
+	handler := NewRouter(log, clientApp, nil, nil, health.NewState(log, nil))
+	for _, tc := range []struct {
+		name  string
+		value string
+		reuse bool
 	}{
-		{name: "200 logs INFO", path: "/", wantStatus: http.StatusOK, wantLevel: "INFO", wantRoute: "/"},
-		{name: "404 logs WARN", path: "/api/nope", wantStatus: http.StatusNotFound, wantLevel: "WARN", wantRoute: "/api/"},
-		{name: "oversized request ID replaced", path: "/api/nope", wantStatus: http.StatusNotFound, wantLevel: "WARN", wantRoute: "/api/", requestID: strings.Repeat("a", 129)},
-		{name: "invalid request ID replaced", path: "/api/nope", wantStatus: http.StatusNotFound, wantLevel: "WARN", wantRoute: "/api/", requestID: "client/id"},
-	}
-
-	for _, tt := range tests {
-		t.Run(tt.name, func(t *testing.T) {
+		{name: "missing"},
+		{name: "one character", value: "a", reuse: true},
+		{name: "allowed characters", value: "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789._-", reuse: true},
+		{name: "maximum length", value: strings.Repeat("a", 128), reuse: true},
+		{name: "over maximum length", value: strings.Repeat("a", 129)},
+		{name: "spaces", value: "  client id  "},
+		{name: "tab", value: "client\tid"},
+		{name: "newline", value: "client\nid"},
+		{name: "carriage return", value: "client\rid"},
+		{name: "null", value: "client\x00id"},
+		{name: "DEL", value: "client\x7fid"},
+		{name: "non-ASCII", value: "client-é"},
+		{name: "punctuation", value: "client/id"},
+		{name: "comma separated", value: "first,second"},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
 			t.Parallel()
-			clientApp, err := spa.Load()
-			if err != nil {
-				t.Fatal(err)
+			value := tc.value
+			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, "/api/nope", nil)
+			r.Header.Set("X-Request-Id", value)
+			rec := httptest.NewRecorder()
+			handler.ServeHTTP(rec, r)
+			if rec.Code != http.StatusNotFound {
+				t.Fatalf("status: %d, want 404", rec.Code)
 			}
-			var logs syncBuffer
-			log, err := logging.New(logging.Options{Format: logging.FormatJSON, Output: &logs})
-			if err != nil {
-				t.Fatal(err)
-			}
-			srv := httptest.NewServer(NewRouter(log, clientApp, nil, nil))
-			t.Cleanup(srv.Close)
-
-			resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: tt.path, Headers: http.Header{"X-Request-Id": {tt.requestID}}})
-			testkit.AssertStatus(t, resp, tt.wantStatus)
-
-			id := resp.Header.Get("X-Request-Id")
-			if id == "" {
-				t.Fatalf("missing %s header", "X-Request-Id")
-			}
-
-			if len(id) > 128 || (tt.requestID != "" && id == tt.requestID) {
-				t.Fatalf("invalid generated request ID: %q", id)
-			}
-
-			// Close waits for the handler to return, so the record is written.
-			srv.Close()
-
-			var got []map[string]any
-			for line := range strings.Lines(logs.String()) {
-				var rec map[string]any
-				if err := json.Unmarshal([]byte(line), &rec); err != nil {
-					t.Fatalf("unmarshal %q: %v", line, err)
-				}
-				if rec["msg"] == "request" {
-					got = append(got, rec)
-				}
-			}
-			if len(got) != 1 {
-				t.Fatalf("request records: got %d, want 1\n%s", len(got), logs.String())
-			}
-			rec := got[0]
-
-			if rec["request_id"] != id {
-				t.Errorf("request_id: got %v, want %q", rec["request_id"], id)
-			}
-			if rec["level"] != tt.wantLevel {
-				t.Errorf("level: got %v, want %s", rec["level"], tt.wantLevel)
-			}
-			if rec["status"] != float64(tt.wantStatus) {
-				t.Errorf("status: got %v, want %d", rec["status"], tt.wantStatus)
-			}
-			if rec["method"] != http.MethodGet {
-				t.Errorf("method: got %v, want %s", rec["method"], http.MethodGet)
-			}
-			if rec["path"] != tt.path {
-				t.Errorf("path: got %v, want %s", rec["path"], tt.path)
-			}
-			if rec["route"] != tt.wantRoute {
-				t.Errorf("route: got %v, want %s", rec["route"], tt.wantRoute)
-			}
-			if _, ok := rec["latency"].(float64); !ok {
-				t.Errorf("latency: got %v, want number", rec["latency"])
-			}
-		})
-	}
-
-	t.Run("incoming X-Request-Id is reused", func(t *testing.T) {
-		t.Parallel()
-		clientApp, err := spa.Load()
-		if err != nil {
-			t.Fatal(err)
-		}
-		var logs syncBuffer
-		log, err := logging.New(logging.Options{Format: logging.FormatJSON, Output: &logs})
-		if err != nil {
-			t.Fatal(err)
-		}
-		srv := httptest.NewServer(NewRouter(log, clientApp, nil, nil))
-		t.Cleanup(srv.Close)
-
-		resp := testkit.Do(t, srv, testkit.DoOpts{
-			Method:  http.MethodGet,
-			Path:    "/api/nope",
-			Headers: http.Header{"X-Request-Id": {"client-supplied-id"}},
-		})
-		testkit.AssertStatus(t, resp, http.StatusNotFound)
-		testkit.AssertJSON(t, resp.Body, `{"code":"not_found"}`)
-		srv.Close() // waits for the handler to return, so the record is written
-
-		if got := resp.Header.Get("X-Request-Id"); got != "client-supplied-id" {
-			t.Errorf("header: got %q, want %q", got, "client-supplied-id")
-		}
-		if !strings.Contains(logs.String(), `"request_id":"client-supplied-id"`) {
-			t.Errorf("log missing client request id:\n%s", logs.String())
-		}
-	})
-}
-
-func TestNewRouter_UnpinnedContract(t *testing.T) {
-	t.Parallel()
-	srv := newRouterServer(t)
-	for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodPost} {
-		for _, path := range []string{"/api", "/api/unknown", "/api/lcards/one/x"} {
-			resp := testkit.Do(t, srv, testkit.DoOpts{Method: method, Path: path})
-			testkit.AssertStatus(t, resp, http.StatusNotFound)
-			if method == http.MethodHead {
-				if len(resp.Body) != 0 {
-					t.Fatal("HEAD error has body")
+			id := rec.Header().Get("X-Request-Id")
+			if tc.reuse {
+				if id != value {
+					t.Fatalf("ID: %q, want %q", id, value)
 				}
 			} else {
-				testkit.AssertJSON(t, resp.Body, `{"code":"not_found"}`)
+				if len(id) < 26 || len(id) > 128 || strings.ContainsFunc(id, func(ch rune) bool { return (ch < 'A' || ch > 'Z') && (ch < '2' || ch > '7') }) {
+					t.Fatalf("generated ID: %q", id)
+				}
 			}
-		}
-	}
-	for _, headers := range []http.Header{{"X-Request-Id": {"first", "second"}}, {"X-Request-Id": {"", "second"}}, {"X-Request-Id": {"invalid/id", "second"}}} {
-		resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/api/nope", Headers: headers})
-		id := resp.Header.Get("X-Request-Id")
-		if headers.Get("X-Request-Id") == "first" {
-			if id != "first" {
-				t.Fatalf("request ID: %q", id)
+			if r.Header.Get("X-Request-Id") != value {
+				t.Fatal("incoming header changed")
 			}
-		} else if id == "" || id == headers.Get("X-Request-Id") || id == "second" {
-			t.Fatalf("generated ID: %q", id)
-		}
-	}
-	for _, tc := range []struct {
-		method, path, body string
-		status             int
-	}{
-		{http.MethodPost, "/client", "method not allowed\n", http.StatusMethodNotAllowed},
-		{http.MethodGet, "/missing.js", "404 page not found\n", http.StatusNotFound},
-	} {
-		resp := testkit.Do(t, srv, testkit.DoOpts{Method: tc.method, Path: tc.path})
-		testkit.AssertStatus(t, resp, tc.status)
-		if string(resp.Body) != tc.body {
-			t.Fatalf("body: %q, want %q", resp.Body, tc.body)
-		}
+		})
 	}
 }

@@ -11,12 +11,13 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apotourlyan/ludustudii/internal/infra/health"
 	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 )
 
-func TestRouter_FinalResponseLogging(t *testing.T) {
+func TestMiddleware_FinalResponseLogging(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
 		name, path   string
@@ -107,7 +108,7 @@ func TestRouter_LoggedRouteIsMatchedPattern(t *testing.T) {
 				t.Fatal(err)
 			}
 			rec := httptest.NewRecorder()
-			NewRouter(log, clientApp, nil, nil).ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), tc.method, tc.path, nil))
+			NewRouter(log, clientApp, nil, nil, health.NewState(log, nil)).ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), tc.method, tc.path, nil))
 			if rec.Code != tc.status {
 				t.Fatalf("status: %d, want %d", rec.Code, tc.status)
 			}

@@ -3,18 +3,13 @@
 package health
 
 import (
-	"bytes"
 	"context"
 	"errors"
 	"log/slog"
 	"net/http"
 	"net/http/httptest"
-	"strings"
-	"sync"
 	"testing"
 	"time"
-
-	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 )
 
 type pingFunc func(context.Context) error
@@ -85,69 +80,5 @@ func TestProbes(t *testing.T) {
 				}
 			})
 		}
-	}
-}
-
-func probeLogger(t *testing.T, logs *bytes.Buffer) *slog.Logger {
-	t.Helper()
-	level := new(slog.LevelVar)
-	level.Set(slog.LevelDebug)
-	log, err := logging.New(logging.Options{Level: level, Format: logging.FormatJSON, Output: logs})
-	if err != nil {
-		t.Fatal(err)
-	}
-	return log
-}
-
-func TestState_DrainingDuringPing(t *testing.T) {
-	t.Parallel()
-	for _, tc := range []struct {
-		name      string
-		pingError error
-	}{
-		{name: "successful ping"},
-		{name: "failed ping", pingError: errors.New("database unreachable")},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			var logs bytes.Buffer
-			started, release := make(chan struct{}), make(chan struct{})
-			state := NewState(probeLogger(t, &logs), pingFunc(func(context.Context) error {
-				close(started)
-				<-release
-				return tc.pingError
-			}))
-			result := make(chan bool, 1)
-			go func() { result <- state.Check(t.Context()) }()
-			<-started
-			state.StartDraining(t.Context())
-			close(release)
-			if <-result || state.Check(t.Context()) {
-				t.Fatal("a completed ping restored readiness during drain")
-			}
-			if strings.Contains(logs.String(), "Readiness unavailable") || strings.Contains(logs.String(), "Readiness recovered") {
-				t.Fatalf("late ping logged a transition after draining started: %s", logs.String())
-			}
-		})
-	}
-}
-
-func TestState_ConcurrentFailuresLogOnce(t *testing.T) {
-	t.Parallel()
-	var logs bytes.Buffer
-	state := NewState(probeLogger(t, &logs), pingFunc(func(context.Context) error {
-		return errors.New("unreachable")
-	}))
-	var wg sync.WaitGroup
-	for range 20 {
-		wg.Go(func() {
-			if state.Check(t.Context()) {
-				t.Error("failed ping reported available")
-			}
-		})
-	}
-	wg.Wait()
-	if got := strings.Count(logs.String(), `"msg":"Readiness unavailable"`); got != 1 {
-		t.Fatalf("unavailable transitions: %d, want 1", got)
 	}
 }

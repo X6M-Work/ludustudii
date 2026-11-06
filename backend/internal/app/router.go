@@ -21,8 +21,8 @@ const MaxBodyBytes = 1 << 20
 // NewRouter builds the production handler with recovery, request IDs, request
 // logging, probes, body limits, API routes, optional reference routes and the SPA.
 // Each request's logging context includes its request_id attribute.
-func NewRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Handler, db *sql.DB) http.Handler {
-	return newRouter(log, clientApp, apiDocs, db, health.NewState(log, db))
+func NewRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Handler, db *sql.DB, state *health.State) http.Handler {
+	return newRouter(log, clientApp, apiDocs, db, state)
 }
 
 func newRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Handler, db *sql.DB, state *health.State) http.Handler {

@@ -15,6 +15,7 @@ import (
 	"testing"
 
 	"github.com/apotourlyan/ludustudii/internal/app"
+	"github.com/apotourlyan/ludustudii/internal/infra/health"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 	"github.com/apotourlyan/ludustudii/internal/testkit"
 	"github.com/google/uuid"
@@ -31,7 +32,8 @@ func newServer(t *testing.T) (*httptest.Server, *sql.DB) {
 		t.Fatal(err)
 	}
 	db := testkit.NewDB(t)
-	srv := httptest.NewServer(app.NewRouter(slog.New(slog.DiscardHandler), clientApp, nil, db))
+	log := slog.New(slog.DiscardHandler)
+	srv := httptest.NewServer(app.NewRouter(log, clientApp, nil, db, health.NewState(log, db)))
 	t.Cleanup(srv.Close)
 	return srv, db
 }

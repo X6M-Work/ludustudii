@@ -84,7 +84,7 @@ func Run() (err error) {
 	}()
 
 	state := health.NewState(log, db)
-	router := newRouter(log, ca, adh, db, state)
+	router := NewRouter(log, ca, adh, db, state)
 
 	server := &http.Server{
 		Addr:         net.JoinHostPort("", ev.AppPort),
