@@ -44,6 +44,7 @@ func (s *State) StartDraining(ctx context.Context) {
 
 // Check pings the database within one second and reports whether the instance
 // can receive traffic. Once draining starts, Check returns false without pinging.
+// A canceled request returns false without changing availability or logging.
 func (s *State) Check(ctx context.Context) bool {
 	if s.currentState() == draining {
 		return false
@@ -52,6 +53,10 @@ func (s *State) Check(ctx context.Context) bool {
 	pingCtx, cancel := context.WithTimeout(ctx, readinessPingTimeout)
 	defer cancel()
 	err := s.db.PingContext(pingCtx)
+	// An abandoned probe does not establish whether the database is available.
+	if ctx.Err() != nil {
+		return false
+	}
 	if err == nil {
 		err = pingCtx.Err()
 	}

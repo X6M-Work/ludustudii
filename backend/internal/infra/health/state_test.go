@@ -18,6 +18,32 @@ func stateLogger(t *testing.T, logs *bytes.Buffer) *slog.Logger {
 	return slog.New(slog.NewJSONHandler(logs, &slog.HandlerOptions{Level: slog.LevelDebug}))
 }
 
+func TestState_RequestCanceledDuringPing(t *testing.T) {
+	t.Parallel()
+	var logs bytes.Buffer
+	started := make(chan struct{})
+	state := NewState(stateLogger(t, &logs), pingFunc(func(ctx context.Context) error {
+		close(started)
+		<-ctx.Done()
+		return ctx.Err()
+	}))
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+	result := make(chan bool, 1)
+	go func() { result <- state.Check(ctx) }()
+	<-started
+	cancel()
+	if <-result {
+		t.Error("canceled probe reported available")
+	}
+	if state.currentState() != available {
+		t.Error("canceled probe changed availability")
+	}
+	if logs.Len() != 0 {
+		t.Errorf("canceled probe logged a transition: %s", logs.String())
+	}
+}
+
 func TestState_DrainingDuringPing(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
