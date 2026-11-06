@@ -943,13 +943,16 @@
       }
     },
     "/livez": {
-      "description": "GET and HEAD are supported. Other methods return 405 with the shared JSON\nerror body (code method_not_allowed), Allow: GET, HEAD, Cache-Control:\nno-store and X-Request-Id.\n",
+      "description": "GET and HEAD are supported. Other methods return 405 with the shared JSON\nerror body (code method_not_allowed), Allow: GET, HEAD, Cache-Control:\nno-store and X-Request-Id. The global 1 MiB body limit runs before probe\nhandling and rejects oversized declared bodies with 413.\n",
       "get": {
         "description": "Checks no dependencies, including the database. Succeeds whenever the process can answer HTTP, including during draining.",
         "operationId": "getLiveness",
         "responses": {
           "200": {
             "$ref": "#/components/responses/ProbeOK"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
           }
         },
         "summary": "Liveness probe",
@@ -963,6 +966,9 @@
         "responses": {
           "200": {
             "$ref": "#/components/responses/HeadProbeOK"
+          },
+          "413": {
+            "$ref": "#/components/responses/HeadPayloadTooLarge"
           }
         },
         "summary": "Liveness probe",
@@ -977,13 +983,16 @@
       ]
     },
     "/readyz": {
-      "description": "GET and HEAD are supported. Other methods return 405 with the shared JSON\nerror body (code method_not_allowed), Allow: GET, HEAD, Cache-Control:\nno-store and X-Request-Id.\n",
+      "description": "GET and HEAD are supported. Other methods return 405 with the shared JSON\nerror body (code method_not_allowed), Allow: GET, HEAD, Cache-Control:\nno-store and X-Request-Id. The global 1 MiB body limit runs before probe\nhandling and rejects oversized declared bodies with 413.\n",
       "get": {
         "description": "Pings the database with a one-second timeout. Returns 503 when the ping fails or the instance is draining for shutdown.",
         "operationId": "getReadiness",
         "responses": {
           "200": {
             "$ref": "#/components/responses/ProbeOK"
+          },
+          "413": {
+            "$ref": "#/components/responses/PayloadTooLarge"
           },
           "503": {
             "$ref": "#/components/responses/ProbeUnavailable"
@@ -1000,6 +1009,9 @@
         "responses": {
           "200": {
             "$ref": "#/components/responses/HeadProbeOK"
+          },
+          "413": {
+            "$ref": "#/components/responses/HeadPayloadTooLarge"
           },
           "503": {
             "$ref": "#/components/responses/HeadProbeUnavailable"

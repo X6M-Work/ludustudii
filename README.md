@@ -184,11 +184,15 @@ checks no dependencies, including the database. Use it for liveness checks.
 one second and the instance is not shutting down; otherwise it returns 503.
 Use readiness to decide whether to send traffic to an instance.
 
-Both paths live outside `/api`, require no authentication, and send
-`Cache-Control: no-store` and `X-Request-Id`. GET bodies are
+Both paths live outside `/api` and require no authentication. Probe handlers
+send `Cache-Control: no-store` and `X-Request-Id`. GET bodies are
 `{"status":"ok"}` or `{"status":"unavailable"}`; HEAD sends no body.
 Unsupported methods receive 405 with the shared JSON error body
 `{"code":"method_not_allowed"}` and `Allow: GET, HEAD`.
+
+The global 1 MiB body limit also applies to both paths. Oversized declared
+bodies return JSON `413 payload_too_large` before the probe handler runs;
+HEAD sends no body.
 
 On SIGINT or SIGTERM, readiness becomes unavailable immediately. HTTP keeps
 serving during `APP_SHUTDOWN_DRAIN_DELAY`, allowing load balancers to remove

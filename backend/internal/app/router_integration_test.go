@@ -195,6 +195,31 @@ func TestRouter_SPAErrors(t *testing.T) {
 	}
 }
 
+func TestRouter_HealthBodyLimit(t *testing.T) {
+	t.Parallel()
+	srv := newRouterServer(t)
+	for _, path := range []string{health.LivenessPath, health.ReadinessPath} {
+		for _, method := range []string{http.MethodGet, http.MethodHead} {
+			t.Run(method+" "+path, func(t *testing.T) {
+				t.Parallel()
+				resp := testkit.Do(t, srv, testkit.DoOpts{
+					Method: method,
+					Path:   path,
+					Body:   strings.Repeat("a", MaxBodyBytes+1),
+				})
+				testkit.AssertStatus(t, resp, http.StatusRequestEntityTooLarge)
+				if method == http.MethodHead {
+					if len(resp.Body) != 0 {
+						t.Fatal("HEAD error has a response body")
+					}
+				} else {
+					testkit.AssertJSON(t, resp.Body, `{"code":"payload_too_large"}`)
+				}
+			})
+		}
+	}
+}
+
 func TestRouter_HealthEndpoints(t *testing.T) {
 	t.Parallel()
 	for _, scenario := range []string{"database unavailable", "stopping with healthy database"} {

@@ -187,16 +187,22 @@ func TestRouter_HealthEndpointsReserveRootPaths(t *testing.T) {
 					req := httptest.NewRequestWithContext(t.Context(), method, path, nil)
 					req.ContentLength = size
 					handler.ServeHTTP(rec, req)
-					wantStatus, wantBody, wantAllow := http.StatusOK, `{"status":"ok"}`, ""
+					wantStatus, wantBody, wantAllow, wantCache := http.StatusOK, `{"status":"ok"}`, "", "no-store"
 					if method == http.MethodHead {
 						wantBody = ""
 					} else if method != http.MethodGet {
 						wantStatus, wantBody, wantAllow = http.StatusMethodNotAllowed, "{\"code\":\"method_not_allowed\"}\n", "GET, HEAD"
 					}
+					if size > MaxBodyBytes {
+						wantStatus, wantBody, wantAllow, wantCache = http.StatusRequestEntityTooLarge, "{\"code\":\"payload_too_large\"}\n", "", ""
+						if method == http.MethodHead {
+							wantBody = ""
+						}
+					}
 					if rec.Code != wantStatus || rec.Body.String() != wantBody || rec.Header().Get("Allow") != wantAllow {
 						t.Fatalf("response: %d %q, Allow %q", rec.Code, rec.Body.String(), rec.Header().Get("Allow"))
 					}
-					if rec.Header().Get("Cache-Control") != "no-store" || rec.Header().Get("X-Request-Id") == "" || rec.Header().Get("Content-Type") != "application/json" {
+					if rec.Header().Get("Cache-Control") != wantCache || rec.Header().Get("X-Request-Id") == "" || rec.Header().Get("Content-Type") != "application/json" {
 						t.Fatalf("missing probe headers: %v", rec.Header())
 					}
 				}

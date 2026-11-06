@@ -59,4 +59,4 @@ records explain *why*.
 | [0021](0021-bounded-client-request-ids.md) | Bounded client request IDs | Accepted | back-end, api, observability |
 | [0022](0022-opaque-pagination-cursor-contract.md) | Opaque pagination cursor contract | Accepted | back-end, api |
 | [0023](0023-liveness-and-readiness-probes.md) | Liveness and readiness probes (amends 0012 for quiet probe log levels) | Accepted | back-end, operations, observability |
-| [0024](0024-json-errors-for-unsupported-probe-methods.md) | JSON errors for unsupported probe methods (proposes amending 0023) | Proposed | back-end, api, operations |
+| [0024](0024-json-errors-for-unsupported-probe-methods.md) | JSON errors for unsupported probe methods (proposes amending 0007 and 0023) | Proposed | back-end, api, operations |

@@ -9,10 +9,19 @@
 ADR 0023 gives unsupported probe methods a plain-text 405 response. Other
 non-file errors use the shared JSON error shape and central error handler.
 The probe exception makes clients handle an additional error format.
+ADR 0007 limits that shape to API paths and assigns plain-text errors to
+non-API paths, which includes the operational probes.
 
 ## Decision
 
-This record amends ADR 0023 only for unsupported probe methods:
+This record amends [ADR 0023](0023-liveness-and-readiness-probes.md) only for
+unsupported probe methods, and
+[ADR 0007](0007-one-json-error-shape-with-machine-readable-codes.md) only in
+its API-only scope for the shared JSON error shape. The non-API paths
+`/livez` and `/readyz` also use that shape for method errors and shared
+middleware errors. Their GET and HEAD probe status responses retain their
+existing contracts. ADR 0007 and ADR 0023 remain Accepted; their other rules
+continue to apply.
 
 - Methods other than GET and HEAD on `/livez` and `/readyz` return 405 with
   `Content-Type: application/json` and `{"code":"method_not_allowed"}`.

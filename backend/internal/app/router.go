@@ -22,10 +22,6 @@ const MaxBodyBytes = 1 << 20
 // logging, probes, body limits, API routes, optional reference routes and the SPA.
 // Each request's logging context includes its request_id attribute.
 func NewRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Handler, db *sql.DB, state *health.State) http.Handler {
-	return newRouter(log, clientApp, apiDocs, db, state)
-}
-
-func newRouter(log *slog.Logger, clientApp *spa.ClientApp, apiDocs *apidocs.Handler, db *sql.DB, state *health.State) http.Handler {
 	onError := errorHandler(log)
 
 	api := httpkit.NewAPI(onError)
@@ -66,9 +62,7 @@ func withMiddleware(log *slog.Logger, onError httpkit.ErrorHandler, h http.Handl
 		}),
 		// Handle panics before the logger records the final response.
 		httpkit.Recover(onError),
-		httpkit.BodyLimit(MaxBodyBytes, onError, httpkit.BodyLimitOptions{
-			ExcludedPaths: map[string]struct{}{health.LivenessPath: {}, health.ReadinessPath: {}},
-		}),
+		httpkit.BodyLimit(MaxBodyBytes, onError),
 	)(h)
 
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {

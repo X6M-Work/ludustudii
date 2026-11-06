@@ -1,7 +1,8 @@
 description: |
   GET and HEAD are supported. Other methods return 405 with the shared JSON
   error body (code method_not_allowed), Allow: GET, HEAD, Cache-Control:
-  no-store and X-Request-Id.
+  no-store and X-Request-Id. The global 1 MiB body limit runs before probe
+  handling and rejects oversized declared bodies with 413.
 parameters:
   - $ref: '../components/parameters.yml#/RequestId'
 get:
@@ -12,6 +13,8 @@ get:
   responses:
     '200':
       $ref: '../components/responses/probes.yml#/ProbeOK'
+    '413':
+      $ref: '../components/responses/errors.yml#/PayloadTooLarge'
     '503':
       $ref: '../components/responses/probes.yml#/ProbeUnavailable'
 head:
@@ -22,5 +25,7 @@ head:
   responses:
     '200':
       $ref: '../components/responses/probes.yml#/HeadProbeOK'
+    '413':
+      $ref: '../components/responses/head.yml#/HeadPayloadTooLarge'
     '503':
       $ref: '../components/responses/probes.yml#/HeadProbeUnavailable'
