@@ -1,6 +1,6 @@
 # 0021. Bounded client request IDs
 
-- Status: Accepted
+- Status: Superseded by [0026](../0026-request-ids-and-request-logging.md)
 - Date: 2026-11-05
 - Tags: back-end, api, observability
 

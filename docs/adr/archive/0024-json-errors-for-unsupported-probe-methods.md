@@ -1,6 +1,6 @@
 # 0024. JSON errors for unsupported probe methods
 
-- Status: Accepted
+- Status: Superseded by [0025](../0025-error-responses.md), [0027](../0027-liveness-and-readiness-probes.md)
 - Date: 2026-11-06
 - Tags: back-end, api, operations
 

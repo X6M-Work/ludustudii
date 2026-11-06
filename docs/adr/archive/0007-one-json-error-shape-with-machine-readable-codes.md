@@ -1,6 +1,6 @@
 # 0007. One JSON error shape with machine-readable codes
 
-- Status: Accepted, Amended by [0024](0024-json-errors-for-unsupported-probe-methods.md)
+- Status: Superseded by [0025](../0025-error-responses.md)
 - Date: 2026-11-05
 - Tags: back-end, front-end, api
 

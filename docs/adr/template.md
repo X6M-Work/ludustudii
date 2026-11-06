@@ -3,6 +3,8 @@
 - Status: Proposed | Accepted | Rejected | Superseded by NNNN | Deprecated
 - Date: YYYY-MM-DD
 - Tags: tag-1, tag-2
+- Consolidates: NNNN, NNNN (optional; only in a consolidating record, linking
+  each number to its file in `archive/`)
 
 ## Context
 

@@ -147,8 +147,11 @@ is the source of truth; the notes below summarize it.
   `-`. Missing, empty or invalid values are replaced with a random base32 ID,
   without rejecting the request. The selected ID is attached to every log
   record for that request.
-- **Errors** share one JSON shape. `errors` is present only for validation
-  failures in body fields, path parameters or query parameters:
+- **Errors** share one JSON shape. Errors from shared middleware, such as
+  oversized bodies and recovered panics, use it on every path, client-app
+  paths included; the client app's own errors are plain text. `errors` is
+  present only for validation failures in body fields, path parameters or
+  query parameters:
 
   ```json
   {

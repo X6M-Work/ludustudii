@@ -1,6 +1,6 @@
 # 0023. Liveness and readiness probes
 
-- Status: Accepted, Amended by [0024](0024-json-errors-for-unsupported-probe-methods.md)
+- Status: Superseded by [0026](../0026-request-ids-and-request-logging.md), [0027](../0027-liveness-and-readiness-probes.md)
 - Date: 2026-11-05
 - Tags: back-end, operations, observability
 

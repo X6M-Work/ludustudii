@@ -1,6 +1,6 @@
 # 0012. Request IDs and one log record per request
 
-- Status: Accepted, Amended by [0021](0021-bounded-client-request-ids.md), [0023](0023-liveness-and-readiness-probes.md)
+- Status: Superseded by [0026](../0026-request-ids-and-request-logging.md)
 - Date: 2026-11-05
 - Tags: back-end, api, observability
 

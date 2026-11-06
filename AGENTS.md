@@ -87,7 +87,8 @@ Architecture decisions are recorded in `docs/adr/` (index:
 `docs/adr/README.md`). Before changing an area, check whether a decision
 record covers it. Follow accepted decisions. If one seems wrong, stop and
 propose an amending or superseding record instead of changing the code to
-contradict it.
+contradict it. `docs/adr/archive/` is history only: ignore it and never follow
+an archived record.
 
 ## Checks handled by tooling
 
