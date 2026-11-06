@@ -317,7 +317,8 @@ See `backend/migrations/goose.md` for the full goose command reference.
 Unit tests use `<name>_test.go`; integration tests use
 `<name>_integration_test.go`. Service API tests keep `api_test.go` as the
 exception. Filenames identify the scope; retain the `unit` and `integration`
-build tags to select which suite runs.
+build tags to select which suite runs. `make test-tags-check` (part of
+`make check`) fails when a test file's name and build tag disagree.
 
 Tests are split by build tag:
 
@@ -437,13 +438,15 @@ standalone golangci-lint binary; lint tooling is kept out of `go.mod`.
 | `make lint-fix` | Apply available automatic lint fixes. |
 | `make fmt` | Format Go source with gofumpt and goimports. |
 | `make fmt-check` | Fail if any Go file needs formatting. |
+| `make test-tags-check` | Fail if a backend test file's name and build tag disagree. |
 | `make tidy-check` | Fail if the app or tool module's `go.mod` or `go.sum` needs tidying. |
 | `make generate-check` | Regenerate backend files and fail if generation changes tracked backend files. |
 | `make lint-verify` | Validate `backend/.golangci.yml`. |
 | `make vuln` | Check backend packages for known vulnerabilities with govulncheck. |
 
-`make check` runs `fmt-check`, `lint`, `tidy-check`, `generate-check`,
-`test-unit` and `test-integration` sequentially, stopping at the first failure.
+`make check` runs `fmt-check`, `test-tags-check`, `lint`, `tidy-check`,
+`generate-check`, `test-unit` and `test-integration` sequentially, stopping at
+the first failure.
 
 `make generate-check` includes the committed OpenAPI bundle. It leaves regenerated
 files on disk for review and ignores pre-existing edits that generation leaves unchanged.

@@ -213,6 +213,7 @@ git-diff:
 # Separate recursive calls preserve order and stop on failure, including with -j.
 check:
 	$(MAKE) fmt-check
+	$(MAKE) test-tags-check
 	$(MAKE) lint
 	$(MAKE) tidy-check
 	$(MAKE) generate-check
@@ -246,6 +247,27 @@ lint-verify:
 ## vuln: Checks backend packages for known vulnerabilities
 vuln: $(SPA_EMBED_DIR)/index.html
 	$(GO_TOOL) govulncheck ./...
+
+.PHONY: test-tags-check
+
+## test-tags-check: Fails if a backend test file's name and build tag disagree
+# *_integration_test.go and api_test.go need exactly //go:build integration;
+# every other test file needs exactly //go:build unit. Untracked files count.
+test-tags-check:
+	@cd $(BACKEND_DIR) && status=0; \
+	while IFS= read -r -d '' file; do \
+		[ -f "$$file" ] || continue; \
+		case "$$file" in \
+			*_integration_test.go | api_test.go | */api_test.go) want=integration ;; \
+			*) want=unit ;; \
+		esac; \
+		got=$$(awk '/^\/\/go:build /{ sub(/^\/\/go:build /, ""); print; exit }' "$$file"); \
+		if [ "$$got" != "$$want" ]; then \
+			echo "$$file: build tag '$${got:-none}', want '$$want'"; \
+			status=1; \
+		fi; \
+	done < <(git ls-files -z --cached --others --exclude-standard -- '*_test.go'); \
+	exit $$status
 
 .PHONY: tidy-check generate-check
 

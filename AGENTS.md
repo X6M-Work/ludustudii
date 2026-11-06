@@ -25,7 +25,7 @@ backend source paths and `PKG` values below are relative to `backend/`.
   `//go:build integration`.
 
 Keep the build tags: filenames identify the test scope, while tags select
-the suite that Make runs.
+the suite that Make runs. `make check` fails when a name and tag disagree.
 
 ## Adding an endpoint
 
@@ -93,6 +93,6 @@ an archived record.
 ## Checks handled by tooling
 
 Package boundaries (depguard), env access only in `internal/infra/env`, `slog`
-only for logging, formatting, tidy modules and a fresh spec bundle are all
-checked by `make check`. Resolve findings in the code while preserving these
-checks.
+only for logging, formatting, tidy modules, a fresh spec bundle and test file
+names matching their build tags are all checked by `make check`. Resolve
+findings in the code while preserving these checks.
