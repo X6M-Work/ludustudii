@@ -16,6 +16,17 @@ backend source paths and `PKG` values below are relative to `backend/`.
   Use the same `PKG` and `RUN` options with `test-integration`.
 - Keep the OpenAPI spec, code and tests together in the same change.
 
+## Test file naming
+
+- Unit tests use `<name>_test.go` with `//go:build unit`.
+- Integration tests use `<name>_integration_test.go` with
+  `//go:build integration`.
+- Service API tests are the exception: keep `api_test.go` with
+  `//go:build integration`.
+
+Keep the build tags: filenames identify the test scope, while tags select
+the suite that Make runs.
+
 ## Adding an endpoint
 
 Follow the structure in `internal/services/lcards`, using `lcards/create` as
@@ -38,7 +49,7 @@ the reference slice.
 6. Test each layer using the existing patterns:
    - `handler_test.go` (`//go:build unit`): isolate binding, validation and store
      behavior using the existing function fields and interfaces.
-   - `store_test.go` (`//go:build integration`): real SQL against a `testkit`
+   - `store_integration_test.go` (`//go:build integration`): real SQL against a `testkit`
      database. No store mocks or store unit tests.
    - `api_test.go` in the service package (`//go:build integration`): drive the
      router through `testkit.Do`, which validates every response against the spec.

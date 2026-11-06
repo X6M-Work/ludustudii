@@ -311,6 +311,11 @@ See `backend/migrations/goose.md` for the full goose command reference.
 
 ### Testing
 
+Unit tests use `<name>_test.go`; integration tests use
+`<name>_integration_test.go`. Service API tests keep `api_test.go` as the
+exception. Filenames identify the scope; retain the `unit` and `integration`
+build tags to select which suite runs.
+
 Tests are split by build tag:
 
 | Command | Tag | Scope |
@@ -344,11 +349,11 @@ Forward port 8000 in VS Code's **Ports** tab, then open the forwarded URL with
 
 The testing strategy is deliberate:
 
-- **Handler tests** (unit) replace each step — bind, validate, store — through
+- **Handler tests** (`handler_test.go`, unit) replace each step — bind, validate, store — through
   function fields and interfaces, so every step is tested in isolation.
-- **Store tests** (integration) run real SQL against a real database; stores
+- **Store tests** (`store_integration_test.go`, integration) run real SQL against a real database; stores
   have no unit tests or mocks.
-- **API tests** (integration) drive the full router over HTTP with a real
+- **API tests** (`api_test.go`, integration) drive the full router over HTTP with a real
   client and database, covering routing, middleware and error handling.
 - **Contract tests** fuzz the sanitizer against the validators, so sanitized
   input always passes the format checks.
