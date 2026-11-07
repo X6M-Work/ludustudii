@@ -482,7 +482,7 @@ GitHub Actions runs the same gate as a developer
 
 | Workflow | When | What |
 | --- | --- | --- |
-| [`ci.yml`](.github/workflows/ci.yml) | Every push to `main` and every pull request; a newer run for the same ref cancels the older one | `make check` |
+| [`ci.yml`](.github/workflows/ci.yml) | Every push to `main` and every pull request; a newer push to a pull request cancels its older run, while runs on `main` always finish | `make check` |
 | [`vuln.yml`](.github/workflows/vuln.yml) | Daily at 03:17 UTC, or on demand | `make vuln` |
 
 The CI job installs Go from `backend/go.mod` and golangci-lint with
