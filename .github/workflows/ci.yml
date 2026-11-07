@@ -1,0 +1,48 @@
+name: CI
+
+# Runs the same gate as a developer: make check (ADR 0020). The test database
+# comes from the devcontainer's compose file and tool versions from the same
+# sources as the devcontainer (ADR 0028).
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+permissions:
+  contents: read
+
+jobs:
+  check:
+    name: make check
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      - name: Set up Go
+        uses: actions/setup-go@v7.0.0
+        with:
+          go-version-file: backend/go.mod
+          cache-dependency-path: |
+            backend/go.sum
+            backend/tools/go.sum
+
+      - name: Install golangci-lint
+        run: make install-golangci-lint
+
+      # Only db_test starts; its healthcheck makes --wait block until
+      # Postgres accepts connections.
+      - name: Start test database
+        run: docker compose -f .devcontainer/docker-compose.yml up -d --wait db_test
+
+      - name: make check
+        env:
+          DB_TEST_CONNECTION: postgres://tester:tester@localhost:5433/ludustudii_db_test?sslmode=disable
+        run: make check

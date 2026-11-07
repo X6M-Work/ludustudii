@@ -9,10 +9,8 @@ go -C backend/tools install \
   golang.org/x/tools/cmd/stringer \
   golang.org/x/vuln/cmd/govulncheck \
   github.com/pressly/goose/v3/cmd/goose
-# Pin the standalone binary; keep lint tooling out of the backend module.
-GOLANGCI_VERSION=v2.15.0
-curl -sSfL "https://raw.githubusercontent.com/golangci/golangci-lint/${GOLANGCI_VERSION}/install.sh" | sh -s -- -b "$(go env GOPATH)/bin" "$GOLANGCI_VERSION"
-golangci-lint version
+# The Makefile holds the golangci-lint pin; CI installs it the same way.
+make install-golangci-lint
 echo "Go tools installed successfully!"
 
 echo "Installing frontend dependencies..."

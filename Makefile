@@ -21,6 +21,9 @@ LOG_FILE ?= $(BACKEND_DIR)/tmp/app.log
 PKG ?= ./...
 RUN ?=
 RUN_FLAG = $(if $(RUN),-run '$(RUN)')
+# The single pin for golangci-lint, read by the devcontainer and CI through
+# install-golangci-lint and enforced by versions-check.
+GOLANGCI_LINT_VERSION := v2.15.0
 
 .DEFAULT_GOAL := help
 # Deletes a target whose recipe fails, such as a partly written Scalar bundle.
@@ -212,6 +215,7 @@ git-diff:
 ## check: Runs every gate a change must pass (fast to slow). Agents and CI run this.
 # Separate recursive calls preserve order and stop on failure, including with -j.
 check:
+	$(MAKE) versions-check
 	$(MAKE) fmt-check
 	$(MAKE) test-tags-check
 	$(MAKE) lint
@@ -219,6 +223,41 @@ check:
 	$(MAKE) generate-check
 	$(MAKE) test-unit
 	$(MAKE) test-integration
+
+.PHONY: versions-check install-golangci-lint
+
+## versions-check: Fails if a tool version disagrees with its single source
+# Go: backend/go.mod is the source for the devcontainer's golang: image tag
+# (any -variant suffix ignored) and backend/tools/go.mod. golangci-lint: the
+# installed binary must match GOLANGCI_LINT_VERSION, compared without a leading v.
+versions-check:
+	@status=0; \
+	go_line() { awk '$$1 == "go" { print $$2; exit }' "$$1"; }; \
+	want=$$(go_line $(BACKEND_DIR)/go.mod); \
+	tools=$$(go_line $(BACKEND_DIR)/tools/go.mod); \
+	if [ "$$tools" != "$$want" ]; then \
+		echo "$(BACKEND_DIR)/tools/go.mod: go '$${tools:-none}', want '$$want' (from $(BACKEND_DIR)/go.mod)"; \
+		status=1; \
+	fi; \
+	image=$$(sed -n 's/^[[:space:]]*image:[[:space:]]*golang:\([^[:space:]]*\).*/\1/p' .devcontainer/docker-compose.yml); \
+	if [ "$${image%%-*}" != "$$want" ]; then \
+		echo ".devcontainer/docker-compose.yml: golang image '$${image:-none}', want '$$want' (from $(BACKEND_DIR)/go.mod)"; \
+		status=1; \
+	fi; \
+	pin='$(GOLANGCI_LINT_VERSION)'; \
+	lint=$$(golangci-lint version --short 2>/dev/null); \
+	if [ "$${lint#v}" != "$${pin#v}" ]; then \
+		echo "golangci-lint: installed '$${lint:-none}', want '$${pin#v}' (GOLANGCI_LINT_VERSION); run 'make install-golangci-lint'"; \
+		status=1; \
+	fi; \
+	exit $$status
+
+## install-golangci-lint: Installs golangci-lint at GOLANGCI_LINT_VERSION into $(go env GOPATH)/bin
+# The standalone binary keeps lint tooling out of the backend modules.
+install-golangci-lint:
+	curl -sSfL "https://raw.githubusercontent.com/golangci/golangci-lint/$(GOLANGCI_LINT_VERSION)/install.sh" \
+		| sh -s -- -b "$$(go env GOPATH)/bin" "$(GOLANGCI_LINT_VERSION)"
+	"$$(go env GOPATH)/bin/golangci-lint" version
 
 .PHONY: lint lint-fix fmt fmt-check lint-verify
 

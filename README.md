@@ -293,8 +293,16 @@ To update a tool, run `go -C backend/tools get -tool <package>@<version>`, then
 CLI in `backend/tools/go.mod` and library in `backend/go.mod` on the same version;
 when updating goose, also run `go -C backend get github.com/pressly/goose/v3@<version>`
 and `go -C backend mod tidy`, and commit both app module files.
-The standalone linter is pinned separately by `GOLANGCI_VERSION` in
-`.devcontainer/post-create.sh`.
+
+Each tool version has one source, which the devcontainer and CI both read:
+
+| Tool | Source | Kept in sync by |
+| --- | --- | --- |
+| Go | `go` line in `backend/go.mod` | `make versions-check` fails when the devcontainer's `golang:` image tag or `backend/tools/go.mod` disagrees |
+| golangci-lint | `GOLANGCI_LINT_VERSION` in the `Makefile` | `make install-golangci-lint` installs it (devcontainer and CI); `make versions-check` fails when the installed binary differs |
+
+To upgrade Go, change all three places in one commit. To upgrade the linter,
+change `GOLANGCI_LINT_VERSION` and run `make install-golangci-lint`.
 
 ### Database migrations
 
@@ -428,12 +436,15 @@ bundle. A binary built without `API_DOCS=1` fails to start if
 
 ### Linting
 
-Run these commands from the repository root. The devcontainer installs the pinned
-standalone golangci-lint binary; lint tooling is kept out of `go.mod`.
+Run these commands from the repository root. The devcontainer and CI install the
+pinned standalone golangci-lint binary with `make install-golangci-lint`; lint
+tooling is kept out of `go.mod`.
 
 | Command | Purpose |
 | --- | --- |
 | `make check` | Run all required gates in order; agents and CI use this. Requires `DB_TEST_CONNECTION`. |
+| `make versions-check` | Fail if the devcontainer or tool module Go version, or the installed golangci-lint, differs from its single source. |
+| `make install-golangci-lint` | Install golangci-lint at `GOLANGCI_LINT_VERSION`. |
 | `make lint` | Check the backend and tagged tests. |
 | `make lint-fix` | Apply available automatic lint fixes. |
 | `make fmt` | Format Go source with gofumpt and goimports. |
@@ -444,9 +455,9 @@ standalone golangci-lint binary; lint tooling is kept out of `go.mod`.
 | `make lint-verify` | Validate `backend/.golangci.yml`. |
 | `make vuln` | Check backend packages for known vulnerabilities with govulncheck. |
 
-`make check` runs `fmt-check`, `test-tags-check`, `lint`, `tidy-check`,
-`generate-check`, `test-unit` and `test-integration` sequentially, stopping at
-the first failure.
+`make check` runs `versions-check`, `fmt-check`, `test-tags-check`, `lint`,
+`tidy-check`, `generate-check`, `test-unit` and `test-integration`
+sequentially, stopping at the first failure.
 
 `make generate-check` includes the committed OpenAPI bundle. It leaves regenerated
 files on disk for review and ignores pre-existing edits that generation leaves unchanged.
@@ -463,3 +474,24 @@ For a one-off exception, place `//nolint:<linter> // <reason>` beside the code
 with the smallest practical scope. Name the linter and explain the deliberate
 behavior or false positive; prefer a real fix when the finding identifies a bug.
 For gosec, use `// #nosec Gxxx -- <reason>` to suppress only the relevant check.
+
+### CI
+
+GitHub Actions runs the same gate as a developer
+([ADR 0028](docs/adr/0028-ci-reuses-the-devcontainer-test-database.md)):
+
+| Workflow | When | What |
+| --- | --- | --- |
+| [`ci.yml`](.github/workflows/ci.yml) | Every push to `main` and every pull request; a newer run for the same ref cancels the older one | `make check` |
+| [`vuln.yml`](.github/workflows/vuln.yml) | Daily at 03:17 UTC, or on demand | `make vuln` |
+
+The CI job installs Go from `backend/go.mod` and golangci-lint with
+`make install-golangci-lint`. It starts only `db_test` from
+`.devcontainer/docker-compose.yml` (`docker compose up -d --wait db_test`) and
+points `DB_TEST_CONNECTION` at `localhost:5433`. It doesn't install frontend
+dependencies, so the Scalar bundle isn't embedded and the API docs tests take
+their "no script" path; nothing else in `make check` needs them.
+
+A failing `ci.yml` run means the change isn't done. To run the vulnerability
+scan by hand, open **Actions → Vulnerability scan → Run workflow**, or run
+`gh workflow run vuln.yml`.

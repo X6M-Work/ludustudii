@@ -11,6 +11,8 @@ backend source paths and `PKG` values below are relative to `backend/`.
 
 - Make sure `make check` passes before finishing. It needs `DB_TEST_CONNECTION` (set in the
   devcontainer).
+- CI runs `make check` on every push and pull request (`.github/workflows/ci.yml`).
+  A failing CI run means the change isn't done.
 - While iterating, use focused tests, for example:
   `make test-unit PKG=./internal/services/lcards/... RUN='TestHandler_Handle'`.
   Use the same `PKG` and `RUN` options with `test-integration`.
