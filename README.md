@@ -308,6 +308,30 @@ Each tool version has one source, which the devcontainer and CI both read:
 To upgrade Go, change all three places in one commit. To upgrade the linter,
 change `GOLANGCI_LINT_VERSION` and run `make install-golangci-lint`.
 
+### GitHub CLI in the devcontainer
+
+Agents open pull requests with `gh`, authenticated by `GH_TOKEN`, which the
+devcontainer reads from your machine (`remoteEnv` in `devcontainer.json`).
+
+1. Create a fine-grained token limited to this repository, with
+   **Pull requests: Read and write** and **Contents: Read-only**. The read-only
+   Contents permission is deliberate: the token can open pull requests but
+   cannot push or merge.
+2. Save it to `~/.config/ludustudii/gh_token` (`chmod 600`) and export it from
+   `~/.profile`:
+
+   ```sh
+   if [ -r "$HOME/.config/ludustudii/gh_token" ]; then
+     export GH_TOKEN="$(cat "$HOME/.config/ludustudii/gh_token")"
+   fi
+   ```
+
+3. Log out and back in, then rebuild or reopen the container.
+   `gh auth status` inside the container should report the token.
+
+Without `GH_TOKEN`, everything else works; agents just can't open pull
+requests.
+
 ### Database migrations
 
 Migrations live in `backend/migrations` as goose SQL files. Only tests use

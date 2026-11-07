@@ -18,6 +18,23 @@ backend source paths and `PKG` values below are relative to `backend/`.
   Use the same `PKG` and `RUN` options with `test-integration`.
 - Keep the OpenAPI spec, code and tests together in the same change.
 
+## Git workflow
+
+- Never commit to `main` directly. Create a branch with a short, descriptive
+  name (for example `feat/decks`), commit there, and push the branch.
+- After pushing, open a pull request against `main`
+  (`gh pr create --base main`) with a title in the form `type: summary`
+  (types: `feat`, `fix`, `refactor`, `test`, `docs`, `build`, `ci`, `dev`)
+  and a body that follows `.github/pull_request_template.md`
+  (`gh pr create --body` skips the template). Then stop.
+- Fixes requested in review go on the same branch as new commits; the pull
+  request updates automatically.
+- Never merge, approve, enable auto-merge, or rebase onto `main` and
+  force-push. The maintainer reviews and squash-merges.
+- Commits are authored by the maintainer only. Don't add `Co-authored-by`
+  trailers, "Generated with" lines, or any other agent attribution to commit
+  messages or pull request text.
+
 ## Test file naming
 
 - Unit tests use `<name>_test.go` with `//go:build unit`.

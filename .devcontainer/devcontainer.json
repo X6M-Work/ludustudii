@@ -27,6 +27,9 @@
   "features": {
     "ghcr.io/devcontainers/features/node:2": {
       "version": "26"
+    },
+    "ghcr.io/devcontainers/features/github-cli:1": {
+      "version": "2"
     }
   },
   "otherPortsAttributes": {
@@ -34,6 +37,9 @@
   },
   "containerEnv": {
     "LANG": "C.UTF-8"
+  },
+  "remoteEnv": {
+    "GH_TOKEN": "${localEnv:GH_TOKEN}"
   },
   "postCreateCommand": ".devcontainer/post-create.sh"
 }
