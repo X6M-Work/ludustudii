@@ -1,4 +1,8 @@
 # Ludustudii
+
+[![CI](https://github.com/apotourlyan/ludustudii/actions/workflows/ci.yml/badge.svg?branch=main&event=push)](https://github.com/apotourlyan/ludustudii/actions/workflows/ci.yml)
+[![Vulnerability scan](https://github.com/apotourlyan/ludustudii/actions/workflows/vuln.yml/badge.svg)](https://github.com/apotourlyan/ludustudii/actions/workflows/vuln.yml)
+
 Ludus Studii ("The Study Game") — Turn complex study material into structured, gamified learning loops.
 
 ## Backend
