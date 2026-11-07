@@ -10,7 +10,8 @@
         "google.google-antigravity",
         "openai.chatgpt",
         "anthropic.claude-code",
-        "typescriptteam.native-preview"
+        "typescriptteam.native-preview",
+        "github.vscode-github-actions"
       ],
       "settings": {
         "gopls": {
