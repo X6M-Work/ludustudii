@@ -1,0 +1,29 @@
+name: PR title
+
+# Pull requests are squash-merged, so a title becomes a commit subject on main.
+# The edited type re-runs the check when the title is fixed in the UI. The
+# rules live in make pr-title-check, whose self-test is part of make check.
+on:
+  pull_request:
+    types: [opened, edited, synchronize, reopened]
+
+# The check reads only the event payload, so the job needs no token.
+permissions: {}
+
+jobs:
+  title:
+    name: pr title
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Check out
+        uses: actions/checkout@v7.0.1
+        with:
+          persist-credentials: false
+
+      # The title is untrusted text. It reaches the script only through the
+      # environment; interpolating it into run: would allow command injection.
+      - name: make pr-title-check
+        env:
+          PR_TITLE: ${{ github.event.pull_request.title }}
+        run: make pr-title-check

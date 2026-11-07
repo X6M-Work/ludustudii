@@ -1,6 +1,6 @@
 # 0028. CI reuses the devcontainer test database and tool versions
 
-- Status: Proposed
+- Status: Accepted
 - Date: 2026-11-07
 - Tags: back-end, tooling
 
@@ -20,8 +20,11 @@ database setting is a place where local and CI results can drift apart.
 - **CI reads each tool version from the same single source as the
   devcontainer.** `make check` fails when a copy that can't read the source
   directly disagrees with it.
-- **CI's gate is `make check` and nothing else.** The vulnerability scan runs
-  on a schedule, outside the gate (ADR 0020).
+- **Every CI check runs a Make target**, so its rules live in the Makefile
+  and can be run locally. `make check` is the gate for code; checks on pull
+  request metadata (such as the title format) run their own target, whose
+  self-test is part of `make check`. The vulnerability scan runs on a
+  schedule, outside the gate (ADR 0020).
 
 ## Alternatives considered
 

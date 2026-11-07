@@ -27,6 +27,11 @@ backend source paths and `PKG` values below are relative to `backend/`.
   (types: `feat`, `fix`, `refactor`, `test`, `docs`, `build`, `ci`, `dev`)
   and a body that follows `.github/pull_request_template.md`
   (`gh pr create --body` skips the template). Then stop.
+- CI (`.github/workflows/pr-title.yml`) enforces the title format: a listed
+  type, no scope, one space after the colon, a summary starting with a
+  lowercase letter or a digit, no trailing period, and at most 64 characters
+  so the squash-merge subject with ` (#N)` stays within 72. Check a title
+  locally with `PR_TITLE='type: summary' make pr-title-check`.
 - Fixes requested in review go on the same branch as new commits; the pull
   request updates automatically.
 - Never merge, approve, enable auto-merge, or rebase onto `main` and

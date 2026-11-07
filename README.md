@@ -478,14 +478,16 @@ tooling is kept out of `go.mod`.
 | `make fmt` | Format Go source with gofumpt and goimports. |
 | `make fmt-check` | Fail if any Go file needs formatting. |
 | `make test-tags-check` | Fail if a backend test file's name and build tag disagree. |
+| `make pr-title-check` | Fail if `PR_TITLE` breaks the pull request title format (`type: summary`, at most 64 characters). |
+| `make pr-title-check-test` | Run `pr-title-check` against a table of valid and invalid titles and fail on an unexpected result. |
 | `make tidy-check` | Fail if the app or tool module's `go.mod` or `go.sum` needs tidying. |
 | `make generate-check` | Regenerate backend files and fail if generation changes tracked backend files. |
 | `make lint-verify` | Validate `backend/.golangci.yml`. |
 | `make vuln` | Check backend packages for known vulnerabilities with govulncheck. |
 
-`make check` runs `versions-check`, `fmt-check`, `test-tags-check`, `lint`,
-`tidy-check`, `generate-check`, `test-unit` and `test-integration`
-sequentially, stopping at the first failure.
+`make check` runs `versions-check`, `fmt-check`, `test-tags-check`,
+`pr-title-check-test`, `lint`, `tidy-check`, `generate-check`, `test-unit` and
+`test-integration` sequentially, stopping at the first failure.
 
 `make generate-check` includes the committed OpenAPI bundle. It leaves regenerated
 files on disk for review and ignores pre-existing edits that generation leaves unchanged.
@@ -511,6 +513,7 @@ GitHub Actions runs the same gate as a developer
 | Workflow | When | What |
 | --- | --- | --- |
 | [`ci.yml`](.github/workflows/ci.yml) | Every push to `main` and every pull request; a newer push to a pull request cancels its older run, while runs on `main` always finish | `make check` |
+| [`pr-title.yml`](.github/workflows/pr-title.yml) | Every pull request when it is opened, reopened, pushed to or edited, so fixing the title re-runs it | `make pr-title-check` with the pull request title, which must be `type: summary` within 64 characters |
 | [`vuln.yml`](.github/workflows/vuln.yml) | Daily at 03:17 UTC, or on demand | `make vuln` |
 
 The CI job installs Go from `backend/go.mod` and golangci-lint with

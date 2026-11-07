@@ -218,6 +218,7 @@ check:
 	$(MAKE) versions-check
 	$(MAKE) fmt-check
 	$(MAKE) test-tags-check
+	$(MAKE) pr-title-check-test
 	$(MAKE) lint
 	$(MAKE) tidy-check
 	$(MAKE) generate-check
@@ -306,6 +307,72 @@ test-tags-check:
 			status=1; \
 		fi; \
 	done < <(git ls-files -z --cached --others --exclude-standard -- '*_test.go'); \
+	exit $$status
+
+.PHONY: pr-title-check pr-title-check-test
+
+# Pull requests are squash-merged, so a title becomes a commit subject on main.
+# These are the only copies of the title rules; CI (pr-title.yml) runs the check.
+PR_TITLE_TYPES := feat fix refactor test docs build ci dev
+# Squash merging appends " (#N)"; 64 keeps the subject within 72 characters
+# for pull request numbers up to four digits.
+PR_TITLE_MAX := 64
+
+## pr-title-check: Fails if PR_TITLE breaks the pull request title format 'type: summary'
+## ---- Usage: PR_TITLE='feat: add decks' make pr-title-check
+# The title is read from the environment only, never expanded by make or
+# interpolated into the script, because it is untrusted text.
+pr-title-check:
+	@title=$${PR_TITLE-}; types='$(PR_TITLE_TYPES)'; max=$(PR_TITLE_MAX); broken=(); \
+	format="^($${types// /|}): [^ ]"; \
+	if [[ ! $$title =~ $$format ]]; then \
+		broken+=("a type, a colon and exactly one space come before the summary (no scope)"); \
+	elif [[ ! $${title#*: } =~ ^[a-z0-9] ]]; then \
+		broken+=("the summary starts with a lowercase letter or a digit"); \
+	fi; \
+	[[ $$title != *. ]] || broken+=("no trailing period"); \
+	[ $${#title} -le $$max ] || broken+=("at most $$max characters (this title has $${#title})"); \
+	if [ $${#broken[@]} -eq 0 ]; then \
+		printf 'pr-title-check: ok: %s\n' "$$title"; \
+		exit 0; \
+	fi; \
+	printf 'pr-title-check: invalid title: "%s"\n' "$$title"; \
+	printf 'Broken rule: %s\n' "$${broken[@]}"; \
+	printf 'Expected format: type: summary (for example "feat: add deck sharing")\n'; \
+	printf '  type: one of %s\n' "$${types// /, }"; \
+	printf '  summary: starts with a lowercase letter or a digit, no trailing period\n'; \
+	printf '  length: at most %s characters, so the " (#N)" squash merging appends fits within 72\n' "$$max"; \
+	exit 1
+
+## pr-title-check-test: Fails if pr-title-check accepts or rejects a title in its test table unexpectedly
+# Each case is 'want|title'. The two generated titles sit on the length
+# boundary: "feat: " plus 58 or 59 digits is 64 or 65 characters.
+pr-title-check-test:
+	@status=0; \
+	cases=( \
+		'pass|feat: add deck sharing' \
+		'pass|ci: check pull request titles' \
+		'pass|fix: 404 for missing decks' \
+		"pass|$$(printf 'feat: %058d' 0)" \
+		"fail|$$(printf 'feat: %059d' 0)" \
+		'fail|' \
+		'fail|chore: bump tools' \
+		'fail|Feat: add deck sharing' \
+		'fail|feat(decks): add sharing' \
+		'fail|feat:add deck sharing' \
+		'fail|feat:  add deck sharing' \
+		'fail|feat: ' \
+		'fail|feat: Add deck sharing' \
+		'fail|feat: add deck sharing.' \
+	); \
+	for case in "$${cases[@]}"; do \
+		want=$${case%%|*}; title=$${case#*|}; \
+		if PR_TITLE=$$title $(MAKE) --no-print-directory pr-title-check >/dev/null 2>&1; then got=pass; else got=fail; fi; \
+		if [ "$$got" != "$$want" ]; then \
+			printf 'pr-title-check-test: "%s": got %s, want %s\n' "$$title" "$$got" "$$want"; \
+			status=1; \
+		fi; \
+	done; \
 	exit $$status
 
 .PHONY: tidy-check generate-check
