@@ -99,6 +99,34 @@ linters:
               desc: services must remain independent of application wiring
             - pkg: github.com/apotourlyan/ludustudii/internal/infra
               desc: services must remain independent of infrastructure
+        # The shared front and the process lifecycle serve any composition of
+        # surfaces, so they must not know any surface.
+        front:
+          files: ["**/internal/app/router/*.go", "**/internal/app/server/*.go", "!$test"]
+          deny:
+            - pkg: github.com/apotourlyan/ludustudii/internal/app
+              desc: router and server must remain independent of the composition root and surfaces
+            - pkg: github.com/apotourlyan/ludustudii/internal/services
+              desc: router and server must remain independent of services
+            - pkg: github.com/apotourlyan/ludustudii/internal/infra/health
+              desc: router and server must remain independent of the probes surface
+            - pkg: github.com/apotourlyan/ludustudii/internal/infra/spa
+              desc: router and server must remain independent of the client app surface
+            - pkg: github.com/apotourlyan/ludustudii/internal/infra/apidocs
+              desc: router and server must remain independent of the API reference surface
+            - pkg: github.com/apotourlyan/ludustudii/internal/infra/rdb
+              desc: router and server must remain independent of the database
+        api-surface:
+          files: ["**/internal/app/api/*.go", "!$test"]
+          deny:
+            - pkg: github.com/apotourlyan/ludustudii/internal/app
+              desc: the API surface must remain independent of the composition root and the shared front
+            - pkg: github.com/apotourlyan/ludustudii/internal/infra/health
+              desc: the API surface must remain independent of the probes surface
+            - pkg: github.com/apotourlyan/ludustudii/internal/infra/spa
+              desc: the API surface must remain independent of the client app surface
+            - pkg: github.com/apotourlyan/ludustudii/internal/infra/apidocs
+              desc: the API surface must remain independent of the API reference surface
         testkit:
           files: ["!$test"]
           deny:

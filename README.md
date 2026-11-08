@@ -36,8 +36,11 @@ backend/
 ├── migrations/            # goose SQL migrations, embedded (see goose.md)
 ├── tools/                 # separate module for pinned development tools
 └── internal/
-    ├── app/               # wiring: config, logger, DB, router, error handler, graceful shutdown
-    ├── infra/             # env, health, logging, rdb (Postgres), spa, apidocs
+    ├── app/               # composition root: config, logger, DB; composes the surfaces (handler.go)
+    │   ├── api/           # API surface: every service under /api
+    │   ├── router/        # shared HTTP front: root mux, middleware chain, central error handler
+    │   └── server/        # process lifecycle: serve, drain, graceful shutdown
+    ├── infra/             # env, health (probes), logging, rdb (Postgres), spa (client app), apidocs
     ├── kit/               # helpers independent of app and infra: erresp, validator, sanitizer, staticfile, httpkit
     ├── services/
     │   └── lcards/        # learning cards: one subpackage per endpoint
@@ -58,18 +61,47 @@ Stores contain no inline SQL strings. Package boundaries are enforced by `depgua
 
 - `kit` must not import `infra`, `services` or `app`.
 - `services` must not import `infra` or `app`.
+- `app/router` and `app/server` must not import the rest of `app`, `services`,
+  any surface (`health`, `spa`, `apidocs`) or `rdb`.
+- `app/api` must not import the rest of `app` or the other surfaces.
 - `testkit` may only be imported from test files.
+
+#### Surfaces and startup
+
+The HTTP server is composed of surfaces. Each is built on its own, owns its
+patterns on one root `http.ServeMux` and needs only its own dependencies:
+
+| Surface | Patterns | Built by | Needs |
+| --- | --- | --- | --- |
+| Probes | `/livez`, `/readyz` | `health.NewProbes` | readiness state |
+| API | `/api`, `/api/` | `api.New` (`internal/app/api`) | database |
+| API reference | `GET /docs`, `GET /docs/{$}`, `GET /docs/openapi.json`, `GET /docs/scalar.js` | `apidocs.NewHandler`, only when enabled | embedded files |
+| Client app | `/` (catch-all) | `spa.NewHandler` | embedded files |
+
+A surface implements `router.Surface` (`Mount(*http.ServeMux)`). `router.New`
+mounts the surfaces it is given and wraps the root mux once with the
+middleware chain; it knows no surface. Surfaces that platforms poll also
+implement `router.QuietSurface`, so their request summaries log at debug.
+Every surface reports errors to the same `router.ErrorHandler`.
+
+`internal/app` is the composition root and the only package that knows every
+surface. `app.Run` loads the configuration, the client app, the optional
+reference and the database. `newHandler` (`internal/app/handler.go`) builds the
+surfaces and mounts them, and `server.Run` owns the process lifecycle:
+serving, draining and graceful shutdown. Tests compose only the surfaces they
+need. Service API tests mount the API surface alone, for example. A future
+binary that serves a subset of the surfaces needs a new composition root, not
+changes to the surfaces ([ADR 0001](docs/adr/0001-single-binary-services-as-packages.md)).
 
 #### Routing
 
-The app routes through an outer `http.ServeMux`, wrapped once by the
-middleware chain in `internal/app/router.go`. It sends `/api` and `/api/` to an
-`httpkit.API`, which has its own mux for the API routes. Both muxes serve
-requests themselves, so they set `Request.Pattern` and wildcard path values
-(`r.PathValue("id")`).
+The root mux sends `/api` and `/api/` to an `httpkit.API`, which has its own
+mux for the API routes. Both muxes serve requests themselves, so they set
+`Request.Pattern` and wildcard path values (`r.PathValue("id")`).
 
 - **API endpoints** register with `api.HandleFunc`, one call per method and
-  path, in each service's `routes.go`:
+  path, in each service's `routes.go`. Each service's `RegisterRoutes` is
+  called from `api.New`:
 
   ```go
   api.HandleFunc("GET "+domain.CardsPath+"/{id}", g.Handle)
@@ -182,8 +214,9 @@ is the source of truth; the notes below summarize it.
 
 ### Probes
 
-`internal/infra/health` owns the probes and their shared `health.State`. The app
-wires that state into the router and shutdown handling.
+`internal/infra/health` owns the probes surface (`health.Probes`) and the
+shared `health.State`. The composition root mounts the probes and passes the
+same state to `server.Run`, which marks it stopping on shutdown.
 
 `GET /livez` (and HEAD) returns 200 whenever the process can answer HTTP. It
 checks no dependencies, including the database. Use it for liveness checks.

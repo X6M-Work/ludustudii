@@ -14,9 +14,8 @@ import (
 	"sync"
 	"testing"
 
-	"github.com/apotourlyan/ludustudii/internal/app"
-	"github.com/apotourlyan/ludustudii/internal/infra/health"
-	"github.com/apotourlyan/ludustudii/internal/infra/spa"
+	"github.com/apotourlyan/ludustudii/internal/app/api"
+	"github.com/apotourlyan/ludustudii/internal/app/router"
 	"github.com/apotourlyan/ludustudii/internal/testkit"
 	"github.com/google/uuid"
 )
@@ -27,13 +26,10 @@ func TestMain(m *testing.M) {
 
 func newServer(t *testing.T) (*httptest.Server, *sql.DB) {
 	t.Helper()
-	clientApp, err := spa.Load()
-	if err != nil {
-		t.Fatal(err)
-	}
 	db := testkit.NewDB(t)
 	log := slog.New(slog.DiscardHandler)
-	srv := httptest.NewServer(app.NewRouter(log, clientApp, nil, db, health.NewState(log, db)))
+	onError := router.ErrorHandler(log)
+	srv := httptest.NewServer(router.New(log, onError, api.New(db, onError)))
 	t.Cleanup(srv.Close)
 	return srv, db
 }
@@ -568,7 +564,7 @@ func TestCreate(t *testing.T) {
 			Method:      http.MethodPost,
 			Path:        "/api/lcards",
 			ContentType: "application/json",
-			Body:        strings.Repeat("a", app.MaxBodyBytes+1),
+			Body:        strings.Repeat("a", router.MaxBodyBytes+1),
 		})
 		testkit.AssertStatus(t, resp, http.StatusRequestEntityTooLarge)
 		testkit.AssertJSON(t, resp.Body, `{"code":"payload_too_large"}`)
@@ -584,7 +580,7 @@ func TestCreate(t *testing.T) {
 			Method:      http.MethodPost,
 			Path:        "/api/lcards",
 			ContentType: "application/json",
-			Body:        strings.Repeat("a", app.MaxBodyBytes+1),
+			Body:        strings.Repeat("a", router.MaxBodyBytes+1),
 			Chunked:     true,
 		})
 		testkit.AssertStatus(t, resp, http.StatusRequestEntityTooLarge)
@@ -726,7 +722,7 @@ func TestUpdate(t *testing.T) {
 			Headers:     http.Header{"If-Match": {`"1"`}},
 			Path:        "/api/lcards/" + id,
 			ContentType: "application/json",
-			Body:        strings.Repeat("a", app.MaxBodyBytes+1),
+			Body:        strings.Repeat("a", router.MaxBodyBytes+1),
 			Chunked:     true,
 		})
 		testkit.AssertStatus(t, resp, http.StatusRequestEntityTooLarge)

@@ -1,6 +1,6 @@
 //go:build unit
 
-package app
+package server
 
 import (
 	"context"
@@ -11,6 +11,10 @@ import (
 
 	"github.com/apotourlyan/ludustudii/internal/infra/health"
 )
+
+type pingFunc func(context.Context) error
+
+func (f pingFunc) PingContext(ctx context.Context) error { return f(ctx) }
 
 type stopFunc func(context.Context)
 

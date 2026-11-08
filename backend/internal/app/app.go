@@ -1,5 +1,9 @@
-// Package app wires the server together: configuration, logging, database,
-// router and HTTP server lifecycle.
+// Package app is the composition root of the server binary. It loads the
+// configuration, builds each part the binary serves and runs them as one
+// process. It is the only package that knows every part. Each surface is
+// built on its own and mounted on the shared router, and the process lifecycle
+// lives in package server, so a part can move to its own binary with a new
+// composition root rather than a rewrite.
 package app
 
 import (
@@ -10,10 +14,8 @@ import (
 	"net"
 	"net/http"
 	"os"
-	"os/signal"
-	"syscall"
-	"time"
 
+	"github.com/apotourlyan/ludustudii/internal/app/server"
 	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
 	"github.com/apotourlyan/ludustudii/internal/infra/env"
 	"github.com/apotourlyan/ludustudii/internal/infra/health"
@@ -22,48 +24,39 @@ import (
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
 )
 
-// Run loads the environment, sets the default logger, loads the embedded
-// client app and, when APP_API_DOCS is set, the API reference, connects to
-// the database and serves HTTP until the server fails or the process receives
-// SIGINT or SIGTERM. On a signal it shuts the server down gracefully within
-// the configured shutdown timeout after the drain delay; a second signal
-// during draining or shutdown terminates the process immediately. The database is closed before Run returns.
+// Run loads the environment and sets the default logger, loads the client app
+// and, when APP_API_DOCS is set, the API reference, connects to the database
+// and serves HTTP until the server fails or the process receives SIGINT or
+// SIGTERM (see server.Run). The database is closed before Run returns.
 func Run() (err error) {
 	ev, err := env.Load()
 	if err != nil {
 		return fmt.Errorf("load environment: %w", err)
 	}
-
-	log, err := logging.New(logging.Options{
-		Level:  ev.LogLevel,
-		Format: ev.LogFormat,
-		Output: os.Stdout,
-	})
+	log, err := newLogger(ev)
 	if err != nil {
-		return fmt.Errorf("create logger: %w", err)
+		return err
 	}
 	slog.SetDefault(log)
 	slog.LogAttrs(context.Background(), slog.LevelInfo, "Environment variables loaded", ev.LogAttrs()...)
 
-	ca, err := spa.Load()
+	clientApp, err := spa.Load()
 	if err != nil {
 		return fmt.Errorf("load client app: %w", err)
 	}
-
-	var adh *apidocs.Handler
+	var docs *apidocs.Docs
 	if ev.AppAPIDocs {
 		// The API keeps running without its reference when only the Scalar
 		// bundle is missing, as in a checkout without frontend dependencies.
 		// A binary built without the apidocs tag fails to start instead, since
 		// enabling the reference for it is a deployment mistake.
-		d, err := apidocs.Load()
+		docs, err = apidocs.Load()
 		switch {
 		case errors.Is(err, apidocs.ErrScriptNotEmbedded):
 			slog.Warn("API reference disabled", "error", err)
 		case err != nil:
 			return fmt.Errorf("load api docs: %w", err)
 		default:
-			adh = apidocs.NewHandler(d)
 			slog.Info("API reference enabled", "path", apidocs.Path)
 		}
 	}
@@ -84,71 +77,35 @@ func Run() (err error) {
 		}
 	}()
 
-	state := health.NewState(log, db)
-	router := NewRouter(log, ca, adh, db, state)
+	readiness := health.NewState(log, db)
+	handler := newHandler(log, parts{
+		db:        db,
+		readiness: readiness,
+		clientApp: clientApp,
+		docs:      docs,
+	})
 
-	server := &http.Server{
+	slog.Info("Starting HTTP server", "port", ev.AppPort)
+	return server.Run(&http.Server{
 		Addr:         net.JoinHostPort("", ev.AppPort),
-		Handler:      router,
+		Handler:      handler,
 		ReadTimeout:  ev.AppReadTimeout,
 		WriteTimeout: ev.AppWriteTimeout,
 		IdleTimeout:  ev.AppIdleTimeout,
-	}
-
-	errChan := make(chan error, 1)
-	go func() {
-		slog.Info("Starting HTTP server", "port", ev.AppPort)
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
-			errChan <- fmt.Errorf("http server error: %w", err)
-		}
-	}()
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
-
-	select {
-	case err := <-errChan:
-		return err
-	case <-ctx.Done():
-		stop()
-		slog.Info("Shutting down HTTP server...")
-	}
-
-	shutdownCtx := context.Background()
-	if err := drain(shutdownCtx, state, ev.AppShutdownDrainDelay); err != nil {
-		return err
-	}
-	return shutdown(shutdownCtx, server, ev.AppShutdownTimeout)
+	}, readiness, server.Options{
+		DrainDelay:      ev.AppShutdownDrainDelay,
+		ShutdownTimeout: ev.AppShutdownTimeout,
+	})
 }
 
-type stopper interface {
-	MarkStopping(context.Context)
-}
-
-// drain marks the instance unready while HTTP is still serving and waits for
-// routing changes to propagate before shutdown begins.
-func drain(ctx context.Context, state stopper, delay time.Duration) error {
-	state.MarkStopping(ctx)
-	timer := time.NewTimer(delay)
-	defer timer.Stop()
-	select {
-	case <-timer.C:
-		return nil
-	case <-ctx.Done():
-		return fmt.Errorf("http server drain: %w", ctx.Err())
+func newLogger(ev *env.Vars) (*slog.Logger, error) {
+	log, err := logging.New(logging.Options{
+		Level:  ev.LogLevel,
+		Format: ev.LogFormat,
+		Output: os.Stdout,
+	})
+	if err != nil {
+		return nil, fmt.Errorf("create logger: %w", err)
 	}
-}
-
-type shutter interface {
-	Shutdown(context.Context) error
-}
-
-// shutdown gives in-flight requests their configured grace period.
-func shutdown(ctx context.Context, server shutter, timeout time.Duration) error {
-	shutdownCtx, cancel := context.WithTimeout(ctx, timeout)
-	defer cancel()
-	if err := server.Shutdown(shutdownCtx); err != nil {
-		return fmt.Errorf("http server shutdown: %w", err)
-	}
-	return nil
+	return log, nil
 }

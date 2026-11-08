@@ -69,17 +69,29 @@ the reference slice.
    `api.HandleFunc("METHOD path", h.Handle)` on the `*httpkit.API` it receives,
    one call per method and path. Always include the method; GET also serves
    HEAD. The API turns the mux's 404 and 405 (with its `Allow`) into the JSON
-   error shape. A new service registers in `internal/app/router.go`.
+   error shape. A new service registers in `internal/app/api/api.go`.
 6. Test each layer using the existing patterns:
    - `handler_test.go` (`//go:build unit`): isolate binding, validation and store
      behavior using the existing function fields and interfaces.
    - `store_integration_test.go` (`//go:build integration`): real SQL against a `testkit`
      database. No store mocks or store unit tests.
-   - `api_test.go` in the service package (`//go:build integration`): drive the
-     router through `testkit.Do`, which validates every response against the spec.
+   - `api_test.go` in the service package (`//go:build integration`): mount the
+     API surface alone (`router.New(log, onError, api.New(db, onError))`) and
+     drive it through `testkit.Do`, which validates every response against the spec.
    - A package with integration tests needs `TestMain` calling `testkit.Run`.
    - When changing validation or normalization rules, extend the domain unit
      tests and sanitizer/validator fuzz contracts in `<svc>/contract/`.
+
+## Composing the server
+
+`internal/app` is the composition root. HTTP surfaces (probes, API, API
+reference, client app) are built independently and mounted on the shared
+router in `internal/app/handler.go`. Keep each surface free of the others'
+dependencies. A surface takes its own parts and the error handler, never the
+whole configuration. Process lifecycle changes (signals, draining, shutdown)
+go in `internal/app/server`, and shared middleware goes in
+`internal/app/router`. Neither may know a surface. See README.md (Backend →
+Surfaces and startup).
 
 ## Rules not enforced by tooling
 

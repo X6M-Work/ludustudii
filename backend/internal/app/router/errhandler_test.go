@@ -1,6 +1,6 @@
 //go:build unit
 
-package app
+package router
 
 import (
 	"bytes"

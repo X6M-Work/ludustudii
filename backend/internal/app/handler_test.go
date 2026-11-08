@@ -13,17 +13,17 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/apotourlyan/ludustudii/internal/app/router"
 	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
 	"github.com/apotourlyan/ludustudii/internal/infra/health"
 	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
-	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
 )
 
-func TestRouter_PathNormalization(t *testing.T) {
+func TestHandler_PathNormalization(t *testing.T) {
 	t.Parallel()
-	testRouterResponses(t, []routerResponseCase{
+	testHandlerResponses(t, []handlerResponseCase{
 		{"GET", "/api/lcards/.", 307, "<a href=\"/api/lcards\">Temporary Redirect</a>.\n\n", "", "/api/lcards"},
 		{"GET", "/api/lcards/..", 307, "<a href=\"/api\">Temporary Redirect</a>.\n\n", "", "/api"},
 		{"GET", "/api//unknown", 307, "<a href=\"/api/unknown\">Temporary Redirect</a>.\n\n", "", "/api/unknown"},
@@ -33,30 +33,30 @@ func TestRouter_PathNormalization(t *testing.T) {
 	})
 }
 
-func TestRouter_EscapedPaths(t *testing.T) {
+func TestHandler_EscapedPaths(t *testing.T) {
 	t.Parallel()
-	testRouterResponses(t, []routerResponseCase{
+	testHandlerResponses(t, []handlerResponseCase{
 		{"GET", "/api/lcards/bad%2fx", 400, "{\"code\":\"validation_error\",\"errors\":[{\"field\":\"id\",\"code\":\"invalid_uuid7\"}]}\n", "", ""},
 		{"GET", "/%61pi/nope", 404, "{\"code\":\"not_found\"}\n", "", ""},
 	})
 }
 
-func TestRouter_APIDocsRouting(t *testing.T) {
+func TestHandler_APIDocsRouting(t *testing.T) {
 	t.Parallel()
 	clientApp, err := spa.Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	testRouterResponses(t, []routerResponseCase{
+	testHandlerResponses(t, []handlerResponseCase{
 		{"GET", "/docs/unknown", 200, string(clientApp.IndexFile.Bytes), "", ""},
 		{"GET", "/docs/?q=x", 302, "", "", "/docs?q=x"},
 		{"HEAD", "/docs/?q=x", 302, "", "", "/docs?q=x"},
 	})
 }
 
-func TestRouter_MethodNotAllowed(t *testing.T) {
+func TestHandler_MethodNotAllowed(t *testing.T) {
 	t.Parallel()
-	testRouterResponses(t, []routerResponseCase{
+	testHandlerResponses(t, []handlerResponseCase{
 		{"POST", "/docs", 405, "method not allowed\n", "GET, HEAD", ""},
 		{"POST", "/docs/", 405, "method not allowed\n", "GET, HEAD", ""},
 		{"POST", "/docs/openapi.json", 405, "method not allowed\n", "GET, HEAD", ""},
@@ -66,21 +66,21 @@ func TestRouter_MethodNotAllowed(t *testing.T) {
 	})
 }
 
-type routerResponseCase struct {
+type handlerResponseCase struct {
 	method, path          string
 	status                int
 	body, allow, location string
 }
 
-func testRouterResponses(t *testing.T, cases []routerResponseCase) {
+func testHandlerResponses(t *testing.T, cases []handlerResponseCase) {
 	t.Helper()
 	clientApp, err := spa.Load()
 	if err != nil {
 		t.Fatal(err)
 	}
-	docs := apidocs.NewHandler(&apidocs.Docs{Page: staticfile.File{ContentType: "text/html", Bytes: []byte("reference")}})
+	docs := &apidocs.Docs{Page: staticfile.File{ContentType: "text/html", Bytes: []byte("reference")}}
 	log := slog.New(slog.DiscardHandler)
-	handler := NewRouter(log, clientApp, docs, nil, health.NewState(log, nil))
+	handler := newHandler(log, parts{readiness: health.NewState(log, nil), clientApp: clientApp, docs: docs})
 	for _, tc := range cases {
 		t.Run(tc.method+" "+tc.path, func(t *testing.T) {
 			t.Parallel()
@@ -99,14 +99,14 @@ func testRouterResponses(t *testing.T, cases []routerResponseCase) {
 	}
 }
 
-func TestRouter_RequestIDHeader(t *testing.T) {
+func TestHandler_RequestIDHeader(t *testing.T) {
 	t.Parallel()
 	clientApp, err := spa.Load()
 	if err != nil {
 		t.Fatal(err)
 	}
 	log := slog.New(slog.DiscardHandler)
-	handler := NewRouter(log, clientApp, nil, nil, health.NewState(log, nil))
+	handler := newHandler(log, parts{readiness: health.NewState(log, nil), clientApp: clientApp})
 	for _, tc := range []struct {
 		name  string
 		value string
@@ -169,7 +169,7 @@ func probeLogger(t *testing.T, logs *bytes.Buffer) *slog.Logger {
 	return log
 }
 
-func TestRouter_HealthEndpointsReserveRootPaths(t *testing.T) {
+func TestHandler_HealthEndpointsReserveRootPaths(t *testing.T) {
 	t.Parallel()
 	clientApp, err := spa.Load()
 	if err != nil {
@@ -177,12 +177,12 @@ func TestRouter_HealthEndpointsReserveRootPaths(t *testing.T) {
 	}
 	log := slog.New(slog.DiscardHandler)
 	state := health.NewState(log, pingFunc(func(context.Context) error { return nil }))
-	handler := NewRouter(log, clientApp, nil, nil, state)
+	handler := newHandler(log, parts{readiness: state, clientApp: clientApp})
 	for _, path := range []string{health.LivenessPath, health.ReadinessPath} {
 		for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodPost, http.MethodOptions} {
 			t.Run(method+" "+path, func(t *testing.T) {
 				t.Parallel()
-				for _, size := range []int64{0, MaxBodyBytes + 1} {
+				for _, size := range []int64{0, router.MaxBodyBytes + 1} {
 					rec := httptest.NewRecorder()
 					req := httptest.NewRequestWithContext(t.Context(), method, path, nil)
 					req.ContentLength = size
@@ -193,7 +193,7 @@ func TestRouter_HealthEndpointsReserveRootPaths(t *testing.T) {
 					} else if method != http.MethodGet {
 						wantStatus, wantBody, wantAllow = http.StatusMethodNotAllowed, "{\"code\":\"method_not_allowed\"}\n", "GET, HEAD"
 					}
-					if size > MaxBodyBytes {
+					if size > router.MaxBodyBytes {
 						wantStatus, wantBody, wantAllow, wantCache = http.StatusRequestEntityTooLarge, "{\"code\":\"payload_too_large\"}\n", "", ""
 						if method == http.MethodHead {
 							wantBody = ""
@@ -218,7 +218,7 @@ func TestRouter_HealthEndpointsReserveRootPaths(t *testing.T) {
 	}
 }
 
-func TestRouter_HealthRequestLogging(t *testing.T) {
+func TestHandler_HealthRequestLogging(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
 		name, path     string
@@ -250,7 +250,7 @@ func TestRouter_HealthRequestLogging(t *testing.T) {
 				if err != nil {
 					t.Fatal(err)
 				}
-				handler := NewRouter(log, clientApp, nil, nil, state)
+				handler := newHandler(log, parts{readiness: state, clientApp: clientApp})
 				req := httptest.NewRequestWithContext(t.Context(), method, tc.path, nil)
 				req.Header.Set("X-Request-Id", "health-request")
 				rec := httptest.NewRecorder()
@@ -292,74 +292,7 @@ func TestRouter_HealthRequestLogging(t *testing.T) {
 	}
 }
 
-func TestMiddleware_FinalResponseLogging(t *testing.T) {
-	t.Parallel()
-	for _, tc := range []struct {
-		name, path   string
-		status       int
-		level, route string
-	}{
-		{"panic", "/api/panic", 500, "ERROR", "GET /api/panic"},
-		// BodyLimit rejects a known oversized body before the mux matches a route.
-		{"body limit", "/api/committed", 413, "WARN", ""},
-		{"committed error", "/api/committed", 202, "INFO", "GET /api/committed"},
-	} {
-		t.Run(tc.name, func(t *testing.T) {
-			t.Parallel()
-			var logs bytes.Buffer
-			log, err := logging.New(logging.Options{Format: logging.FormatJSON, Output: &logs})
-			if err != nil {
-				t.Fatal(err)
-			}
-			onError := errorHandler(log)
-			api := httpkit.NewAPI(onError)
-			api.HandleFunc("GET /api/panic", func(http.ResponseWriter, *http.Request) error { panic("boom") })
-			api.HandleFunc("GET /api/committed", func(w http.ResponseWriter, _ *http.Request) error {
-				w.WriteHeader(http.StatusAccepted)
-				return errors.New("after commit")
-			})
-			handler := withMiddleware(log, onError, api)
-			r := httptest.NewRequestWithContext(t.Context(), http.MethodGet, tc.path, nil)
-			if tc.name == "body limit" {
-				r.Method = http.MethodPost
-				r.ContentLength = MaxBodyBytes + 1
-			}
-			rec := httptest.NewRecorder()
-			handler.ServeHTTP(rec, r)
-			if rec.Code != tc.status {
-				t.Fatalf("status: %d, want %d", rec.Code, tc.status)
-			}
-			count := 0
-			for line := range strings.Lines(logs.String()) {
-				var record map[string]any
-				if err := json.Unmarshal([]byte(line), &record); err != nil {
-					t.Fatal(err)
-				}
-				if record["msg"] != "request" {
-					continue
-				}
-				count++
-				if record["status"] != float64(tc.status) || record["level"] != tc.level || record["route"] != tc.route {
-					t.Fatalf("record: %+v", record)
-				}
-				if record["request_id"] != rec.Header().Get("X-Request-Id") {
-					t.Fatal("request ID missing from context")
-				}
-			}
-			if count != 1 {
-				t.Fatalf("request records: %d, want 1", count)
-			}
-			if tc.name == "committed error" && strings.Contains(logs.String(), "Unhandled error") {
-				t.Fatal("committed error was logged")
-			}
-			if rec.Body.Len() != 0 && tc.name == "committed error" {
-				t.Fatal("committed error changed body")
-			}
-		})
-	}
-}
-
-func TestRouter_LoggedRouteIsMatchedPattern(t *testing.T) {
+func TestHandler_LoggedRouteIsMatchedPattern(t *testing.T) {
 	t.Parallel()
 	for _, tc := range []struct {
 		method, path string
@@ -383,7 +316,7 @@ func TestRouter_LoggedRouteIsMatchedPattern(t *testing.T) {
 				t.Fatal(err)
 			}
 			rec := httptest.NewRecorder()
-			NewRouter(log, clientApp, nil, nil, health.NewState(log, nil)).ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), tc.method, tc.path, nil))
+			newHandler(log, parts{readiness: health.NewState(log, nil), clientApp: clientApp}).ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), tc.method, tc.path, nil))
 			if rec.Code != tc.status {
 				t.Fatalf("status: %d, want %d", rec.Code, tc.status)
 			}

@@ -60,9 +60,9 @@ func TestProbes(t *testing.T) {
 					state.MarkStopping(t.Context())
 				}
 				mux := http.NewServeMux()
-				RegisterProbes(mux, state, func(_ http.ResponseWriter, _ *http.Request, err error) {
+				NewProbes(state, func(_ http.ResponseWriter, _ *http.Request, err error) {
 					t.Errorf("unexpected probe error: %v", err)
-				})
+				}).Mount(mux)
 				rec := httptest.NewRecorder()
 				start := time.Now()
 				mux.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), method, tc.path, nil))
@@ -99,13 +99,13 @@ func TestProbes_UnsupportedMethods(t *testing.T) {
 				}))
 				mux := http.NewServeMux()
 				calls := 0
-				RegisterProbes(mux, state, func(w http.ResponseWriter, _ *http.Request, err error) {
+				NewProbes(state, func(w http.ResponseWriter, _ *http.Request, err error) {
 					calls++
 					if !errors.Is(err, httpkit.ErrMethodNotAllowed) {
 						t.Errorf("error: %v, want ErrMethodNotAllowed", err)
 					}
 					w.WriteHeader(http.StatusMethodNotAllowed)
-				})
+				}).Mount(mux)
 				rec := httptest.NewRecorder()
 				mux.ServeHTTP(rec, httptest.NewRequestWithContext(t.Context(), method, path, nil))
 				if rec.Code != http.StatusMethodNotAllowed || calls != 1 {

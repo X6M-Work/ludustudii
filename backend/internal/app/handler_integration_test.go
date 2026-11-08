@@ -13,11 +13,11 @@ import (
 	"sync"
 	"testing"
 
+	"github.com/apotourlyan/ludustudii/internal/app/router"
 	"github.com/apotourlyan/ludustudii/internal/infra/apidocs"
 	"github.com/apotourlyan/ludustudii/internal/infra/health"
 	"github.com/apotourlyan/ludustudii/internal/infra/logging"
 	"github.com/apotourlyan/ludustudii/internal/infra/spa"
-	"github.com/apotourlyan/ludustudii/internal/kit/httpkit"
 	"github.com/apotourlyan/ludustudii/internal/kit/staticfile"
 	"github.com/apotourlyan/ludustudii/internal/testkit"
 )
@@ -28,21 +28,21 @@ func discardLogger() *slog.Logger {
 	return slog.New(slog.DiscardHandler)
 }
 
-func newRouterServer(t *testing.T) *httptest.Server {
+func newHandlerServer(t *testing.T) *httptest.Server {
 	t.Helper()
 	clientApp, err := spa.Load()
 	if err != nil {
 		t.Fatal(err)
 	}
 	log := discardLogger()
-	srv := httptest.NewServer(NewRouter(log, clientApp, nil, nil, health.NewState(log, nil)))
+	srv := httptest.NewServer(newHandler(log, parts{readiness: health.NewState(log, nil), clientApp: clientApp}))
 	t.Cleanup(srv.Close)
 	return srv
 }
 
-func TestRouter_SPAIndex(t *testing.T) {
+func TestHandler_SPAIndex(t *testing.T) {
 	t.Parallel()
-	srv := newRouterServer(t)
+	srv := newHandlerServer(t)
 	resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/"})
 	testkit.AssertStatus(t, resp, http.StatusOK)
 	if ct := resp.Header.Get("Content-Type"); !strings.HasPrefix(ct, "text/html") {
@@ -53,20 +53,7 @@ func TestRouter_SPAIndex(t *testing.T) {
 	}
 }
 
-func TestMiddleware_PanicResponse(t *testing.T) {
-	t.Parallel()
-	log := discardLogger()
-	onError := errorHandler(log)
-	api := httpkit.NewAPI(onError)
-	api.HandleFunc("GET /api/panic", func(http.ResponseWriter, *http.Request) error { panic("boom") })
-	srv := httptest.NewServer(withMiddleware(log, onError, api))
-	t.Cleanup(srv.Close)
-	resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/api/panic"})
-	testkit.AssertStatus(t, resp, http.StatusInternalServerError)
-	testkit.AssertJSON(t, resp.Body, `{"code":"unexpected_error"}`)
-}
-
-func TestRouter_APIDocs(t *testing.T) {
+func TestHandler_APIDocs(t *testing.T) {
 	t.Parallel()
 
 	clientApp, err := spa.Load()
@@ -82,7 +69,7 @@ func TestRouter_APIDocs(t *testing.T) {
 	t.Run("disabled: /docs is left to the SPA", func(t *testing.T) {
 		t.Parallel()
 		log := discardLogger()
-		srv := httptest.NewServer(NewRouter(log, clientApp, nil, nil, health.NewState(log, nil)))
+		srv := httptest.NewServer(newHandler(log, parts{readiness: health.NewState(log, nil), clientApp: clientApp}))
 		t.Cleanup(srv.Close)
 
 		resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: apidocs.Path})
@@ -100,7 +87,7 @@ func TestRouter_APIDocs(t *testing.T) {
 	t.Run("enabled: /docs serves the reference", func(t *testing.T) {
 		t.Parallel()
 		log := discardLogger()
-		srv := httptest.NewServer(NewRouter(log, clientApp, apidocs.NewHandler(docs), nil, health.NewState(log, nil)))
+		srv := httptest.NewServer(newHandler(log, parts{readiness: health.NewState(log, nil), clientApp: clientApp, docs: docs}))
 		t.Cleanup(srv.Close)
 
 		for path, want := range map[string]staticfile.File{
@@ -124,9 +111,9 @@ func TestRouter_APIDocs(t *testing.T) {
 	})
 }
 
-func TestRouter_UnknownAPIPaths(t *testing.T) {
+func TestHandler_UnknownAPIPaths(t *testing.T) {
 	t.Parallel()
-	srv := newRouterServer(t)
+	srv := newHandlerServer(t)
 	for _, method := range []string{http.MethodGet, http.MethodHead, http.MethodPost} {
 		for _, path := range []string{"/api", "/api/", "/api/nope", "/api/unknown", "/api/lcards/one/x"} {
 			t.Run(method+" "+path, func(t *testing.T) {
@@ -145,9 +132,9 @@ func TestRouter_UnknownAPIPaths(t *testing.T) {
 	}
 }
 
-func TestRouter_FirstRequestIDHeader(t *testing.T) {
+func TestHandler_FirstRequestIDHeader(t *testing.T) {
 	t.Parallel()
-	srv := newRouterServer(t)
+	srv := newHandlerServer(t)
 	for _, tc := range []struct {
 		name   string
 		values []string
@@ -174,9 +161,9 @@ func TestRouter_FirstRequestIDHeader(t *testing.T) {
 	}
 }
 
-func TestRouter_SPAErrors(t *testing.T) {
+func TestHandler_SPAErrors(t *testing.T) {
 	t.Parallel()
-	srv := newRouterServer(t)
+	srv := newHandlerServer(t)
 	for _, tc := range []struct {
 		method, path, body string
 		status             int
@@ -197,9 +184,9 @@ func TestRouter_SPAErrors(t *testing.T) {
 
 // Shared middleware errors use the JSON error shape on client-app paths too,
 // unlike errors from the client app's own handler.
-func TestRouter_SPABodyLimit(t *testing.T) {
+func TestHandler_SPABodyLimit(t *testing.T) {
 	t.Parallel()
-	srv := newRouterServer(t)
+	srv := newHandlerServer(t)
 	for _, tc := range []struct{ method, path string }{
 		{http.MethodPost, "/"},
 		{http.MethodGet, "/client"},
@@ -209,7 +196,7 @@ func TestRouter_SPABodyLimit(t *testing.T) {
 			resp := testkit.Do(t, srv, testkit.DoOpts{
 				Method: tc.method,
 				Path:   tc.path,
-				Body:   strings.Repeat("a", MaxBodyBytes+1),
+				Body:   strings.Repeat("a", router.MaxBodyBytes+1),
 			})
 			testkit.AssertStatus(t, resp, http.StatusRequestEntityTooLarge)
 			if ct := resp.Header.Get("Content-Type"); ct != "application/json" {
@@ -220,24 +207,9 @@ func TestRouter_SPABodyLimit(t *testing.T) {
 	}
 }
 
-func TestMiddleware_ClientAppPanicResponse(t *testing.T) {
+func TestHandler_HealthBodyLimit(t *testing.T) {
 	t.Parallel()
-	log := discardLogger()
-	mux := http.NewServeMux()
-	mux.HandleFunc("/", func(http.ResponseWriter, *http.Request) { panic("boom") })
-	srv := httptest.NewServer(withMiddleware(log, errorHandler(log), mux))
-	t.Cleanup(srv.Close)
-	resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: "/client"})
-	testkit.AssertStatus(t, resp, http.StatusInternalServerError)
-	if ct := resp.Header.Get("Content-Type"); ct != "application/json" {
-		t.Errorf("Content-Type: got %q, want application/json", ct)
-	}
-	testkit.AssertJSON(t, resp.Body, `{"code":"unexpected_error"}`)
-}
-
-func TestRouter_HealthBodyLimit(t *testing.T) {
-	t.Parallel()
-	srv := newRouterServer(t)
+	srv := newHandlerServer(t)
 	for _, path := range []string{health.LivenessPath, health.ReadinessPath} {
 		for _, method := range []string{http.MethodGet, http.MethodHead} {
 			t.Run(method+" "+path, func(t *testing.T) {
@@ -245,7 +217,7 @@ func TestRouter_HealthBodyLimit(t *testing.T) {
 				resp := testkit.Do(t, srv, testkit.DoOpts{
 					Method: method,
 					Path:   path,
-					Body:   strings.Repeat("a", MaxBodyBytes+1),
+					Body:   strings.Repeat("a", router.MaxBodyBytes+1),
 				})
 				testkit.AssertStatus(t, resp, http.StatusRequestEntityTooLarge)
 				if method == http.MethodHead {
@@ -260,7 +232,7 @@ func TestRouter_HealthBodyLimit(t *testing.T) {
 	}
 }
 
-func TestRouter_HealthEndpoints(t *testing.T) {
+func TestHandler_HealthEndpoints(t *testing.T) {
 	t.Parallel()
 	for _, scenario := range []string{"database unavailable", "stopping with healthy database"} {
 		t.Run(scenario, func(t *testing.T) {
@@ -272,7 +244,7 @@ func TestRouter_HealthEndpoints(t *testing.T) {
 			}
 			log := discardLogger()
 			state := health.NewState(log, db)
-			srv := httptest.NewServer(NewRouter(log, clientApp, nil, db, state))
+			srv := httptest.NewServer(newHandler(log, parts{db: db, readiness: state, clientApp: clientApp}))
 			t.Cleanup(srv.Close)
 			probe := func(path string, status int, body string) {
 				t.Helper()
@@ -337,7 +309,7 @@ func (b *syncBuffer) String() string {
 	return b.buf.String()
 }
 
-func TestRouter_RequestLogging(t *testing.T) {
+func TestHandler_RequestLogging(t *testing.T) {
 	t.Parallel()
 
 	tests := []struct {
@@ -366,7 +338,7 @@ func TestRouter_RequestLogging(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			srv := httptest.NewServer(NewRouter(log, clientApp, nil, nil, health.NewState(log, nil)))
+			srv := httptest.NewServer(newHandler(log, parts{readiness: health.NewState(log, nil), clientApp: clientApp}))
 			t.Cleanup(srv.Close)
 
 			resp := testkit.Do(t, srv, testkit.DoOpts{Method: http.MethodGet, Path: tt.path, Headers: http.Header{"X-Request-Id": {tt.requestID}}})
@@ -434,7 +406,7 @@ func TestRouter_RequestLogging(t *testing.T) {
 		if err != nil {
 			t.Fatal(err)
 		}
-		srv := httptest.NewServer(NewRouter(log, clientApp, nil, nil, health.NewState(log, nil)))
+		srv := httptest.NewServer(newHandler(log, parts{readiness: health.NewState(log, nil), clientApp: clientApp}))
 		t.Cleanup(srv.Close)
 
 		resp := testkit.Do(t, srv, testkit.DoOpts{

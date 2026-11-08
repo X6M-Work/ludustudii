@@ -13,16 +13,35 @@ const (
 	ReadinessPath = "/readyz"
 )
 
-// RegisterProbes reserves the probe paths for GET and HEAD, returning 405 for
-// other methods through onError rather than reaching a catch-all handler.
-func RegisterProbes(mux *http.ServeMux, state *State, onError httpkit.ErrorHandler) {
-	// Reserve these exact paths for all methods so the SPA cannot catch them.
+// Probes is the operational surface: the liveness and readiness endpoints at
+// the root, outside the API and the client app. It depends only on State, so
+// every server binary can mount it.
+type Probes struct {
+	state   *State
+	onError httpkit.ErrorHandler
+}
+
+// NewProbes returns Probes that report readiness from state and method errors
+// through onError.
+func NewProbes(state *State, onError httpkit.ErrorHandler) *Probes {
+	return &Probes{state: state, onError: onError}
+}
+
+// Mount reserves the probe paths for GET and HEAD, returning 405 for other
+// methods through onError rather than reaching a catch-all route.
+func (p *Probes) Mount(mux *http.ServeMux) {
+	// Reserve these exact paths for all methods so a catch-all cannot catch them.
 	mux.HandleFunc(LivenessPath, probeHandler(func(w http.ResponseWriter, r *http.Request) {
 		writeProbe(w, r, true)
-	}, onError))
+	}, p.onError))
 	mux.HandleFunc(ReadinessPath, probeHandler(func(w http.ResponseWriter, r *http.Request) {
-		writeProbe(w, r, state.Check(r.Context()))
-	}, onError))
+		writeProbe(w, r, p.state.Check(r.Context()))
+	}, p.onError))
+}
+
+// QuietPaths returns the probe paths, whose request summaries log at debug.
+func (p *Probes) QuietPaths() []string {
+	return []string{LivenessPath, ReadinessPath}
 }
 
 // probeHandler applies the common HTTP headers and method restrictions.

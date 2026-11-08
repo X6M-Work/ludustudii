@@ -19,10 +19,12 @@ func NewHandler(docs *Docs) *Handler {
 	return &Handler{docs: docs}
 }
 
-// RegisterRoutes registers the reference routes on mux for GET and HEAD.
-// Other methods fall through to the mux's catch-all route. The trailing slash
-// redirects only at the exact /docs/ path.
-func (h *Handler) RegisterRoutes(mux *http.ServeMux) {
+// Mount registers the reference routes on mux for GET and HEAD, making Handler
+// a surface of its own that needs neither the API nor the client app. Other
+// methods get the mux's 405, or fall through to a catch-all route if another
+// surface registers one. The trailing slash redirects only at the exact /docs/
+// path.
+func (h *Handler) Mount(mux *http.ServeMux) {
 	mux.Handle("GET "+Path, http.HandlerFunc(h.docs.Page.Serve))
 	mux.Handle("GET "+Path+"/{$}", http.HandlerFunc(redirectToPath))
 	mux.Handle("GET "+Path+"/openapi.json", http.HandlerFunc(h.docs.Spec.Serve))

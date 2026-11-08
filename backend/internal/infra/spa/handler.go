@@ -21,22 +21,26 @@ type Handler struct {
 	fileServer http.Handler
 	rootFS     fs.FS
 	indexFile  staticfile.File
+	onError    httpkit.ErrorHandler
 }
 
-// NewHandler returns a Handler that serves clientApp.
-func NewHandler(clientApp *ClientApp) *Handler {
+// NewHandler returns a Handler that serves clientApp and reports errors to
+// onError. It needs neither the database nor the API.
+func NewHandler(clientApp *ClientApp, onError httpkit.ErrorHandler) *Handler {
 	return &Handler{
 		fileServer: http.FileServerFS(clientApp.RootFS),
 		rootFS:     clientApp.RootFS,
 		indexFile:  clientApp.IndexFile,
+		onError:    onError,
 	}
 }
 
-// RegisterRoutes registers the client application's catch-all route on mux,
-// reporting errors to onError. The pattern is method-less because "GET /"
-// conflicts with "/api/"; serve checks the method itself.
-func (h *Handler) RegisterRoutes(mux *http.ServeMux, onError httpkit.ErrorHandler) {
-	mux.Handle("/", httpkit.Adapt(h.serve, onError))
+// Mount registers the client application's catch-all route on mux, so every
+// path no other surface claims serves the client app. The pattern is
+// method-less because "GET /" conflicts with method-less prefixes of other
+// surfaces, such as "/api/"; serve checks the method itself.
+func (h *Handler) Mount(mux *http.ServeMux) {
+	mux.Handle("/", httpkit.Adapt(h.serve, h.onError))
 }
 
 func (h *Handler) serve(w http.ResponseWriter, r *http.Request) error {

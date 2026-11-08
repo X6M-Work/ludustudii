@@ -19,7 +19,7 @@ func newTestServer(t *testing.T) (http.Handler, *Docs) {
 		t.Fatal(err)
 	}
 	mux := http.NewServeMux()
-	NewHandler(d).RegisterRoutes(mux)
+	NewHandler(d).Mount(mux)
 	return mux, d
 }
 
