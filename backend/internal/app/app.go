@@ -33,9 +33,13 @@ func Run() (err error) {
 	if err != nil {
 		return fmt.Errorf("load environment: %w", err)
 	}
-	log, err := newLogger(ev)
+	log, err := logging.New(logging.Options{
+		Level:  ev.LogLevel,
+		Format: ev.LogFormat,
+		Output: os.Stdout,
+	})
 	if err != nil {
-		return err
+		return fmt.Errorf("create logger: %w", err)
 	}
 	slog.SetDefault(log)
 	slog.LogAttrs(context.Background(), slog.LevelInfo, "Environment variables loaded", ev.LogAttrs()...)
@@ -96,16 +100,4 @@ func Run() (err error) {
 		DrainDelay:      ev.AppShutdownDrainDelay,
 		ShutdownTimeout: ev.AppShutdownTimeout,
 	})
-}
-
-func newLogger(ev *env.Vars) (*slog.Logger, error) {
-	log, err := logging.New(logging.Options{
-		Level:  ev.LogLevel,
-		Format: ev.LogFormat,
-		Output: os.Stdout,
-	})
-	if err != nil {
-		return nil, fmt.Errorf("create logger: %w", err)
-	}
-	return log, nil
 }
