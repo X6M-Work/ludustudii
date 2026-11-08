@@ -16,55 +16,45 @@ type pingFunc func(context.Context) error
 
 func (f pingFunc) PingContext(ctx context.Context) error { return f(ctx) }
 
-type stopFunc func(context.Context)
-
-func (f stopFunc) MarkStopping(ctx context.Context) { f(ctx) }
-
 type shutdownFunc func(context.Context) error
 
 func (f shutdownFunc) Shutdown(ctx context.Context) error { return f(ctx) }
 
-func TestDrain_MarksStoppingBeforeDelay(t *testing.T) {
+func TestDrain_CallsOnDrainBeforeDelay(t *testing.T) {
 	t.Parallel()
 	for _, delay := range []time.Duration{0, 40 * time.Millisecond} {
 		t.Run(delay.String(), func(t *testing.T) {
 			t.Parallel()
 			state := health.NewState(slog.New(slog.DiscardHandler), pingFunc(func(context.Context) error { return nil }))
 			marked := make(chan time.Time, 1)
-			switcher := stopFunc(func(ctx context.Context) {
+			onDrain := func(ctx context.Context) {
 				state.MarkStopping(ctx)
 				marked <- time.Now()
-			})
-			done := make(chan error, 1)
-			go func() { done <- drain(t.Context(), switcher, delay) }()
+			}
+			done := make(chan struct{})
+			go func() {
+				drain(onDrain, delay)
+				close(done)
+			}()
 			markedAt := <-marked
 			if state.Check(t.Context()) {
 				t.Error("instance still available during drain")
 			}
-			if err := <-done; err != nil {
-				t.Fatal(err)
-			}
+			<-done
 			if time.Since(markedAt) < delay {
-				t.Error("drain returned before its delay elapsed after marking stopping")
+				t.Error("drain returned before its delay elapsed after OnDrain")
 			}
 		})
 	}
 }
 
-func TestDrain_Canceled(t *testing.T) {
+func TestDrain_NilOnDrainWaitsForDelay(t *testing.T) {
 	t.Parallel()
-	ctx, cancel := context.WithCancel(t.Context())
-	defer cancel()
-	marked := false
-	err := drain(ctx, stopFunc(func(context.Context) {
-		marked = true
-		cancel()
-	}), time.Second)
-	if !marked {
-		t.Error("instance was not marked stopping")
-	}
-	if !errors.Is(err, context.Canceled) {
-		t.Fatalf("drain error: %v, want context.Canceled", err)
+	const delay = 40 * time.Millisecond
+	start := time.Now()
+	drain(nil, delay)
+	if elapsed := time.Since(start); elapsed < delay {
+		t.Errorf("drain returned after %v, want at least %v", elapsed, delay)
 	}
 }
 

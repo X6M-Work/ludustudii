@@ -96,7 +96,8 @@ func Run() (err error) {
 		ReadTimeout:  ev.AppReadTimeout,
 		WriteTimeout: ev.AppWriteTimeout,
 		IdleTimeout:  ev.AppIdleTimeout,
-	}, readiness, server.Options{
+	}, server.Options{
+		OnDrain:         readiness.MarkStopping,
 		DrainDelay:      ev.AppShutdownDrainDelay,
 		ShutdownTimeout: ev.AppShutdownTimeout,
 	})

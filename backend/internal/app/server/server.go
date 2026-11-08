@@ -16,25 +16,24 @@ import (
 
 // Options configures how Run stops the server.
 type Options struct {
-	// DrainDelay is how long the server keeps serving after Stopper is told
-	// it is stopping, so routing changes can propagate.
+	// OnDrain is called when the first SIGINT or SIGTERM arrives, while the
+	// server is still serving. Use it to start failing readiness so load
+	// balancers stop sending new traffic here before shutdown begins. It may
+	// be nil.
+	OnDrain func(context.Context)
+	// DrainDelay is how long the server keeps serving after OnDrain, so load
+	// balancers can notice the failed readiness and route traffic elsewhere.
 	DrainDelay time.Duration
 	// ShutdownTimeout is the grace period for in-flight requests after the
 	// drain delay.
 	ShutdownTimeout time.Duration
 }
 
-// Stopper is told that the server is stopping, before the drain delay starts,
-// typically to make readiness report unavailable.
-type Stopper interface {
-	MarkStopping(context.Context)
-}
-
 // Run serves srv until it fails or the process receives SIGINT or SIGTERM. On
-// a signal it marks stopper stopping, keeps serving for the drain delay, then
+// a signal it calls OnDrain, keeps serving for the drain delay, then
 // shuts the server down within the shutdown timeout. A second signal during
 // draining or shutdown terminates the process immediately.
-func Run(srv *http.Server, stopper Stopper, opts Options) error {
+func Run(srv *http.Server, opts Options) error {
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
 
@@ -54,25 +53,17 @@ func Run(srv *http.Server, stopper Stopper, opts Options) error {
 		slog.Info("Shutting down HTTP server...")
 	}
 
-	shutdownCtx := context.Background()
-	if err := drain(shutdownCtx, stopper, opts.DrainDelay); err != nil {
-		return err
-	}
-	return shutdown(shutdownCtx, srv, opts.ShutdownTimeout)
+	drain(opts.OnDrain, opts.DrainDelay)
+	return shutdown(context.Background(), srv, opts.ShutdownTimeout)
 }
 
-// drain marks the instance unready while HTTP is still serving and waits for
-// routing changes to propagate before shutdown begins.
-func drain(ctx context.Context, stopper Stopper, delay time.Duration) error {
-	stopper.MarkStopping(ctx)
-	timer := time.NewTimer(delay)
-	defer timer.Stop()
-	select {
-	case <-timer.C:
-		return nil
-	case <-ctx.Done():
-		return fmt.Errorf("http server drain: %w", ctx.Err())
+// drain lets load balancers move traffic away before shutdown: onDrain makes
+// readiness fail, and the server keeps serving for the delay.
+func drain(onDrain func(context.Context), delay time.Duration) {
+	if onDrain != nil {
+		onDrain(context.Background())
 	}
+	time.Sleep(delay)
 }
 
 type shutter interface {

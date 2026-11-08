@@ -216,7 +216,8 @@ is the source of truth; the notes below summarize it.
 
 `internal/infra/health` owns the probes surface (`health.Probes`) and the
 shared `health.State`. The composition root mounts the probes and passes the
-same state to `server.Run`, which marks it stopping on shutdown.
+same state's `MarkStopping` to `server.Run` as its `OnDrain` hook, which runs
+when shutdown begins.
 
 `GET /livez` (and HEAD) returns 200 whenever the process can answer HTTP. It
 checks no dependencies, including the database. Use it for liveness checks.
