@@ -6,6 +6,7 @@ import (
 	"context"
 	"errors"
 	"log/slog"
+	"net/http"
 	"testing"
 	"time"
 
@@ -89,3 +90,90 @@ func TestShutdown_ServerError(t *testing.T) {
 		t.Fatalf("shutdown error: %v, want %v", err, want)
 	}
 }
+
+type mockServer struct {
+	listen func() error
+	shut   func(context.Context) error
+}
+
+func (m mockServer) ListenAndServe() error {
+	if m.listen != nil {
+		return m.listen()
+	}
+	return nil
+}
+
+func (m mockServer) Shutdown(ctx context.Context) error {
+	if m.shut != nil {
+		return m.shut(ctx)
+	}
+	return nil
+}
+
+func TestServe_ListenerFailsDuringDrain(t *testing.T) {
+	t.Parallel()
+	want := errors.New("listener closed unexpectedly")
+
+	ctx, cancel := context.WithCancel(t.Context())
+	defer cancel()
+
+	listenErr := make(chan error, 1)
+	drainStarted := make(chan struct{})
+
+	srv := mockServer{
+		listen: func() error {
+			<-drainStarted
+			return <-listenErr
+		},
+		shut: func(context.Context) error {
+			return nil
+		},
+	}
+
+	state := stopFunc(func(context.Context) {
+		close(drainStarted)
+		listenErr <- want
+	})
+
+	cancel()
+
+	err := serve(ctx, nil, srv, state, 20*time.Millisecond, time.Second)
+	if !errors.Is(err, want) {
+		t.Fatalf("serve error: %v, want %v", err, want)
+	}
+}
+
+func TestServe_ListenerFailsBeforeSignal(t *testing.T) {
+	t.Parallel()
+	want := errors.New("bind failed")
+	srv := mockServer{
+		listen: func() error { return want },
+	}
+	err := serve(t.Context(), nil, srv, stopFunc(func(context.Context) {}), 0, time.Second)
+	if !errors.Is(err, want) {
+		t.Fatalf("serve error: %v, want %v", err, want)
+	}
+}
+
+func TestServe_GracefulShutdown(t *testing.T) {
+	t.Parallel()
+	ctx, cancel := context.WithCancel(t.Context())
+	cancel()
+
+	closed := make(chan struct{})
+	srv := mockServer{
+		listen: func() error {
+			<-closed
+			return http.ErrServerClosed
+		},
+		shut: func(context.Context) error {
+			close(closed)
+			return nil
+		},
+	}
+	err := serve(ctx, nil, srv, stopFunc(func(context.Context) {}), 0, time.Second)
+	if err != nil {
+		t.Fatalf("serve error: %v, want nil", err)
+	}
+}
+

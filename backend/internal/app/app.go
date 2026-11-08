@@ -95,30 +95,51 @@ func Run() (err error) {
 		IdleTimeout:  ev.AppIdleTimeout,
 	}
 
+	slog.Info("Starting HTTP server", "port", ev.AppPort)
+	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
+	defer stop()
+
+	return serve(ctx, stop, server, state, ev.AppShutdownDrainDelay, ev.AppShutdownTimeout)
+}
+
+type server interface {
+	shutter
+	ListenAndServe() error
+}
+
+func serve(ctx context.Context, stop func(), srv server, state stopper, drainDelay, shutdownTimeout time.Duration) error {
 	errChan := make(chan error, 1)
+	served := make(chan struct{})
 	go func() {
-		slog.Info("Starting HTTP server", "port", ev.AppPort)
-		if err := server.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
+		defer close(served)
+		if err := srv.ListenAndServe(); err != nil && !errors.Is(err, http.ErrServerClosed) {
 			errChan <- fmt.Errorf("http server error: %w", err)
 		}
 	}()
-
-	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
-	defer stop()
 
 	select {
 	case err := <-errChan:
 		return err
 	case <-ctx.Done():
-		stop()
+		if stop != nil {
+			stop()
+		}
 		slog.Info("Shutting down HTTP server...")
 	}
 
 	shutdownCtx := context.Background()
-	if err := drain(shutdownCtx, state, ev.AppShutdownDrainDelay); err != nil {
-		return err
+	drainErr := drain(shutdownCtx, state, drainDelay)
+	shutdownErr := shutdown(shutdownCtx, srv, shutdownTimeout)
+
+	<-served
+
+	var listenErr error
+	select {
+	case listenErr = <-errChan:
+	default:
 	}
-	return shutdown(shutdownCtx, server, ev.AppShutdownTimeout)
+
+	return errors.Join(drainErr, shutdownErr, listenErr)
 }
 
 type stopper interface {
